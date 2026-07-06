@@ -1194,7 +1194,7 @@ let allTodos = [], allCustomers = [], allProspects = [], allSharedInsurance = []
 let allSharedJeonsan = [], allSharedGongsi = [], allSharedMonitoring = [], allSharedClaim = [], allSharedInsContact = [];
 let allSharedManagerContact = [];
 let promoData = null, myPromoRecords = [], promoRecEditId = null, promoEditTargetUid = null, promoTeamRecordsCache = {};
-let allTeams = {}, allUsers = [], twDate = new Date().toISOString().slice(0,10);
+let allTeams = {}, allUsers = [], twDate = tw_today();
 let twReports = {}, twGoals = {}, twTeamGoals = {};
 let jeonFilter = 'general', gongFilter = 'general', claimFilter = 'general', monFilter = 'life', managerFilter = 'general';
 let customerMindmap = {nodes:[]}, lineageMindmap = {nodes:[]};
@@ -4256,7 +4256,12 @@ async function removeTeamMember(uid) {
 }
 
 /* ── 팀 업무 ── */
-function tw_today() { return new Date().toISOString().slice(0,10); }
+function tw_today() {
+  const _d = new Date();
+  return _d.getFullYear() + '-' +
+    String(_d.getMonth()+1).padStart(2,'0') + '-' +
+    String(_d.getDate()).padStart(2,'0');
+}
 function tw_isWeekday(dateStr) {
   const d = new Date(dateStr); return d.getDay() !== 0 && d.getDay() !== 6;
 }
@@ -4315,15 +4320,15 @@ async function loadTeamworkData(date) {
     uids = [...new Set([...( myT.memberIds||[]), myT.leaderId].filter(Boolean))];
   }
   twReports = {};
-  try {
-    for (const uid of uids) {
+  for (const uid of uids) {
+    try {
       const doc = await db.collection('users').doc(uid).collection('tw_reports').doc(date).get();
       if (doc.exists) twReports[uid] = doc.data();
-    }
-  } catch(e) {}
+    } catch(e) { console.warn('tw_report 읽기 실패:', uid, e.message); }
+  }
 }
 
-async function renderTeamwork() {
+async function renderTeamwork(skipReload) {
   const wrap = $('tw-container');
   if (!wrap) return;
 
@@ -4339,26 +4344,27 @@ async function renderTeamwork() {
     return;
   }
 
-  wrap.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray-400);">불러오는 중...</div>';
-  $('tw-date-label').textContent = tw_dateLabel(twDate);
-  await loadTeamworkData(twDate);
-  // 목표 데이터 (주 단위) 갱신
-  const weekNum = _getWeekNum(twDate);
-  const myT = myTeam();
-  const isAdm = CU.employeeId===ADMIN_ID||CU.role==='admin';
-  const uids = isAdm ? allUsers.map(u=>u.uid) : (myT ? [...new Set([...(myT.memberIds||[]),myT.leaderId].filter(Boolean))] : [CU.uid]);
-  twGoals = {};
-  for (const uid of uids) {
-    try {
-      const doc = await db.collection('users').doc(uid).collection('tw_goals').doc(String(weekNum)).get();
-      if (doc.exists) twGoals[uid] = {[weekNum]: doc.data()};
-    } catch(e) {}
+  if (!skipReload) {
+    wrap.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray-400);">불러오는 중...</div>';
+    $('tw-date-label').textContent = tw_dateLabel(twDate);
+    await loadTeamworkData(twDate);
+    // 목표 데이터 (주 단위) 갱신
+    const weekNum = _getWeekNum(twDate);
+    const myT = myTeam();
+    const isAdm = CU.employeeId===ADMIN_ID||CU.role==='admin';
+    const uids = isAdm ? allUsers.map(u=>u.uid) : (myT ? [...new Set([...(myT.memberIds||[]),myT.leaderId].filter(Boolean))] : [CU.uid]);
+    twGoals = {};
+    for (const uid of uids) {
+      try {
+        const doc = await db.collection('users').doc(uid).collection('tw_goals').doc(String(weekNum)).get();
+        if (doc.exists) twGoals[uid] = {[weekNum]: doc.data()};
+      } catch(e) {}
+    }
+    // 마감 초과 자동 지각처리 (팀원만, 팀장 제외)
+    await _autoRecordLates();
+    // 관리자·팀장이 열면 미로그인 팀원들도 지각처리
+    await _autoRecordLatesForTeam();
   }
-
-  // 마감 초과 자동 지각처리 (팀원만, 팀장 제외)
-  await _autoRecordLates();
-  // 관리자·팀장이 열면 미로그인 팀원들도 지각처리
-  await _autoRecordLatesForTeam();
 
   const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
   const myT2 = myTeam();
@@ -4502,7 +4508,7 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
     let disabled = false;
     if (!a.status && (s.k === 'depart' || s.k === 'arrive')) disabled = true; // 기상 전
     if (a.status === 'depart' && (s.k === 'wake' || s.k === 'depart')) disabled = true; // 출발 후
-    return `<button class="tw-attend-btn ${isSelected?'selected':''}${disabled?' opacity-40':''}" ${disabled?'disabled style="opacity:.4;cursor:not-allowed;"':''} onclick="${disabled?'':'selectAttend(\"'+s.k+'\")'}">
+    return `<button class="tw-attend-btn ${isSelected?'selected':''}${disabled?' opacity-40':''}" ${disabled?'disabled style="opacity:.4;cursor:not-allowed;"':''} onclick="${disabled?'':'selectAttend(\''+s.k+'\')'}">
       <span style="font-size:22px;">${s.e}</span>
       <span>${s.l}</span>
       ${t ? `<span class="tw-time">${t}</span>` : ''}
@@ -4557,7 +4563,7 @@ async function selectAttend(status) {
     if (!twReports[CU.uid]) twReports[CU.uid] = {};
     twReports[CU.uid].attend = {...attendData, time: now, allTimes: {...prevAllTimes, [status]: now}};
     if (isLate) await recordLate(CU.uid, twDate, 'attendance');
-    renderTeamwork();
+    renderTeamwork(true);
     const msg = status==='off' ? (isLate?'OFF 체크 (지각 처리됨)':'OFF 체크 완료') : (isLate?'출근 체크 (지각 처리됨)':'출근 체크 완료');
     toast(msg, isLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
