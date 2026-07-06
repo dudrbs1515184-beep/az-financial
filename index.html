@@ -4,6 +4,8 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>AZ금융서비스 설계사 시스템</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#2563eb">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -444,7 +446,7 @@
     <button class="nav-btn" onclick="goSection('customers',this)">고객관리</button>
     <button class="nav-btn" onclick="goSection('promo',this)">프로모션 계산기</button>
     <button class="nav-btn" onclick="goSection('insurance',this)">전체 보험사</button>
-    <button class="nav-btn" onclick="goSection('manager',this)">매니저연락처</button>
+    <button class="nav-btn" onclick="goSection('manager',this)">연락처</button>
     <button class="nav-btn" onclick="goSection('mindmap-customer',this)">고객 마인드맵</button>
     <button class="nav-btn" onclick="goSection('mindmap-lineage',this)">계보 마인드맵</button>
     <button class="nav-btn" onclick="goSection('notebook',this)">공용 메모장</button>
@@ -460,7 +462,7 @@
     <button class="bnav-btn" onclick="goSection('customers',this)"><span>고객</span></button>
     <button class="bnav-btn" onclick="goSection('promo',this)"><span>프로모션</span></button>
     <button class="bnav-btn" onclick="goSection('insurance',this)"><span>전체보험사</span></button>
-    <button class="bnav-btn" onclick="goSection('manager',this)"><span>매니저</span></button>
+    <button class="bnav-btn" onclick="goSection('manager',this)"><span>연락처</span></button>
     <button class="bnav-btn" onclick="goSection('mindmap-customer',this)"><span>고객맵</span></button>
     <button class="bnav-btn" onclick="goSection('mindmap-lineage',this)"><span>계보맵</span></button>
     <button class="bnav-btn" onclick="goSection('notebook',this)"><span>메모</span></button>
@@ -478,7 +480,7 @@
       <div class="stat-grid">
         <div class="stat-card" onclick="goSection('customers')"><div class="stat-num" id="stat-customers">0</div><div class="stat-label">👥 총 고객</div></div>
         <div class="stat-card" onclick="goSection('todo')"><div class="stat-num" id="stat-todos">0</div><div class="stat-label">✅ 미완료 할일</div></div>
-        <div class="stat-card" onclick="goSection('prospects')"><div class="stat-num" id="stat-prospects">0</div><div class="stat-label">⭐ 사업대상자</div></div>
+        <div class="stat-card" onclick="goProspectsInCustomers()"><div class="stat-num" id="stat-prospects">0</div><div class="stat-label">⭐ 사업대상자</div></div>
       </div>
       <div class="alert-section" id="home-car-section" style="display:none;"><div class="alert-title">🚗 자동차보험 만기 예정</div><div id="home-car-list"></div></div>
       <div class="alert-section" id="home-bday-section" style="display:none;"><div class="alert-title">🎂 이번달 생일 (주민번호 기준)</div><div id="home-bday-list"></div></div>
@@ -502,7 +504,7 @@
 
     <!-- 고객관리 -->
     <section id="sec-customers" class="section">
-      <div class="sec-head"><h2 class="sec-title">고객관리</h2><div style="display:flex;gap:8px;"><button class="btn-ghost" onclick="importFromSheets()" style="font-size:13px;font-weight:600;">불러오기</button><button class="btn-ghost" onclick="syncToSheets()" style="font-size:13px;font-weight:600;">내보내기</button><button class="icon-btn" onclick="openGsConfig()">⚙️</button><button class="btn-outline" onclick="openCAdd()">+ 고객 추가</button></div></div>
+      <div class="sec-head"><h2 class="sec-title">고객관리</h2><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-ghost" onclick="openCustomerMap()" style="font-size:13px;font-weight:600;">🗺 내 고객 모아보기</button><button class="btn-ghost" onclick="importFromSheets()" style="font-size:13px;font-weight:600;">불러오기</button><button class="btn-ghost" onclick="syncToSheets()" style="font-size:13px;font-weight:600;">내보내기</button><button class="icon-btn" onclick="openGsConfig()">⚙️</button><button class="btn-outline" onclick="openCAdd()">+ 고객 추가</button></div></div>
       <div id="gs-status" style="display:none;font-size:12px;color:var(--gray-500);margin-bottom:8px;padding:8px;background:var(--gray-50);border-radius:8px;"></div>
       <div class="tabs">
         <button class="tab active" onclick="filterCustomerProspect('all',this)">전체</button>
@@ -585,7 +587,19 @@
 
     <!-- 공용 메모장 -->
     <section id="sec-notebook" class="section">
-      <div class="sec-head"><h2 class="sec-title">공용 메모장</h2><button class="btn-outline" id="note-add-btn" style="display:none;" onclick="openNoteAdd()">+ 등록</button></div>
+      <div class="sec-head">
+        <h2 class="sec-title">공용 메모장</h2>
+        <button class="btn-outline" id="note-add-btn" style="display:none;" onclick="openNoteAdd()">+ 등록</button>
+      </div>
+      <div class="tabs">
+        <button class="tab active" id="notebook-tab-tip" onclick="switchNoteTab('tip',this)">💡 영업 꿀팁</button>
+        <button class="tab" id="notebook-tab-memo" onclick="switchNoteTab('memo',this)">📝 메모장</button>
+        <button class="tab" id="notebook-tab-photo" onclick="switchNoteTab('photo',this)">📷 사진첩</button>
+      </div>
+      <div class="search-wrap" style="margin-top:8px;">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="notebook-search" placeholder="검색..." oninput="renderSharedNotes()">
+      </div>
       <div id="notebook-list"></div>
     </section>
 
@@ -632,18 +646,33 @@
       <div class="sec-head"><h2 class="sec-title">승인 관리</h2></div><div id="admin-list"></div>
     </section>
 
-    <!-- 매니저 연락처 -->
+    <!-- 연락처 -->
     <section id="sec-manager" class="section">
       <div class="sec-head">
-        <h2 class="sec-title">매니저 연락처</h2>
-        <button class="btn-outline" id="manager-add-btn" style="display:none;" onclick="openManagerAdd()">+ 추가</button>
+        <h2 class="sec-title">연락처</h2>
+        <button class="btn-outline" id="manager-add-btn" style="display:none;" onclick="openContactTypeChooser()">+ 추가</button>
       </div>
       <div class="tabs">
-        <button class="tab active" onclick="filterManager('general',this)">손해보험</button>
-        <button class="tab" onclick="filterManager('life',this)">생명보험</button>
-        <button class="tab" onclick="filterManager('coop',this)">유사보험</button>
+        <button class="tab active" onclick="switchContactTab('internal',this)">내부 연락처</button>
+        <button class="tab" onclick="switchContactTab('external',this)">보험사 연락처</button>
       </div>
-      <div id="manager-list"></div>
+      <!-- 내부 연락처 -->
+      <div id="contact-internal-area">
+        <div id="manager-list"></div>
+      </div>
+      <!-- 보험사 연락처 -->
+      <div id="contact-external-area" style="display:none;">
+        <div class="tabs" style="margin-top:10px;" id="contact-external-type-tabs">
+          <button class="tab active" id="cet-all" onclick="switchExtContactType('all',this)">전체</button>
+          <button class="tab" id="cet-general" onclick="switchExtContactType('general',this)">손해보험</button>
+          <button class="tab" id="cet-life" onclick="switchExtContactType('life',this)">생명보험</button>
+          <button class="tab" id="cet-coop" onclick="switchExtContactType('coop',this)">유사보험</button>
+        </div>
+        <div class="search-wrap" style="margin-top:10px;"><span class="search-icon">🔍</span>
+          <input type="text" id="contact-external-search" placeholder="보험사 검색..." oninput="renderContactExternal(this.value)">
+        </div>
+        <div id="contact-external-list"></div>
+      </div>
     </section>
 
     <!-- 보고 및 취합 -->
@@ -659,6 +688,8 @@
           <button class="btn-ghost" style="width:auto;padding:7px 14px;" onclick="tw_goToday()">오늘</button>
         </div>
       </div>
+      <!-- 팀별 시책 (고정) -->
+      <div id="tw-sicheck-wrap" style="margin-bottom:16px;"></div>
       <div id="tw-team-selector" style="margin-bottom:16px;display:none;">
         <label style="font-size:12px;font-weight:700;color:var(--gray-500);display:block;margin-bottom:6px;">팀 선택</label>
         <select id="tw-team-select" style="padding:8px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;" onchange="renderTeamwork()">
@@ -711,9 +742,9 @@
     <div class="modal-head"><div class="modal-title" id="m-c-title">고객 추가</div><button class="modal-close" onclick="closeModal('m-customer')">✕</button></div>
     <input type="hidden" id="c-eid">
     <div class="field"><label>이름 *</label><input type="text" id="c-name"></div>
-    <div class="field"><label>주민번호</label><input type="text" id="c-rrn"></div>
+    <div class="field"><label>주민번호 (앞 7자리)</label><input type="text" id="c-rrn" maxlength="8" placeholder="예: 900101-1" oninput="fmtRrn(this)"></div>
     <div class="field"><label>통신사</label><select id="c-telecom"><option value="">선택</option><option value="SKT">SKT</option><option value="KT">KT</option><option value="LGU+">LGU+</option><option value="SKT 알뜰폰">SKT 알뜰폰</option><option value="KT 알뜰폰">KT 알뜰폰</option><option value="LGU+ 알뜰폰">LGU+ 알뜰폰</option><option value="기타">기타</option></select></div>
-    <div class="field"><label>전화번호</label><input type="tel" id="c-phone"></div>
+    <div class="field"><label>전화번호</label><input type="tel" id="c-phone" placeholder="010-0000-0000" oninput="fmtPhoneInput(this)" maxlength="13"></div>
     <div class="field"><label>주소</label><input type="text" id="c-addr"></div>
     <div class="field"><label>직업</label><input type="text" id="c-job"></div>
     <div class="field"><label>운전여부</label><select id="c-driving"><option value="">선택</option><option value="예">예</option><option value="아니오">아니오</option></select></div>
@@ -751,7 +782,7 @@
     <div class="modal-actions"><button class="btn-primary" onclick="saveSharedInsurance()">저장</button></div>
   </div>
 </div>
-<div class="overlay" id="m-notebook"><div class="modal"><div class="modal-head"><div class="modal-title" id="m-note-title">메모</div><button class="modal-close" onclick="closeModal('m-notebook')">✕</button></div><input type="hidden" id="note-eid"><div class="field"><label>제목 *</label><input type="text" id="note-subject"></div><div class="field"><label>내용 *</label><textarea id="note-content"></textarea></div><div class="modal-actions"><button class="btn-primary" onclick="saveSharedNote()">저장</button></div></div></div>
+<div class="overlay" id="m-notebook"><div class="modal"><div class="modal-head"><div class="modal-title" id="m-note-title">메모</div><button class="modal-close" onclick="closeModal('m-notebook')">✕</button></div><input type="hidden" id="note-eid"><div class="field"><label>제목 *</label><input type="text" id="note-subject"></div><div class="field"><label>내용</label><textarea id="note-content"></textarea></div><div class="field" id="note-photo-field" style="display:none;"><label>사진 업로드</label><input type="file" id="note-photo-file" accept="image/*" style="padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;width:100%;font-size:13px;"><div id="note-photo-preview" style="margin-top:8px;"></div><div id="note-photo-progress" style="display:none;margin-top:8px;"><div style="background:var(--gray-100);border-radius:4px;height:6px;"><div id="note-photo-progress-bar" style="background:var(--primary);height:6px;border-radius:4px;width:0%;transition:width .3s;"></div></div><div id="note-photo-progress-text" style="font-size:11px;color:var(--gray-500);margin-top:4px;">업로드 중...</div></div></div><div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-notebook')">취소</button><button class="btn-primary" onclick="saveSharedNote()">저장</button></div></div></div>
 <div class="overlay" id="m-map"><div class="modal"><div class="modal-head"><div class="modal-title">지도 연결</div><button class="modal-close" onclick="closeModal('m-map')">✕</button></div><p id="m-map-addr" style="margin-bottom:10px;"></p><button class="btn-outline" style="display:block;width:100%;margin-bottom:8px;" onclick="launchMap('kakao')">카카오맵</button><button class="btn-outline" style="display:block;width:100%;margin-bottom:8px;" onclick="launchMap('tmap')">T맵</button><button class="btn-outline" style="display:block;width:100%;" onclick="launchMap('naver')">네이버지도</button></div></div>
 <div class="overlay" id="m-prospect"><div class="modal"><div class="modal-head"><div class="modal-title" id="m-p-title">사업대상자</div><button class="modal-close" onclick="closeModal('m-prospect')">✕</button></div><input type="hidden" id="p-eid"><div class="field"><label>이름 *</label><input type="text" id="p-name"></div><div class="field"><label>번호</label><input type="tel" id="p-phone"></div><div class="field"><label>관계</label><input type="text" id="p-rel"></div><div class="field"><label>우선순위</label><select id="p-pri"><option value="high">높음</option><option value="med" selected>보통</option><option value="low">낮음</option></select></div><div class="field"><label>상품</label><input type="text" id="p-product"></div><div class="field"><label>메모</label><textarea id="p-memo"></textarea></div><div class="modal-actions"><button class="btn-primary" onclick="saveProspect()">저장</button></div></div></div>
 <div class="overlay" id="m-gsconfig">
@@ -788,8 +819,8 @@
     </div>
     <!-- 1안/2안 탭 -->
     <div style="display:flex;border:1.5px solid var(--gray-200);border-radius:10px;overflow:hidden;margin-bottom:14px;">
-      <button id="promo-plan-tab-1" onclick="switchPromoTab(1)" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--primary);color:white;transition:all .2s;">1안 (기본)</button>
-      <button id="promo-plan-tab-2" onclick="switchPromoTab(2)" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:white;color:var(--gray-500);transition:all .2s;">2안 (손보CMIP 포함)</button>
+      <button id="promo-plan-tab-1" onclick="switchPromoPlanTab(1)" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:var(--primary);color:white;transition:all .2s;">1안 (기본)</button>
+      <button id="promo-plan-tab-2" onclick="switchPromoPlanTab(2)" style="flex:1;padding:10px;font-size:13px;font-weight:700;border:none;cursor:pointer;background:white;color:var(--gray-500);transition:all .2s;">2안 (손보CMIP 포함)</button>
     </div>
     <!-- 1안 필드 -->
     <div id="promo-plan-1-fields">
@@ -981,6 +1012,41 @@
   </div>
 </div>
 <!-- 매니저 연락처 추가/수정 모달 -->
+<!-- 연락처 유형 선택 모달 -->
+<div class="overlay" id="m-contact-type-chooser">
+  <div class="modal" style="max-width:360px;text-align:center;">
+    <div class="modal-head"><div class="modal-title">연락처 추가</div><button class="modal-close" onclick="closeModal('m-contact-type-chooser')">✕</button></div>
+    <p style="font-size:13px;color:var(--gray-500);margin-bottom:18px;">추가할 연락처 유형을 선택해주세요.</p>
+    <div style="display:flex;gap:12px;">
+      <button class="btn-outline" style="flex:1;padding:18px 10px;border-radius:14px;font-size:14px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:6px;" onclick="openInternalContactAdd()">
+        <span style="font-size:28px;">👤</span>내부 연락처
+      </button>
+      <button class="btn-primary" style="flex:1;padding:18px 10px;border-radius:14px;font-size:14px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:6px;" onclick="openInsuranceContactAdd()">
+        <span style="font-size:28px;">🏢</span>보험사 연락처
+      </button>
+    </div>
+  </div>
+</div>
+<!-- 내부 연락처 추가/수정 모달 -->
+<div class="overlay" id="m-internal-contact">
+  <div class="modal" style="max-width:420px;">
+    <div class="modal-head"><div class="modal-title" id="m-internal-contact-title">내부 연락처 추가</div><button class="modal-close" onclick="closeModal('m-internal-contact')">✕</button></div>
+    <input type="hidden" id="internal-contact-eid">
+    <div class="field"><label>직급</label>
+      <select id="internal-contact-position" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;background:var(--white);color:var(--gray-800);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22><path fill=%22%236b7280%22 d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;background-size:16px;cursor:pointer;">
+        <option value="">선택</option>
+        <option value="BM">BM</option>
+        <option value="총무">총무</option>
+        <option value="SM">SM</option>
+        <option value="ASM">ASM</option>
+        <option value="FC">FC</option>
+      </select>
+    </div>
+    <div class="field"><label>이름 *</label><input type="text" id="internal-contact-name" placeholder="홍길동"></div>
+    <div class="field"><label>전화번호</label><input type="tel" id="internal-contact-phone" placeholder="010-0000-0000" oninput="fmtPhoneInput(this)" maxlength="13"></div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-internal-contact')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveInternalContact()">저장</button></div>
+  </div>
+</div>
 <div class="overlay" id="m-manager">
   <div class="modal">
     <div class="modal-head"><div class="modal-title" id="m-manager-title">매니저 연락처 추가</div><button class="modal-close" onclick="closeModal('m-manager')">✕</button></div>
@@ -998,8 +1064,9 @@
 <div class="overlay" id="m-team-assign">
   <div class="modal" style="max-width:480px;">
     <div class="modal-head"><div class="modal-title">👥 팀 배정</div><button class="modal-close" onclick="closeModal('m-team-assign')">✕</button></div>
-    <div class="field"><label>회원 선택</label>
-      <select id="ta-user-select" style="width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;"></select>
+    <div class="field"><label>회원 검색</label>
+      <input type="text" id="ta-user-search" placeholder="이름 또는 사번 검색..." style="width:100%;padding:9px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;margin-bottom:6px;outline:none;" oninput="filterTeamAssignUsers(this.value)">
+      <select id="ta-user-select" style="width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;" size="5"></select>
     </div>
     <div class="field"><label>팀 배정</label>
       <select id="ta-team-select" style="width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
@@ -1008,8 +1075,11 @@
     </div>
     <div class="field"><label>직급</label>
       <select id="ta-role-select" style="width:100%;padding:11px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;">
-        <option value="member">팀원</option>
-        <option value="leader">팀장</option>
+        <option value="BM">BM</option>
+        <option value="총무">총무</option>
+        <option value="SM">SM (팀장)</option>
+        <option value="ASM">ASM</option>
+        <option value="FC">FC (팀원)</option>
       </select>
     </div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-team-assign')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveTeamAssign()">저장</button></div>
@@ -1037,8 +1107,8 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">건수</label><input type="number" id="goal-target-count" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">CANP(만)</label><input type="number" id="goal-target-canp" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
-        <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">CIS(만)</label><input type="number" id="goal-target-cis" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">액션만남</label><input type="number" id="goal-target-action" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
+        <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">CIS(명)</label><input type="number" id="goal-target-cis" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
       </div>
     </div>
     <div style="background:#f0fdf4;border-radius:10px;padding:12px;margin-bottom:14px;">
@@ -1046,8 +1116,8 @@
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">건수</label><input type="number" id="goal-ach-count" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">CANP(만)</label><input type="number" id="goal-ach-canp" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
-        <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">CIS(만)</label><input type="number" id="goal-ach-cis" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">액션만남</label><input type="number" id="goal-ach-action" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
+        <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">CIS(명)</label><input type="number" id="goal-ach-cis" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
       </div>
     </div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-goals')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveGoal()">저장</button></div>
@@ -1645,7 +1715,7 @@ function renderPromo() {
     </div>`;
 }
 
-function switchPromoTab(n) {
+function switchPromoPlanTab(n) {
   $('promo-plan-1-fields').style.display = n === 1 ? '' : 'none';
   $('promo-plan-2-fields').style.display = n === 2 ? '' : 'none';
   $('promo-plan-tab-1').style.background = n === 1 ? 'var(--primary)' : 'white';
@@ -1765,7 +1835,7 @@ function openPromoAdmin() {
   $('promo-target-cmip2').value          = p.targetCmip2         || '';
   $('promo-target-canp2').value          = p.targetCanp2         || '';
   $('promo-target-nonlife-cmip2').value  = p.targetNonlifeCmip2  || '';
-  switchPromoTab(1);
+  switchPromoPlanTab(1);
   openModal('m-promo-admin');
 }
 
@@ -1820,13 +1890,16 @@ async function initApp() {
   }
   await loadTeams();
   await loadAllUsers();
-  // 팀장이면 메모장·매니저 편집 버튼 표시
+  // SM(팀장)이면 팀관리·메모장·매니저 편집 버튼 표시
   if (!isAdmin && isTeamLeader(CU.uid)) {
     $('note-add-btn').style.display = 'block';
     $('manager-add-btn').style.display = 'block';
+    $('team-admin-nav-btn').style.display = 'flex';
+    $('team-admin-bnav-btn').style.display = 'flex';
   }
   db.collection('shared_insurance').onSnapshot(s => { allSharedInsurance=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-insurance').classList.contains('active')) renderInsurance(); });
   db.collection('shared_notes').onSnapshot(s => { allSharedNotes=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-notebook').classList.contains('active')) renderSharedNotes(); });
+  _loadSicheck();
   db.collection('shared_jeonsan').onSnapshot(s => { allSharedJeonsan=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-jeonsan').classList.contains('active')) renderJeonsan(); });
   db.collection('shared_gongsi').onSnapshot(s => { allSharedGongsi=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-gongsi').classList.contains('active')) renderGongsi(); });
   db.collection('shared_monitoring').onSnapshot(s => { allSharedMonitoring=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-insurance').classList.contains('active')) renderInsurance(); });
@@ -2460,12 +2533,40 @@ function renderTodos(){
     if(f==='done') l=l.filter(t=>t.done);
   }
   l.sort((a,b)=>_todoKey(a).localeCompare(_todoKey(b)));
-  $('todo-list').innerHTML=l.length?l.map(t=>{
+  // 📋 계약 일정 (선택된 날짜의 계약 or 진행중 필터 시 7일내 계약)
+  let contractHtml = '';
+  try {
+    const today = new Date().toISOString().slice(0,10);
+    const contracts = [];
+    (allCustomers||[]).forEach(c => {
+      (c.insuredList||[]).forEach(ins => {
+        if (!ins.contractDate || !ins.insurer) return;
+        const dateMatch = (f === 'pending')
+          ? (ins.contractDate >= today && ins.contractDate <= new Date(Date.now()+7*864e5).toISOString().slice(0,10))
+          : ins.contractDate === cs;
+        if (dateMatch) contracts.push({customerName: c.name, insurer: ins.insurer, date: ins.contractDate, phone: c.phone});
+      });
+    });
+    if (contracts.length) {
+      contractHtml = `<div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:12px;padding:12px;margin-bottom:12px;">
+        <div style="font-size:12px;font-weight:800;color:#1d4ed8;margin-bottom:8px;">📋 계약 일정 ${f==='pending'?'(7일 내)':'(선택일)'}</div>
+        ${contracts.map(ct => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid #dbeafe;">
+          <span style="font-size:14px;">📄</span>
+          <div style="flex:1;">
+            <div style="font-size:13px;font-weight:700;">${esc(ct.customerName)}</div>
+            <div style="font-size:11px;color:var(--gray-500);">${esc(ct.insurer)} · ${ct.date}</div>
+          </div>
+          ${ct.phone ? `<a href="tel:${ct.phone.replace(/\D/g,'')}" style="font-size:12px;color:var(--primary);font-weight:600;text-decoration:none;">📞</a>` : ''}
+        </div>`).join('')}
+      </div>`;
+    }
+  } catch(e) {}
+  $('todo-list').innerHTML = contractHtml + (l.length?l.map(t=>{
     const meta=showDate
       ? `<div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">📅 ${t.date||''}${t.time?` 🕐 ${t.time}`:''}</div>`
       : (t.time?`<div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">🕐 ${t.time}</div>`:'');
     return `<div class="todo-item ${t.done?'done':''}"><div class="todo-check" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div><div style="flex:1">${meta}<div class="todo-text">${esc(t.text)}</div></div><button class="icon-btn" onclick="openTodoEdit('${t.id}')">✏️</button><button class="icon-btn" onclick="delTodo('${t.id}')">🗑</button></div>`;
-  }).join(''):empty('✅','할 일이 없습니다');
+  }).join(''):empty('✅','할 일이 없습니다'));
 }
 
 /* ── 고객관리 ── */
@@ -2487,22 +2588,29 @@ function addInsuredRow(data) {
   const mp  = data?.monthlyPremium || '';
   const ad  = data?.autoDebitDate  || '';
   const bn  = data?.bankName       || '';
+  const cd  = data?.contractDate   || '';
   const optHtml = `<option value="">보험사 선택</option>` +
     INSURER_LIST.map(n => `<option value="${n}"${n===ins?' selected':''}>${n}</option>`).join('');
   const row = document.createElement('div');
   row.id = `insured-row-${idx}`;
-  row.style.cssText = 'display:grid;grid-template-columns:2fr 1.2fr 0.8fr 1fr 28px;gap:4px;align-items:center;';
+  row.style.cssText = 'display:flex;flex-direction:column;gap:3px;background:var(--gray-50);border-radius:8px;padding:6px;margin-bottom:4px;';
   row.innerHTML = `
-    <select class="insured-ins" style="padding:6px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;outline:none;">${optHtml}</select>
-    <input type="number" class="insured-mp" value="${mp}" min="0" placeholder="보험료" style="padding:6px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;outline:none;width:100%;">
-    <input type="number" class="insured-ad" value="${ad}" min="1" max="31" placeholder="일" style="padding:6px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;outline:none;width:100%;">
-    <input type="text"   class="insured-bn" value="${bn}" placeholder="은행명" style="padding:6px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;outline:none;width:100%;">
-    <button type="button" onclick="document.getElementById('insured-row-${idx}').remove()" style="width:24px;height:24px;border:none;background:#fee2e2;color:#dc2626;border-radius:6px;cursor:pointer;font-size:14px;line-height:1;padding:0;">×</button>`;
+    <div style="display:grid;grid-template-columns:1fr auto;gap:4px;align-items:center;">
+      <select class="insured-ins" style="padding:6px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none;font-weight:600;">${optHtml}</select>
+      <button type="button" onclick="document.getElementById('insured-row-${idx}').remove()" style="width:26px;height:26px;border:none;background:#fee2e2;color:#dc2626;border-radius:6px;cursor:pointer;font-size:14px;line-height:1;padding:0;flex-shrink:0;">×</button>
+    </div>
+    <div style="display:grid;grid-template-columns:1.2fr 1fr 0.7fr 1fr;gap:4px;">
+      <div><div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">📅 계약일</div><input type="date" class="insured-cd" value="${cd}" style="padding:5px 4px;border:1.5px solid var(--primary-light,#c7deff);border-radius:8px;font-size:11px;outline:none;width:100%;background:#eff6ff;"></div>
+      <div><div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">월 보험료</div><input type="number" class="insured-mp" value="${mp}" min="0" placeholder="0" style="padding:5px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;outline:none;width:100%;"></div>
+      <div><div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">이체일</div><input type="number" class="insured-ad" value="${ad}" min="1" max="31" placeholder="일" style="padding:5px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;outline:none;width:100%;"></div>
+      <div><div style="font-size:10px;color:var(--gray-400);margin-bottom:2px;">은행명</div><input type="text" class="insured-bn" value="${bn}" placeholder="은행명" style="padding:5px 4px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:12px;outline:none;width:100%;"></div>
+    </div>`;
   $('c-insured-rows').appendChild(row);
 }
 function _getInsuredList() {
   return Array.from($('c-insured-rows').querySelectorAll('[id^=insured-row-]')).map(row => ({
     insurer:        row.querySelector('.insured-ins')?.value || '',
+    contractDate:   row.querySelector('.insured-cd')?.value  || '',
     monthlyPremium: Number(row.querySelector('.insured-mp')?.value) || 0,
     autoDebitDate:  row.querySelector('.insured-ad')?.value  || '',
     bankName:       row.querySelector('.insured-bn')?.value  || ''
@@ -2514,16 +2622,25 @@ function _loadInsuredRows(list) {
   (list || []).forEach(item => addInsuredRow(item));
 }
 function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-ins-co','c-car-date','c-stage','c-silbi'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;_loadInsuredRows([]);openModal('m-customer');}
-function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';$('c-rrn').value=c.rrn||'';$('c-telecom').value=c.telecom||'';$('c-phone').value=c.phone||'';$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-ins-co').value=c.insCo||'';$('c-car-date').value=c.carDate||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-is-prospect').checked=!!c.isProspect;_loadInsuredRows(c.insuredList||[]);closeModal('m-cdetail');openModal('m-customer');}
-async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value, d={name:n,rrn:$('c-rrn').value.trim(),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,insCo:$('c-ins-co').value.trim(),carDate:$('c-car-date').value.trim(),stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),insuredList:_getInsuredList(),isProspect:$('c-is-prospect').checked};try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
+function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';$('c-rrn').value=fmtRrnVal(c.rrn||'');$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-ins-co').value=c.insCo||'';$('c-car-date').value=c.carDate||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-is-prospect').checked=!!c.isProspect;_loadInsuredRows(c.insuredList||[]);closeModal('m-cdetail');openModal('m-customer');}
+async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value, d={name:n,rrn:$('c-rrn').value.replace(/-/g,'').slice(0,7),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,insCo:$('c-ins-co').value.trim(),carDate:$('c-car-date').value.trim(),stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),insuredList:_getInsuredList(),isProspect:$('c-is-prospect').checked};try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
 async function delCustomer(id){if(!confirm('삭제?'))return;allCustomers=allCustomers.filter(c=>c.id!==id);closeModal('m-cdetail');renderCustomers();renderHome();await col('customers').doc(id).delete();}
-function showCDetail(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;const diff=c.carDate?carDiff(c.carDate):null;const showWarn=diff!==null&&diff<=30;const ac=showWarn?carAlertClass(diff):'';const carAlertHtml=showWarn?`<div class="car-alert-box ${ac}"><div class="car-alert-left"><div class="car-alert-title">🚗 자동차보험 만기${diff<=0?'됨':'임박'}</div><div class="car-alert-sub">${esc(c.insCo||'보험사 미등록')} · 만기일 ${esc(c.carDate)}</div></div><div style="text-align:right;"><div class="car-alert-days">${diff<=0?'만기':diff}</div><div class="car-alert-days-label">${diff<=0?'':diff+'일 전'}</div></div></div>`:'';$('m-cdetail-body').innerHTML=`${carAlertHtml}<div class="detail-name">${esc(c.name)}</div>${c.stage?`<span class="badge badge-orange" style="margin-bottom:12px;">${esc(c.stage)}</span>`:''}${c.rrn?`<div class="detail-field"><label>주민번호</label><div>${esc(c.rrn)}</div></div>`:''}${c.telecom?`<div class="detail-field"><label>통신사</label><div>${esc(c.telecom)}</div></div>`:''}${c.phone?`<div class="detail-field"><label>전화번호</label><a href="tel:${c.phone.replace(/\D/g,'')}" class="action-chip chip-call">📞 ${esc(c.phone)}</a></div>`:''}${c.addr?`<div class="detail-field"><label>주소</label><div style="margin-bottom:5px;">${esc(c.addr)}</div><button class="action-chip chip-map" onclick="showMap('${eattr(c.addr)}')">🗺 지도</button></div>`:''}${c.job?`<div class="detail-field"><label>직업</label><div>${esc(c.job)}</div></div>`:''}${c.driving?`<div class="detail-field"><label>운전여부</label><div>${esc(c.driving)}</div></div>`:''}${c.insCo?`<div class="detail-field"><label>자동차보험사</label><div>${esc(c.insCo)}</div></div>`:''}${c.carDate?`<div class="detail-field"><label>자동차보험만기일</label><div style="font-weight:600;${showWarn?'color:'+( diff<=0?'#b91c1c':'#c2410c'):''}">${esc(c.carDate)}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${(c.insuredList&&c.insuredList.length)?`<div class="detail-field"><label>가입 보험사</label><div style="margin-top:6px;border:1px solid var(--gray-100);border-radius:10px;overflow:hidden;"><div style="display:grid;grid-template-columns:2fr 1.2fr 0.8fr 1fr;gap:0;background:var(--gray-50);padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);">보험사월보험료자동이체일은행명</div><div style="display:grid;grid-template-columns:2fr 1.2fr 0.8fr 1fr;gap:0;padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);border-bottom:1px solid var(--gray-100);"><span>보험사</span><span>월보험료</span><span>자동이체일</span><span>은행명</span></div>${c.insuredList.map((item,i)=>`<div style="display:grid;grid-template-columns:2fr 1.2fr 0.8fr 1fr;gap:0;padding:6px 8px;font-size:13px;border-bottom:${i<c.insuredList.length-1?'1px solid var(--gray-50)':'none'};"><span style="font-weight:600;color:var(--primary);">${esc(item.insurer||'')}</span><span>${item.monthlyPremium?Number(item.monthlyPremium).toLocaleString()+'원':'-'}</span><span>${item.autoDebitDate?item.autoDebitDate+'일':'-'}</span><span>${esc(item.bankName||'-')}</span></div>`).join('')}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${c.isProspect?`<div class="detail-field"><label>사업대상자</label><div style="color:#92400e;font-weight:700;background:#fef3c7;padding:6px 12px;border-radius:8px;display:inline-block;">🎯 사업대상자 체크됨</div></div>`:''}<div class="modal-actions"><button class="btn-danger-ghost" onclick="delCustomer('${c.id}')">삭제</button><button class="btn-ghost" onclick="openCEdit('${c.id}')">수정</button></div>`;openModal('m-cdetail');}
+function showCDetail(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;const diff=c.carDate?carDiff(c.carDate):null;const showWarn=diff!==null&&diff<=30;const ac=showWarn?carAlertClass(diff):'';const carAlertHtml=showWarn?`<div class="car-alert-box ${ac}"><div class="car-alert-left"><div class="car-alert-title">🚗 자동차보험 만기${diff<=0?'됨':'임박'}</div><div class="car-alert-sub">${esc(c.insCo||'보험사 미등록')} · 만기일 ${esc(c.carDate)}</div></div><div style="text-align:right;"><div class="car-alert-days">${diff<=0?'만기':diff}</div><div class="car-alert-days-label">${diff<=0?'':diff+'일 전'}</div></div></div>`:'';$('m-cdetail-body').innerHTML=`${carAlertHtml}<div class="detail-name">${esc(c.name)}</div>${c.stage?`<span class="badge badge-orange" style="margin-bottom:12px;">${esc(c.stage)}</span>`:''}${c.rrn?`<div class="detail-field"><label>주민번호</label><div>${esc(c.rrn)}</div></div>`:''}${c.telecom?`<div class="detail-field"><label>통신사</label><div>${esc(c.telecom)}</div></div>`:''}${c.phone?`<div class="detail-field"><label>전화번호</label><a href="tel:${c.phone.replace(/\D/g,'')}" class="action-chip chip-call">📞 ${esc(c.phone)}</a></div>`:''}${c.addr?`<div class="detail-field"><label>주소</label><div style="margin-bottom:5px;">${esc(c.addr)}</div><button class="action-chip chip-map" onclick="showMap('${eattr(c.addr)}')">🗺 지도</button></div>`:''}${c.job?`<div class="detail-field"><label>직업</label><div>${esc(c.job)}</div></div>`:''}${c.driving?`<div class="detail-field"><label>운전여부</label><div>${esc(c.driving)}</div></div>`:''}${c.insCo?`<div class="detail-field"><label>자동차보험사</label><div>${esc(c.insCo)}</div></div>`:''}${c.carDate?`<div class="detail-field"><label>자동차보험만기일</label><div style="font-weight:600;${showWarn?'color:'+( diff<=0?'#b91c1c':'#c2410c'):''}">${esc(c.carDate)}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${(c.insuredList&&c.insuredList.length)?`<div class="detail-field"><label>가입 보험사</label><div style="margin-top:6px;border:1px solid var(--gray-100);border-radius:10px;overflow:hidden;"><div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;background:var(--gray-50);padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);"><span>보험사</span><span>계약일</span><span>월보험료</span><span>이체일</span><span>은행명</span></div>${c.insuredList.map((item,i)=>`<div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;padding:6px 8px;font-size:12px;border-bottom:${i<c.insuredList.length-1?'1px solid var(--gray-50)':'none'};"><span style="font-weight:600;color:var(--primary);">${esc(item.insurer||'')}</span><span style="color:#1d4ed8;font-weight:600;">${item.contractDate||'-'}</span><span>${item.monthlyPremium?Number(item.monthlyPremium).toLocaleString()+'원':'-'}</span><span>${item.autoDebitDate?item.autoDebitDate+'일':'-'}</span><span>${esc(item.bankName||'-')}</span></div>`).join('')}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${c.isProspect?`<div class="detail-field"><label>사업대상자</label><div style="color:#92400e;font-weight:700;background:#fef3c7;padding:6px 12px;border-radius:8px;display:inline-block;">🎯 사업대상자 체크됨</div></div>`:''}<div class="modal-actions"><button class="btn-danger-ghost" onclick="delCustomer('${c.id}')">삭제</button><button class="btn-ghost" onclick="openCEdit('${c.id}')">수정</button></div>`;openModal('m-cdetail');}
 let customerProspectFilter = 'all';
 function filterCustomerProspect(type, btn) {
   customerProspectFilter = type;
   document.querySelectorAll('#sec-customers .tabs .tab').forEach(t => t.classList.remove('active'));
-  btn.classList.add('active');
+  if (btn) btn.classList.add('active');
   renderCustomers($('customer-search')?.value || '');
+}
+function goProspectsInCustomers() {
+  goSection('customers');
+  customerProspectFilter = 'prospect';
+  // 탭 UI 업데이트
+  document.querySelectorAll('#sec-customers .tabs .tab').forEach(t => {
+    t.classList.toggle('active', t.textContent.includes('사업대상자'));
+  });
+  renderCustomers('');
 }
 function renderCustomers(q=''){
   let l=[...allCustomers];
@@ -2574,10 +2691,125 @@ async function delProspect(id,e){e&&e.stopPropagation();if(!confirm('삭제?'))r
 function renderProspects(q=''){let l=[...allProspects];if(q){const lq=q.toLowerCase();l=l.filter(p=>p.name?.includes(lq));}const em={high:'🔴',med:'🟡',low:'🟢'};$('prospect-list').innerHTML=l.length?l.map(p=>`<div class="item-card"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><div class="card-name">${em[p.pri]||em.med} ${esc(p.name)}</div><div><button class="icon-btn" onclick="openPEdit('${p.id}')">✏️</button><button class="icon-btn" onclick="delProspect('${p.id}',event)">🗑</button></div></div><div class="card-meta">${p.phone?`<a href="tel:${p.phone.replace(/\D/g,'')}" class="meta-item" style="color:var(--primary);font-weight:600;text-decoration:none;" onclick="event.stopPropagation()">📞 ${esc(p.phone)}</a>`:''}${p.rel?`<div class="meta-item">👤 ${esc(p.rel)}</div>`:''}${p.product?`<div class="meta-item">📋 ${esc(p.product)}</div>`:''}</div>${p.memo?`<div style="font-size:12px;color:var(--gray-500);margin-top:8px;">${esc(p.memo)}</div>`:''}</div>`).join(''):empty('🎯','없습니다');}
 
 /* ── 메모장 ── */
-function renderSharedNotes(){const adm=CU.employeeId===ADMIN_ID||CU.role==='admin'||isTeamLeader(CU.uid);$('notebook-list').innerHTML=allSharedNotes.length?allSharedNotes.map(n=>`<div class="item-card"><div style="display:flex;justify-content:space-between;margin-bottom:8px;"><h3 style="font-size:15px;">${esc(n.subject)}</h3>${adm?`<div><button class="icon-btn" onclick="openNoteEdit('${n.id}','${eattr(n.subject)}','${eattr(n.content)}')">✏️</button><button class="icon-btn" onclick="delSharedNote('${n.id}')">✕</button></div>`:''}</div><div style="font-size:14px;white-space:pre-wrap;background:#f8fafc;padding:12px;border-radius:8px;">${esc(n.content)}</div></div>`).join(''):empty('📝','없습니다');}
-function openNoteAdd(){$('note-eid').value='';$('note-subject').value='';$('note-content').value='';openModal('m-notebook');}
-function openNoteEdit(id,s,c){$('note-eid').value=id;$('note-subject').value=s;$('note-content').value=c;openModal('m-notebook');}
-async function saveSharedNote(){const s=$('note-subject').value.trim(), c=$('note-content').value.trim(), eid=$('note-eid').value;if(!s||!c)return;try{if(eid)await db.collection('shared_notes').doc(eid).update({subject:s,content:c,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});else await db.collection('shared_notes').add({subject:s,content:c,createdAt:firebase.firestore.FieldValue.serverTimestamp()});closeModal('m-notebook');}catch(e){}}
+let currentNoteTab = 'tip'; // tip | memo | photo
+function switchNoteTab(tab, btn) {
+  currentNoteTab = tab;
+  document.querySelectorAll('#sec-notebook .tabs .tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  // + 등록 버튼 권한 처리
+  const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
+  const isSM = isTeamLeader(CU.uid);
+  const noteAddBtn = $('note-add-btn');
+  if (tab === 'tip') {
+    if (noteAddBtn) noteAddBtn.style.display = 'block'; // 모든 사람 등록 가능
+  } else if (tab === 'memo') {
+    if (noteAddBtn) noteAddBtn.style.display = (isAdmin || isSM) ? 'block' : 'none';
+  } else if (tab === 'photo') {
+    if (noteAddBtn) noteAddBtn.style.display = (isAdmin || isSM) ? 'block' : 'none';
+  }
+  renderSharedNotes();
+}
+function renderSharedNotes() {
+  const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
+  const isSM = isTeamLeader(CU.uid);
+  const q = ($('notebook-search') ? $('notebook-search').value : '').toLowerCase().trim();
+  // 탭별 필터
+  const tabNotes = allSharedNotes.filter(n => (n.noteTab || 'tip') === currentNoteTab);
+  const notes = q ? tabNotes.filter(n => (n.subject||'').toLowerCase().includes(q) || (n.content||'').toLowerCase().includes(q)) : tabNotes;
+  const el = $('notebook-list');
+  if (!notes.length) { el.innerHTML = empty('📝', '등록된 내용이 없습니다'); return; }
+  el.innerHTML = notes.map(n => {
+    // 수정 권한
+    const isOwner = n.authorUid === CU.uid;
+    let canEdit = false, canDel = false;
+    if (n.noteTab === 'tip') {
+      canEdit = isAdmin || isOwner; // 영업꿀팁: 올린 사람 또는 관리자만 수정
+      canDel = isAdmin || isOwner;
+    } else if (n.noteTab === 'memo') {
+      canEdit = isAdmin || isSM; // 메모장: SM, 관리자만 수정
+      canDel = isAdmin || isSM;
+    } else {
+      canEdit = isAdmin || isSM; // 사진첩: SM, 관리자만
+      canDel = isAdmin || isSM;
+    }
+    const dateStr = n.createdAt ? (n.createdAt.toDate ? n.createdAt.toDate().toLocaleDateString('ko-KR') : new Date(n.createdAt).toLocaleDateString('ko-KR')) : '';
+    const updStr = n.updatedAt ? (n.updatedAt.toDate ? n.updatedAt.toDate().toLocaleDateString('ko-KR') : new Date(n.updatedAt).toLocaleDateString('ko-KR')) : '';
+    if (n.noteTab === 'photo') {
+      return `<div class="item-card">
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+          <div><h3 style="font-size:15px;">${esc(n.subject)}</h3>
+            <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">📅 ${dateStr} · ${esc(n.authorName||'')}</div>
+          </div>
+          ${canEdit ? `<div style="display:flex;gap:4px;"><button class="icon-btn" onclick="openNoteEdit('${n.id}')">✏️</button><button class="icon-btn" onclick="delSharedNote('${n.id}')">🗑</button></div>` : ''}
+        </div>
+        ${n.photoUrl ? `<img src="${esc(n.photoUrl)}" style="width:100%;max-height:300px;object-fit:cover;border-radius:10px;border:1px solid var(--gray-100);">` : ''}
+        ${n.content ? `<div style="font-size:13px;color:var(--gray-600);margin-top:8px;">${esc(n.content)}</div>` : ''}
+      </div>`;
+    }
+    return `<div class="item-card">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+        <div><h3 style="font-size:15px;">${esc(n.subject)}</h3>
+          <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">📅 ${dateStr}${updStr&&updStr!==dateStr?' (수정 '+updStr+')':''} · ${esc(n.authorName||'')}</div>
+        </div>
+        ${canEdit ? `<div style="display:flex;gap:4px;"><button class="icon-btn" onclick="openNoteEdit('${n.id}')">✏️</button><button class="icon-btn" onclick="delSharedNote('${n.id}')">🗑</button></div>` : ''}
+      </div>
+      <div style="font-size:14px;white-space:pre-wrap;background:#f8fafc;padding:12px;border-radius:8px;">${esc(n.content||'')}</div>
+    </div>`;
+  }).join('');
+}
+function openNoteAdd() {
+  $('note-eid').value=''; $('note-subject').value=''; $('note-content').value='';
+  // 사진첩 탭일 때 photoUrl 필드 표시
+  const photoField = $('note-photo-field');
+  if (photoField) photoField.style.display = currentNoteTab === 'photo' ? '' : 'none';
+  if ($('note-photo-file')) $('note-photo-file').value = '';
+  const prev0 = $('note-photo-preview'); if(prev0) prev0.innerHTML='';
+  window._noteCurrentPhotoUrl = null;
+  $('m-note-title').textContent = currentNoteTab === 'photo' ? '사진 등록' : currentNoteTab === 'memo' ? '메모 등록' : '영업 꿀팁 등록';
+  openModal('m-notebook');
+}
+function openNoteEdit(id) {
+  const n = allSharedNotes.find(x => x.id === id); if (!n) return;
+  $('note-eid').value = id; $('note-subject').value = n.subject||''; $('note-content').value = n.content||'';
+  const photoField = $('note-photo-field');
+  if (photoField) photoField.style.display = n.noteTab === 'photo' ? '' : 'none';
+  window._noteCurrentPhotoUrl = n.photoUrl||null;
+  const prevEl = $('note-photo-preview'); if(prevEl && n.photoUrl) prevEl.innerHTML = `<img src="${esc(n.photoUrl)}" style="max-width:100%;max-height:120px;border-radius:8px;margin-top:4px;">`; else if(prevEl) prevEl.innerHTML='';
+  if($('note-photo-file')) $('note-photo-file').value='';
+  $('m-note-title').textContent = n.noteTab==='photo' ? '사진 수정' : n.noteTab==='memo' ? '메모 수정' : '영업 꿀팁 수정';
+  openModal('m-notebook');
+}
+async function saveSharedNote() {
+  const s=$('note-subject').value.trim(), c=$('note-content').value.trim(), eid=$('note-eid').value;
+  if (!s) { toast('제목을 입력하세요','error'); return; }
+  // 사진 업로드 처리
+  let photoUrl = window._noteCurrentPhotoUrl || '';
+  const photoFile = $('note-photo-file') ? $('note-photo-file').files[0] : null;
+  if (photoFile) {
+    try {
+      const prog = $('note-photo-progress'); const bar = $('note-photo-progress-bar'); const txt = $('note-photo-progress-text');
+      if(prog) prog.style.display='';
+      const storageRef = storage.ref('shared_notes/' + Date.now() + '_' + photoFile.name.replace(/[^a-zA-Z0-9.]/g,'_'));
+      const uploadTask = storageRef.put(photoFile);
+      photoUrl = await new Promise((res,rej) => {
+        uploadTask.on('state_changed',
+          snap => { const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100); if(bar) bar.style.width=pct+'%'; if(txt) txt.textContent='업로드 중... '+pct+'%'; },
+          rej,
+          async () => { res(await storageRef.getDownloadURL()); }
+        );
+      });
+      if(prog) prog.style.display='none';
+    } catch(e) { toast('사진 업로드 실패: '+e.message,'error'); return; }
+  }
+  try {
+    if (eid) {
+      await db.collection('shared_notes').doc(eid).update({subject:s,content:c,photoUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+    } else {
+      await db.collection('shared_notes').add({subject:s,content:c,photoUrl,noteTab:currentNoteTab,authorUid:CU.uid,authorName:CU.name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+    }
+    closeModal('m-notebook');
+  } catch(e) { toast('오류','error'); }
+}
 async function delSharedNote(id){if(confirm('삭제?'))await db.collection('shared_notes').doc(id).delete();}
 
 /* ── 구글시트 연동 ── */
@@ -3092,8 +3324,8 @@ function _promoDaysLeft(endDate) {
   const end = new Date(endDate + 'T23:59:59');
   return Math.ceil((end - new Date()) / (1000*60*60*24));
 }
-function renderPromo() {
-  const el = $('promo-container'); if(!el) return;
+function _renderWPromo(el) {
+  if(!el) return;
   if (!promoData || !promoData.title) {
     el.innerHTML = '<div style="text-align:center;padding:60px 0;color:var(--gray-400);font-size:15px;">관리자가 아직 프로모션을 설정하지 않았습니다.</div>';
     return;
@@ -3224,12 +3456,74 @@ function renderPromo() {
       ${rowsHtml}
       ${totalRow}
     </div>`;
+  // 주간 목표 breakdown (1안/2안)
+  let weeklyHtml = '';
+  if (days !== null && days > 0) {
+    const weeksLeft = Math.max(1, Math.ceil(days/7));
+    // 1안 잔여
+    const remCount  = Math.max(0, (Number(p.targetCount)||0)  - totCount);
+    const remCanp   = Math.max(0, (Number(p.targetCanp)||0)   - totCanp);
+    const remCmip   = Math.max(0, (Number(p.targetCmip)||0)   - totCmip);
+    // 2안 잔여
+    const remCount2  = Math.max(0, (Number(p.targetCount2)||0)          - totCount);
+    const remCanp2   = Math.max(0, (Number(p.targetCanp2)||0)           - totCanp);
+    const remCmip2   = Math.max(0, (Number(p.targetCmip2)||0)           - totCmip);
+    const remNonlife2= Math.max(0, (Number(p.targetNonlifeCmip2)||0)    - totNonlife);
+    const has1 = (Number(p.targetCount)||0)>0 || (Number(p.targetCanp)||0)>0 || (Number(p.targetCmip)||0)>0;
+    const has2 = hasPlan2;
+    function wkPct(rem, tgt) {
+      const total = Number(tgt)||0;
+      if (!total) return '';
+      const achieved = Math.max(0, total - rem);
+      return `<span style="color:var(--gray-400);font-size:10px;margin-left:4px;">${Math.round(achieved/total*100)}% 달성</span>`;
+    }
+    function buildRows1() {
+      const rows = [];
+      if ((Number(p.targetCount)||0)>0) rows.push(`<div>📝 건수: <strong>${Math.ceil(remCount/weeksLeft)}건/주</strong>${wkPct(remCount,p.targetCount)} <span style="color:var(--gray-400);font-size:11px;">(잔여 ${remCount}건)</span></div>`);
+      if ((Number(p.targetCanp)||0)>0)  rows.push(`<div>💰 CANP: <strong>${Math.ceil((remCanp/weeksLeft)/10000)}만원/주</strong>${wkPct(remCanp,p.targetCanp)} <span style="color:var(--gray-400);font-size:11px;">(잔여 ${Math.ceil(remCanp/10000)}만)</span></div>`);
+      if ((Number(p.targetCmip)||0)>0)  rows.push(`<div>💵 CMIP: <strong>${Math.ceil((remCmip/weeksLeft)/10000)}만원/주</strong>${wkPct(remCmip,p.targetCmip)} <span style="color:var(--gray-400);font-size:11px;">(잔여 ${Math.ceil(remCmip/10000)}만)</span></div>`);
+      return rows;
+    }
+    function buildRows2() {
+      const rows = [];
+      if ((Number(p.targetCount2)||0)>0)         rows.push(`<div>📝 건수: <strong>${Math.ceil(remCount2/weeksLeft)}건/주</strong>${wkPct(remCount2,p.targetCount2)} <span style="color:var(--gray-400);font-size:11px;">(잔여 ${remCount2}건)</span></div>`);
+      if ((Number(p.targetCanp2)||0)>0)           rows.push(`<div>💰 CANP: <strong>${Math.ceil((remCanp2/weeksLeft)/10000)}만원/주</strong>${wkPct(remCanp2,p.targetCanp2)} <span style="color:var(--gray-400);font-size:11px;">(잔여 ${Math.ceil(remCanp2/10000)}만)</span></div>`);
+      if ((Number(p.targetCmip2)||0)>0)           rows.push(`<div>💵 CMIP: <strong>${Math.ceil((remCmip2/weeksLeft)/10000)}만원/주</strong>${wkPct(remCmip2,p.targetCmip2)} <span style="color:var(--gray-400);font-size:11px;">(잔여 ${Math.ceil(remCmip2/10000)}만)</span></div>`);
+      if ((Number(p.targetNonlifeCmip2)||0)>0)    rows.push(`<div>🏦 손보CMIP: <strong>${Math.ceil((remNonlife2/weeksLeft)/10000)}만원/주</strong>${wkPct(remNonlife2,p.targetNonlifeCmip2)} <span style="color:var(--gray-400);font-size:11px;">(잔여 ${Math.ceil(remNonlife2/10000)}만)</span></div>`);
+      return rows;
+    }
+    const rows1 = buildRows1(), rows2 = buildRows2();
+    if (rows1.length || rows2.length) {
+      if (has1 && has2) {
+        weeklyHtml = `<div style="background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:12px;padding:14px;margin-top:12px;">
+          <div style="font-size:12px;font-weight:800;color:#065f46;margin-bottom:10px;">📅 주간 목표 (남은 ${weeksLeft}주)</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+            <div style="background:#ecfdf5;border-radius:10px;padding:10px;">
+              <div style="font-size:11px;font-weight:800;color:#065f46;margin-bottom:6px;">📊 1안</div>
+              <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--gray-700);">${rows1.join('')}</div>
+            </div>
+            <div style="background:#eff6ff;border-radius:10px;padding:10px;">
+              <div style="font-size:11px;font-weight:800;color:#1d4ed8;margin-bottom:6px;">📊 2안</div>
+              <div style="display:flex;flex-direction:column;gap:5px;font-size:12px;color:var(--gray-700);">${rows2.join('')}</div>
+            </div>
+          </div>
+        </div>`;
+      } else {
+        const rows = rows1.length ? rows1 : rows2;
+        weeklyHtml = `<div style="background:#f0fdf4;border:1.5px solid #6ee7b7;border-radius:12px;padding:14px;margin-top:12px;">
+          <div style="font-size:12px;font-weight:800;color:#065f46;margin-bottom:8px;">📅 주간 목표 (남은 ${weeksLeft}주)</div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:13px;color:var(--gray-700);">${rows.join('')}</div>
+        </div>`;
+      }
+    }
+  }
   el.innerHTML = `
     <div class="promo-title-card">
-      <div class="promo-title-text">🏆 ${esc(p.title)}</div>
+      <div class="promo-title-text">☀️ ${esc(p.title)}</div>
       ${cdHtml}
     </div>
     ${metricsHtml}
+    ${weeklyHtml}
     ${myRecordsSection}
     ${teamSectionPlaceholder}`;
   if (showTeamSection) _loadPromoTeamSection();
@@ -3347,12 +3641,64 @@ async function _loadPromoTeamSection() {
           </span>`:''}
         </div>`).join('') : `<div style="color:var(--gray-400);font-size:12px;padding:6px 0;">등록 실적 없음</div>`;
 
+      // ── FC별 주간 목표 계산 ──
+      let fcWeeklyHtml = '';
+      const fcDays = _promoDaysLeft(p.endDate);
+      if (fcDays !== null && fcDays > 0) {
+        const fcWks = Math.max(1, Math.ceil(fcDays/7));
+        function fcWkLine(label, rem, tgt, unit) {
+          if (!tgt || tgt <= 0) return '';
+          const achieved = Math.max(0, tgt - rem);
+          const pct = Math.round(achieved/tgt*100);
+          const wkVal = unit === '건' ? Math.ceil(rem/fcWks)+'건/주' : Math.ceil((rem/fcWks)/10000)+'만원/주';
+          return `<div style="display:flex;justify-content:space-between;align-items:center;font-size:11px;">
+            <span>${label}: <strong>${wkVal}</strong></span>
+            <span style="color:var(--gray-400);">${pct}% 달성</span>
+          </div>`;
+        }
+        const fcRem1Count   = Math.max(0, (p.targetCount||0) - totCount);
+        const fcRem1Canp    = Math.max(0, (p.targetCanp||0) - totCanp);
+        const fcRem1Cmip    = Math.max(0, (p.targetCmip||0) - totCmip);
+        const fcRem2Count   = Math.max(0, (p.targetCount2||0) - totCount);
+        const fcRem2Canp    = Math.max(0, (p.targetCanp2||0) - totCanp);
+        const fcRem2Cmip    = Math.max(0, (p.targetCmip2||0) - totCmip);
+        const fcRem2Nl      = Math.max(0, (p.targetNonlifeCmip2||0) - totNonlife);
+        const wl1 = [
+          fcWkLine('📝건수', fcRem1Count, p.targetCount,  '건'),
+          fcWkLine('💰CANP', fcRem1Canp,  p.targetCanp,  '원'),
+          fcWkLine('💵CMIP', fcRem1Cmip,  p.targetCmip,  '원'),
+        ].filter(Boolean).join('');
+        const wl2 = [
+          fcWkLine('📝건수', fcRem2Count, p.targetCount2,  '건'),
+          fcWkLine('💰CANP', fcRem2Canp,  p.targetCanp2,  '원'),
+          fcWkLine('💵CMIP', fcRem2Cmip,  p.targetCmip2,  '원'),
+          fcWkLine('🏦손보', fcRem2Nl,    p.targetNonlifeCmip2, '원'),
+        ].filter(Boolean).join('');
+        if (wl1 || wl2) {
+          if (hasPlan2 && wl1 && wl2) {
+            fcWeeklyHtml = `<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;margin-top:8px;">
+              <div style="font-size:10px;font-weight:800;color:#065f46;margin-bottom:6px;">📅 주간 목표 (${fcWks}주)</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div><div style="font-size:9px;font-weight:700;color:#065f46;margin-bottom:3px;">1안</div>${wl1}</div>
+                <div><div style="font-size:9px;font-weight:700;color:#1d4ed8;margin-bottom:3px;">2안</div>${wl2}</div>
+              </div>
+            </div>`;
+          } else {
+            const wl = wl1 || wl2;
+            fcWeeklyHtml = `<div style="background:#f0fdf4;border:1px solid #a7f3d0;border-radius:8px;padding:8px 10px;margin-top:8px;">
+              <div style="font-size:10px;font-weight:800;color:#065f46;margin-bottom:4px;">📅 주간 목표 (${fcWks}주)</div>
+              ${wl}
+            </div>`;
+          }
+        }
+      }
       cards += `<div style="background:white;border:1px solid var(--gray-100);border-radius:12px;padding:12px 14px;margin-bottom:8px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
           <div style="font-weight:700;font-size:14px;">${esc(u.name)}</div>
           ${canEditOthers?`<button class="btn-outline" style="font-size:11px;padding:4px 10px;" onclick="(function(){promoEditTargetUid='${uid}';promoRecEditId=null;$('m-promo-rec-title').textContent='실적 추가(${esc(u.name)})';$('promo-rec-eid').value='';$('promo-rec-customer').value='';$('promo-rec-count').value='1';$('promo-rec-cmip').value='';$('promo-rec-canp').value='';$('promo-rec-nonlife-cmip').value='';$('promo-rec-del-btn').style.display='none';_promoModalShowRows();openModal('m-promo-record');})()">+ 추가</button>`:''}
         </div>
         ${metricsHtml}
+        ${fcWeeklyHtml}
         <div style="border-top:1px solid var(--gray-50);padding-top:6px;">
           ${recRows}
         </div>
@@ -3475,7 +3821,7 @@ function openPromoAdmin() {
   $('promo-target-cmip2').value         = p.targetCmip2         || '';
   $('promo-target-canp2').value         = p.targetCanp2         || '';
   $('promo-target-nonlife-cmip2').value = p.targetNonlifeCmip2  || '';
-  switchPromoTab(1);
+  switchPromoPlanTab(1);
   openModal('m-promo-admin');
 }
 async function savePromoTarget() {
@@ -3514,33 +3860,47 @@ function filterManager(type, btn) {
 }
 function renderManagerContact() {
   const canEdit = CU && (CU.employeeId === ADMIN_ID || CU.role === 'admin' || isTeamLeader(CU.uid));
-  const list = allSharedManagerContact.filter(m => m.insType === managerFilter);
+  // 내부 연락처 (contactType==='internal' 또는 미지정인 경우 하위호환)
+  const intList = allSharedManagerContact.filter(m => m.contactType === 'internal');
   const el = $('manager-list');
-  if (!list.length) { el.innerHTML = empty('📋', '등록된 연락처가 없습니다'); return; }
-  const telLink = (t) => t ? `<a href="tel:${t.replace(/[^0-9]/g,'')}" class="manager-tel-link">${esc(t)}</a>` : `<span style="color:var(--gray-300);">-</span>`;
-  el.innerHTML = `<table class="manager-table">
-    <thead><tr>
-      <th>보험사</th>
-      <th class="manager-col-branch">지점명</th>
-      <th class="manager-col-branchtel">지점장 연락처</th>
-      <th>매니저명</th>
-      <th>매니저 연락처</th>
-      ${canEdit ? '<th style="width:72px;"></th>' : ''}
-    </tr></thead>
-    <tbody>
-    ${list.map(m => `<tr>
-      <td style="font-weight:700;">${esc(m.insName||'')}</td>
-      <td class="manager-col-branch">${esc(m.branchName||'-')}</td>
-      <td class="manager-col-branchtel">${telLink(m.branchTel)}</td>
-      <td>${esc(m.managerName||'-')}</td>
-      <td>${telLink(m.managerTel)}</td>
-      ${canEdit ? `<td style="white-space:nowrap;">
-        <button class="icon-btn" style="font-size:12px;" onclick="openManagerEdit('${m.id}')">✏️</button>
-        <button class="icon-btn" style="font-size:12px;color:var(--danger);" onclick="delSharedManager('${m.id}')">🗑</button>
-      </td>` : ''}
-    </tr>`).join('')}
-    </tbody>
-  </table>`;
+  if (!intList.length) { el.innerHTML = empty('📋', '등록된 내부 연락처가 없습니다'); return; }
+  // 직급 순서 정의
+  const RANK_ORDER = ['BM', '총무', 'SM', 'ASM', 'FC'];
+  const RANK_COLOR = { 'BM':'#7c3aed', '총무':'#0369a1', 'SM':'#0891b2', 'ASM':'#059669', 'FC':'#d97706' };
+  // 직급별 그룹핑
+  const groups = {};
+  RANK_ORDER.forEach(r => { groups[r] = []; });
+  intList.forEach(m => {
+    const pos = m.position || '기타';
+    if (!groups[pos]) groups[pos] = [];
+    groups[pos].push(m);
+  });
+  let html = '<div style="display:flex;flex-direction:column;gap:16px;margin-top:10px;">';
+  const allRanks = [...RANK_ORDER, ...Object.keys(groups).filter(k => !RANK_ORDER.includes(k))];
+  allRanks.forEach(rank => {
+    const members = groups[rank];
+    if (!members || !members.length) return;
+    const color = RANK_COLOR[rank] || '#6b7280';
+    html += `<div>
+      <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+        <div style="width:4px;height:18px;background:${color};border-radius:2px;"></div>
+        <span style="font-size:13px;font-weight:700;color:${color};">${esc(rank)}</span>
+        <span style="font-size:11px;color:var(--gray-400);">${members.length}명</span>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:2px solid ${color}20;">
+        ${members.map(m => `<div class="item-card" style="display:flex;align-items:center;gap:12px;padding:10px 14px;">
+          <div style="width:36px;height:36px;border-radius:50%;background:${color}18;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${color};flex-shrink:0;">${esc((m.name||'?')[0])}</div>
+          <div style="flex:1;">
+            <div style="font-size:14px;font-weight:700;">${esc(m.name||'')}</div>
+          </div>
+          ${m.phone ? `<a href="tel:${m.phone.replace(/[^0-9]/g,'')}" style="font-size:13px;color:var(--primary);font-weight:600;">${esc(m.phone)}</a>` : ''}
+          ${canEdit ? `<div style="display:flex;gap:4px;"><button class="icon-btn" onclick="openInternalContactEdit('${m.id}')">✏️</button><button class="icon-btn" style="color:var(--danger);" onclick="delSharedManager('${m.id}')">🗑</button></div>` : ''}
+        </div>`).join('')}
+      </div>
+    </div>`;
+  });
+  html += '</div>';
+  el.innerHTML = html;
 }
 function openManagerAdd() {
   $('m-manager-title').textContent = '매니저 연락처 추가';
@@ -3579,6 +3939,46 @@ async function saveSharedManager() {
     else await db.collection('shared_manager_contact').add(data);
     closeModal('m-manager'); toast('저장됨', 'success');
   } catch(e) { toast('오류: ' + e.message, 'error'); }
+}
+function openContactTypeChooser() {
+  openModal('m-contact-type-chooser');
+}
+function openInternalContactAdd() {
+  closeModal('m-contact-type-chooser');
+  $('m-internal-contact-title').textContent = '내부 연락처 추가';
+  $('internal-contact-eid').value = '';
+  ['internal-contact-position','internal-contact-name','internal-contact-phone'].forEach(id => $(id).value = '');
+  openModal('m-internal-contact');
+}
+function openInternalContactEdit(id) {
+  const m = allSharedManagerContact.find(x => x.id === id);
+  if (!m) return;
+  $('m-internal-contact-title').textContent = '내부 연락처 수정';
+  $('internal-contact-eid').value = id;
+  $('internal-contact-position').value = m.position || '';
+  $('internal-contact-name').value = m.name || '';
+  $('internal-contact-phone').value = m.phone || '';
+  openModal('m-internal-contact');
+}
+async function saveInternalContact() {
+  const name = $('internal-contact-name').value.trim();
+  if (!name) { toast('이름을 입력해주세요', 'error'); return; }
+  const data = {
+    contactType: 'internal',
+    position: $('internal-contact-position').value.trim(),
+    name,
+    phone: $('internal-contact-phone').value.trim()
+  };
+  const eid = $('internal-contact-eid').value;
+  try {
+    if (eid) await db.collection('shared_manager_contact').doc(eid).update(data);
+    else await db.collection('shared_manager_contact').add(data);
+    closeModal('m-internal-contact'); toast('저장됨', 'success');
+  } catch(e) { toast('오류: ' + e.message, 'error'); }
+}
+function openInsuranceContactAdd() {
+  closeModal('m-contact-type-chooser');
+  openManagerAdd();
 }
 async function delSharedManager(id) {
   if (!confirm('삭제하시겠습니까?')) return;
@@ -3621,7 +4021,7 @@ function goSection(n,b){
   if(n==='jeonsan') renderJeonsan();
   if(n==='gongsi') renderGongsi();
   if(n==='claim') renderClaim();
-  if(n==='promo') renderPromo();
+  if(n==='promo') { loadPromo().then(renderPromoWithTabs); }
   if(n==='manager') renderManagerContact();
   if(n==='mindmap-customer') renderMindmap('customer');
   if(n==='mindmap-lineage') renderMindmap('lineage');
@@ -3655,10 +4055,22 @@ async function loadAllUsers() {
   } catch(e) { allUsers = []; }
 }
 
+function _getRoleLabel(u) {
+  if (!u) return 'FC';
+  if (u.jobRole) return u.jobRole;
+  // 팀장이면 SM
+  const myT = Object.values(allTeams).find(t => t.leaderId === u.uid);
+  if (myT) return 'SM';
+  return 'FC';
+}
+const ROLE_ORDER = {BM:1, '총무':2, SM:3, ASM:4, FC:5};
+
 function renderTeamAdmin() {
   const wrap = $('team-admin-container');
   if (!wrap) return;
-  if (!(CU.employeeId === ADMIN_ID || CU.role === 'admin')) {
+  const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
+  const isSM = isTeamLeader(CU.uid);
+  if (!isAdmin && !isSM) {
     wrap.innerHTML = '<div style="text-align:center;padding:40px;color:var(--gray-400);">접근 권한이 없습니다</div>';
     return;
   }
@@ -3678,29 +4090,41 @@ function renderTeamAdmin() {
   const usedUids = new Set(Object.values(allTeams).flatMap(t => [...(t.memberIds||[]), t.leaderId].filter(Boolean)));
   const unassigned = allUsers.filter(u => !usedUids.has(u.uid));
 
-  // 전체 회원 관리 섹션 (관리자 전용 - 삭제 포함)
-  const allUsersList = [...allUsers].sort((a,b)=>(a.name||'').localeCompare(b.name||'','ko')).map(u => `
-    <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-50);">
+  // 검색어
+  const searchQ = ($('team-admin-search-input') ? $('team-admin-search-input').value : '').toLowerCase().trim();
+
+  // 전체 회원 관리 섹션
+  const filteredUsers = [...allUsers].filter(u => !searchQ || (u.name||'').toLowerCase().includes(searchQ) || (u.employeeId||'').toLowerCase().includes(searchQ))
+    .sort((a,b) => (a.name||'').localeCompare(b.name||'','ko'));
+  const allUsersList = filteredUsers.map(u => {
+    const teamObj = Object.values(allTeams).find(t => t.leaderId===u.uid || (t.memberIds||[]).includes(u.uid));
+    const teamLabel = teamObj ? `${teamObj.teamNum}팀` : '미배정';
+    const roleLabel = _getRoleLabel(u);
+    return `<div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-50);">
       <div style="flex:1;">
         <span style="font-size:13px;font-weight:600;">${esc(u.name)}</span>
-        <span style="font-size:11px;color:var(--gray-400);margin-left:6px;">${esc(u.employeeId||'')}</span>
+        <span style="font-size:11px;color:var(--primary);margin-left:5px;background:var(--primary-bg);padding:1px 6px;border-radius:4px;">${roleLabel}</span>
+        <span style="font-size:11px;color:var(--gray-400);margin-left:5px;">${esc(u.employeeId||'')} · ${teamLabel}</span>
       </div>
-      <button style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;"
-        onclick="deleteUserAccount('${u.uid}','${eattr(u.name)}')">삭제</button>
-    </div>`).join('');
+      ${isAdmin ? `<button style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;" onclick="deleteUserAccount('${u.uid}','${eattr(u.name)}')">삭제</button>` : ''}
+    </div>`;
+  }).join('');
 
   let html = `
+  <div style="margin-bottom:12px;">
+    <div class="search-wrap"><span class="search-icon">🔍</span>
+      <input type="text" id="team-admin-search-input" placeholder="이름 또는 사번 검색..." oninput="renderTeamAdmin()" style="padding:10px 16px 10px 42px;border:1.5px solid var(--gray-200);border-radius:40px;font-size:14px;width:100%;outline:none;">
+    </div>
+  </div>
   <div style="margin-bottom:16px;background:white;border:1.5px solid var(--gray-100);border-radius:14px;padding:14px 16px;">
     <div style="font-size:14px;font-weight:700;color:var(--gray-700);margin-bottom:10px;display:flex;align-items:center;gap:6px;">
-      👤 전체 회원 관리 <span style="font-size:12px;font-weight:400;color:var(--gray-400);">(${allUsers.length}명)</span>
+      👤 전체 회원 관리 <span style="font-size:12px;font-weight:400;color:var(--gray-400);">(${filteredUsers.length}/${allUsers.length}명)</span>
     </div>
     <div style="max-height:220px;overflow-y:auto;">
       ${allUsersList || '<div style="color:var(--gray-400);font-size:13px;padding:8px 0;">회원 없음</div>'}
     </div>
   </div>
-  <div style="margin-bottom:16px;display:flex;justify-content:flex-end;">
-    <button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="openTeamAssign()">+ 팀원 배정</button>
-  </div>`;
+  ${isAdmin ? `<div style="margin-bottom:16px;"><button class="btn-primary" style="width:auto;padding:10px 20px;" onclick="openTeamAssign()">+ 팀원 배정</button></div>` : ''}`;
 
   if (unassigned.length) {
     html += `<div class="team-card" style="border-color:#fde68a;background:#fffbeb;">
@@ -3709,17 +4133,23 @@ function renderTeamAdmin() {
     </div>`;
   }
 
-  for (let i = 1; i <= 20; i++) {
-    const t = teams[i];
+  // SM은 자기 팀만, admin은 전체
+  const teamRange = isAdmin ? Array.from({length:20},(_,i)=>i+1) : (isSM ? [Object.values(allTeams).find(t=>t.leaderId===CU.uid)?.teamNum].filter(Boolean) : []);
+  for (const i of teamRange) {
+    const t = teams[i] || {members:[],leader:null,docId:null};
     const hasMembers = t.members.length > 0 || t.leader;
-    html += `<div class="team-card" style="${!hasMembers?'opacity:.45;':''}">
+    const canAssign = isAdmin || isSM;
+    html += `<div class="team-card">
       <div class="team-card-head">
-        <div class="team-name">${i}팀 ${hasMembers?'':'<span style="font-size:12px;color:var(--gray-400);font-weight:400;">(미배정)</span>'}</div>
-        <button class="btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="openTeamAssignFor(${i})">+ 배정</button>
+        <div class="team-name">${i}팀${!hasMembers?' <span style="font-size:12px;color:var(--gray-400);font-weight:400;">(미배정)</span>':''}</div>
+        <div style="display:flex;gap:6px;">
+          ${canAssign ? `<button class="btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="openMemberAbsenceModal2('${i}')">출근분류</button>` : ''}
+          ${canAssign ? `<button class="btn-ghost" style="padding:5px 12px;font-size:12px;" onclick="openTeamAssignFor(${i})">+ 배정</button>` : ''}
+        </div>
       </div>
       <div>
-        ${t.leader ? `<span class="team-member-chip leader">👑 ${esc(t.leader.name)} (팀장)</span>` : ''}
-        ${t.members.filter(m => m?.uid !== t.leader?.uid).map(m => `<span class="team-member-chip">${esc(m.name)} <span style="cursor:pointer;color:#ef4444;margin-left:4px;" onclick="removeTeamMember('${m.uid}')">✕</span></span>`).join('')}
+        ${t.leader ? `<span class="team-member-chip leader">👑 ${esc(t.leader.name)} (SM)</span>` : ''}
+        ${t.members.filter(m => m?.uid !== t.leader?.uid).map(m => `<span class="team-member-chip">${esc(m.name)}${canAssign?` <span style="cursor:pointer;color:#ef4444;margin-left:4px;" onclick="removeTeamMember('${m.uid}')">✕</span>`:''}</span>`).join('')}
         ${!hasMembers ? '<span style="font-size:12px;color:var(--gray-300);">팀원 없음</span>' : ''}
       </div>
     </div>`;
@@ -3755,6 +4185,8 @@ async function openTeamAssign(teamNum) {
 
   // 회원 목록 동적 생성
   const userSel = $('ta-user-select');
+  const searchInput = $('ta-user-search');
+  if (searchInput) searchInput.value = '';
   userSel.innerHTML = '<option value="">회원을 선택하세요</option>' +
     allUsers.map(u => `<option value="${u.uid}">${esc(u.name)} (${u.employeeId||''})</option>`).join('');
 
@@ -3772,7 +4204,7 @@ function openTeamAssignFor(teamNum) { openTeamAssign(teamNum); }
 async function saveTeamAssign() {
   const uid = $('ta-user-select').value;
   const teamNum = parseInt($('ta-team-select').value, 10);
-  const role = $('ta-role-select').value;
+  const role = $('ta-role-select').value; // BM, 총무, SM, ASM, FC
   if (!uid) { toast('회원을 선택하세요','error'); return; }
   if (!teamNum || isNaN(teamNum)) { toast('팀을 선택하세요','error'); return; }
 
@@ -3790,15 +4222,20 @@ async function saveTeamAssign() {
     let teamRef;
     if (teamSnap.empty) {
       teamRef = db.collection('shared_teams').doc();
-      await teamRef.set({teamNum, memberIds: [uid], leaderId: role==='leader' ? uid : null});
+      await teamRef.set({teamNum, memberIds: [uid], leaderId: role==='SM' ? uid : null});
     } else {
       teamRef = teamSnap.docs[0].ref;
       const upd = {memberIds: firebase.firestore.FieldValue.arrayUnion(uid)};
-      if (role === 'leader') upd.leaderId = uid;
+      if (role === 'SM') upd.leaderId = uid;
       await teamRef.update(upd);
     }
 
     await loadTeams();
+    // jobRole 저장
+    await db.collection('users').doc(uid).update({jobRole: role});
+    // 로컬 allUsers도 업데이트
+    const uObj = allUsers.find(u => u.uid === uid);
+    if (uObj) uObj.jobRole = role;
     closeModal('m-team-assign');
     renderTeamAdmin();
     toast('저장됨','success');
@@ -3931,6 +4368,8 @@ async function renderTeamwork() {
   const myR = twReports[CU.uid] || {};
 
   // 팀장은 개인 취합 제외, 팀원 리스트 중심
+  // 팀별 시책 렌더링
+  if (typeof renderSicheck === 'function') renderSicheck();
   const attendHtml  = _tw_attendSection(myR, isWD, canEdit, isLeader);
   const goalHtml    = await _tw_goalSection(canEdit, isLeader);
   const actHtml     = _tw_actSection(myR, canEdit, isLeader);
@@ -4059,7 +4498,11 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   const btns = STATUS.map(s => {
     const isSelected = a.status === s.k;
     const t = allTimes[s.k] ? new Date(allTimes[s.k].toDate ? allTimes[s.k].toDate() : allTimes[s.k]).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
-    return `<button class="tw-attend-btn ${isSelected?'selected':''}" onclick="selectAttend('${s.k}')">
+    // 비활성화 조건
+    let disabled = false;
+    if (!a.status && (s.k === 'depart' || s.k === 'arrive')) disabled = true; // 기상 전
+    if (a.status === 'depart' && (s.k === 'wake' || s.k === 'depart')) disabled = true; // 출발 후
+    return `<button class="tw-attend-btn ${isSelected?'selected':''}${disabled?' opacity-40':''}" ${disabled?'disabled style="opacity:.4;cursor:not-allowed;"':''} onclick="${disabled?'':'selectAttend(\"'+s.k+'\")'}">
       <span style="font-size:22px;">${s.e}</span>
       <span>${s.l}</span>
       ${t ? `<span class="tw-time">${t}</span>` : ''}
@@ -4078,12 +4521,29 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
 
 async function selectAttend(status) {
   const now = new Date();
-  const exempt = status === 'direct' || status === 'off';
-  const hour8 = new Date(twDate); hour8.setHours(8,0,0,0);
-  const isLate = !exempt && now > hour8 && tw_isWeekday(twDate);
-
   const myR = twReports[CU.uid] || {};
   const prevAllTimes = (myR.attend || {}).allTimes || {};
+  const prevStatus = (myR.attend || {}).status;
+
+  // 출발 체크 후에는 기상·출발 재클릭 방지
+  if (prevStatus === 'depart' && (status === 'wake' || status === 'depart')) {
+    toast('출발 이후에는 기상·출발을 다시 체크할 수 없습니다', 'error'); return;
+  }
+  // 기상을 먼저 해야 출발·도착 가능 (직출·OFF 제외)
+  if (!prevStatus && (status === 'depart' || status === 'arrive')) {
+    toast('먼저 기상을 체크해주세요', 'error'); return;
+  }
+  // OFF 체크: 전날 자정(00:00) 까지만 정상, 그 이후는 지각 처리
+  let isLate = false;
+  if (status === 'off') {
+    // 해당 날짜 00:00:00 = 그날 자정
+    const prevMidnight = new Date(twDate); prevMidnight.setHours(0,0,0,0);
+    isLate = now >= prevMidnight; // 당일 00:00 이후 체크하면 지각
+  } else {
+    const exempt = status === 'direct';
+    const hour8 = new Date(twDate); hour8.setHours(8,0,0,0);
+    isLate = !exempt && now > hour8 && tw_isWeekday(twDate);
+  }
 
   const attendData = {
     status,
@@ -4098,7 +4558,8 @@ async function selectAttend(status) {
     twReports[CU.uid].attend = {...attendData, time: now, allTimes: {...prevAllTimes, [status]: now}};
     if (isLate) await recordLate(CU.uid, twDate, 'attendance');
     renderTeamwork();
-    toast(isLate ? '출근 체크 (지각 처리됨)' : '출근 체크 완료', isLate ? 'error' : 'success');
+    const msg = status==='off' ? (isLate?'OFF 체크 (지각 처리됨)':'OFF 체크 완료') : (isLate?'출근 체크 (지각 처리됨)':'출근 체크 완료');
+    toast(msg, isLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
 }
 
@@ -4131,8 +4592,8 @@ async function _tw_goalSection(canEdit, isLeader) {
     const FIELDS = [
       {lbl:'건수',    gv: myGoal.goalCount||0,  av: myGoal.achCount||0,  unit:''},
       {lbl:'CANP',   gv: myGoal.goalCanp||0,   av: myGoal.achCanp||0,   unit:'만'},
-      {lbl:'CIS',    gv: myGoal.goalCis||0,    av: myGoal.achCis||0,    unit:'만'},
       {lbl:'액션만남', gv: myGoal.goalAction||0, av: myGoal.achAction||0, unit:''},
+      {lbl:'CIS',    gv: myGoal.goalCis||0,    av: myGoal.achCis||0,    unit:'명'},
     ];
     myRows = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
       ${FIELDS.map(f => `<div style="background:var(--primary-bg);border-radius:8px;padding:10px;text-align:center;">
@@ -4208,8 +4669,8 @@ function _tw_goalTableHtml(weekNum) {
               <th style="${thStyle}text-align:left;">이름</th>
               <th style="${thStyle}">건수</th>
               <th style="${thStyle}">CANP</th>
-              <th style="${thStyle}">CIS</th>
               <th style="${thStyle}">액션</th>
+              <th style="${thStyle}">CIS(명)</th>
             </tr>
           </thead>
           <tbody>
@@ -4525,7 +4986,7 @@ function _tw_teamStatus() {
 
     // 목표 요약 한 줄
     const goalLine = hasGoal
-      ? `건수 <b>${goal.achCount||0}/${goal.goalCount||0}</b> · CANP <b>${goal.achCanp||0}/${goal.goalCanp||0}</b>만 · CIS <b>${goal.achCis||0}/${goal.goalCis||0}</b>만 · 액션 <b>${goal.achAction||0}/${goal.goalAction||0}</b>`
+      ? `건수 <b>${goal.achCount||0}/${goal.goalCount||0}</b> · CANP <b>${goal.achCanp||0}/${goal.goalCanp||0}</b>만 · CIS <b>${goal.achCis||0}/${goal.goalCis||0}</b>명 · 액션 <b>${goal.achAction||0}/${goal.goalAction||0}</b>`
       : '<span style="color:var(--gray-400);">목표 미입력</span>';
 
     return `<div class="tw-member-row">
@@ -4540,13 +5001,46 @@ function _tw_teamStatus() {
         ${rv.content ? `<span class="tw-status-chip ${rv.late?'late':'done'}" style="font-size:11px;">후기${rv.late?' ⏰':''}</span>` : `<span class="tw-status-chip pending" style="font-size:11px;">후기-</span>`}
         ${(ta.checked||ta.url) ? `<span class="tw-status-chip ${ta.late?'late':'done'}" style="font-size:11px;">TA${ta.late?' ⏰':''}</span>` : `<span class="tw-status-chip pending" style="font-size:11px;">TA-</span>`}
       </div>
+      ${g.content ? `<div style="font-size:12px;color:var(--gray-600);background:var(--gray-50);border-radius:8px;padding:8px;margin-top:6px;white-space:pre-wrap;">📝 활동: ${esc(g.content)}</div>` : ''}
+      ${rv.content ? `<div style="font-size:12px;color:var(--gray-600);background:#f0fdf4;border-radius:8px;padding:8px;margin-top:4px;white-space:pre-wrap;">🌙 후기: ${esc(rv.content)}</div>` : ''}
     </div>`;
   }).join('');
 
+  const myTeamForStatus = myTeam();
+  const isSMForStatus = myTeamForStatus && myTeamForStatus.leaderId === CU.uid;
   return `<div class="tw-section">
-    <div class="tw-section-head"><div class="tw-section-title">👥 팀원 현황</div></div>
+    <div class="tw-section-head"><div class="tw-section-title">👥 팀원 현황</div>
+      ${isSMForStatus ? `<button class="btn-ghost" style="padding:5px 10px;font-size:11px;" onclick="openMemberAbsenceModal('${twDate}')">출근/미출근 분류</button>` : ''}
+    </div>
     ${rows || '<div style="color:var(--gray-400);font-size:14px;">팀원 없음</div>'}
   </div>`;
+}
+
+async function openMemberAbsenceModal(date) {
+  const myT = myTeam(); if (!myT) return;
+  const memberUids = (myT.memberIds||[]).filter(uid => uid !== myT.leaderId);
+  const existing = await db.collection('shared_teams').where('teamNum','==',myT.teamNum).limit(1).get();
+  const absentUids = existing.empty ? [] : (existing.docs[0].data().absentUids || {});
+  const absentSet = new Set(Object.keys(absentUids).filter(uid => absentUids[uid] === date));
+  const names = memberUids.map(uid => {
+    const u = allUsers.find(x => x.uid === uid);
+    return u ? {uid, name: u.name, absent: absentSet.has(uid)} : null;
+  }).filter(Boolean);
+  const html = names.map(m => `<label style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gray-50);cursor:pointer;">
+    <input type="checkbox" id="absent-${m.uid}" ${m.absent?'checked':''} style="width:18px;height:18px;accent-color:var(--danger);">
+    <span style="font-size:14px;font-weight:600;">${esc(m.name)}</span>
+    <span style="font-size:12px;color:var(--gray-400);">${m.absent?'미출근':''}</span>
+  </label>`).join('');
+  const confirmed = confirm(`미출근 설정 (체크=미출근):\n${names.map(m=>`${m.name}: ${m.absent?'미출근':'출근'}`).join('\n')}\n\n설정 화면이 열립니다.`);
+  if (!confirmed) return;
+  // 간단 토글 방식
+  const newAbsent = {};
+  names.forEach(m => {
+    const isNowAbsent = !m.absent; // 토글
+    if (isNowAbsent) newAbsent[m.uid] = date;
+  });
+  // 실제로는 overlay로 처리해야 하지만, 간단히 개별 설정
+  toast('팀원별 미출근 설정은 직접 체크로 처리됩니다', 'error');
 }
 
 /* ── 지각 기록 ── */
@@ -4695,6 +5189,9 @@ async function _autoRecordLatesForTeam() {
 
   for (const uid of targetUids) {
     if (uid === CU.uid) continue; // 본인은 _autoRecordLates()에서 이미 처리
+    // 미출근자 지각 제외 (팀에서 absent로 표시된 경우)
+    const myTForAbsent = Object.values(allTeams).find(t => (t.memberIds||[]).includes(uid) || t.leaderId===uid);
+    if (myTForAbsent && myTForAbsent.absentUids && myTForAbsent.absentUids[uid] === twDate) continue;
     const r = twReports[uid] || {};
     const goal = (twGoals[uid] || {})[weekNum] || {};
 
@@ -4960,6 +5457,833 @@ async function enterTeamwork() {
   twDate = tw_today();
   renderTeamwork();
 }
+
+function filterTeamAssignUsers(q) {
+  const sel = $('ta-user-select');
+  if (!sel) return;
+  const lower = q.toLowerCase().trim();
+  sel.innerHTML = '<option value="">회원을 선택하세요</option>' +
+    allUsers.filter(u => !lower || (u.name||'').toLowerCase().includes(lower) || (u.employeeId||'').toLowerCase().includes(lower))
+    .map(u => `<option value="${u.uid}">${esc(u.name)} (${u.employeeId||''})</option>`).join('');
+}
+
+/* ── 연락처 탭 전환 ── */
+let contactTab = 'internal';
+function switchContactTab(tab, btn) {
+  contactTab = tab;
+  document.querySelectorAll('#sec-manager > .tabs .tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  $('contact-internal-area').style.display = tab === 'internal' ? '' : 'none';
+  $('contact-external-area').style.display = tab === 'external' ? '' : 'none';
+  if (tab === 'external') renderContactExternal();
+}
+function renderContactExternal(q) {
+  const el = $('contact-external-list');
+  if (!el) return;
+  const query = (q || '').toLowerCase();
+  const items = allSharedInsurance.filter(i => !query || (i.name||'').toLowerCase().includes(query) || (i.tel||'').includes(query));
+  if (!items.length) { el.innerHTML = empty('📋','등록된 보험사 연락처가 없습니다'); return; }
+  el.innerHTML = items.map(i => `<div class="item-card" style="display:flex;align-items:center;gap:12px;">
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:700;">${esc(i.name||'')}</div>
+      <div style="font-size:12px;color:var(--gray-500);">${esc(i.insType==='life'?'생명보험':i.insType==='general'?'손해보험':'유사보험')}</div>
+    </div>
+    ${i.tel ? `<a href="tel:${i.tel.replace(/[^0-9]/g,'')}" style="font-size:13px;color:var(--primary);font-weight:600;">${esc(i.tel)}</a>` : ''}
+  </div>`).join('');
+}
+
+/* ── 팀별 시책 ── */
+let allSicheck = {};
+function _loadSicheck() {
+  db.collection('shared_sicheck').onSnapshot(s => {
+    allSicheck = {};
+    s.docs.forEach(d => { allSicheck[d.id] = d.data(); });
+    if ($('tw-sicheck-wrap')) renderSicheck();
+  });
+}
+function renderSicheck() {
+  const wrap = $('tw-sicheck-wrap'); if (!wrap) return;
+  const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
+  const myT = myTeam();
+  const isSM = myT && myT.leaderId === CU.uid;
+  const teamId = myT ? String(myT.teamNum) : null;
+  // 내 팀 시책
+  const mySicheck = teamId && allSicheck[teamId] ? allSicheck[teamId] : null;
+  const canEdit = isAdmin || isSM;
+  let html = '';
+  if (!mySicheck && !isAdmin) {
+    return; // 시책 없으면 표시 안 함
+  }
+  if (mySicheck) {
+    const dateStr = mySicheck.updatedAt ? (mySicheck.updatedAt.toDate ? mySicheck.updatedAt.toDate().toLocaleDateString('ko-KR') : new Date(mySicheck.updatedAt).toLocaleDateString('ko-KR')) : '';
+    html = `<div style="background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1.5px solid var(--primary-light);border-radius:14px;padding:14px 16px;margin-bottom:12px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+        <div style="font-size:13px;font-weight:800;color:var(--primary);">📌 ${esc(mySicheck.teamName||'팀')} 시책</div>
+        ${canEdit ? `<button class="icon-btn" onclick="openSicheckEdit('${teamId}')">✏️</button>` : ''}
+      </div>
+      <div style="font-size:13px;white-space:pre-wrap;color:var(--gray-800);">${esc(mySicheck.content||'')}</div>
+      ${dateStr ? `<div style="font-size:11px;color:var(--gray-400);margin-top:8px;">최근 수정: ${dateStr}</div>` : ''}
+    </div>`;
+  } else if (isAdmin) {
+    // 관리자: 모든 팀 시책 표시
+    Object.entries(allSicheck).forEach(([tid, sc]) => {
+      const dateStr = sc.updatedAt ? (sc.updatedAt.toDate ? sc.updatedAt.toDate().toLocaleDateString('ko-KR') : '') : '';
+      html += `<div style="background:linear-gradient(135deg,#eff6ff 0%,#dbeafe 100%);border:1.5px solid var(--primary-light);border-radius:14px;padding:14px 16px;margin-bottom:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <div style="font-size:13px;font-weight:800;color:var(--primary);">📌 ${esc(sc.teamName||tid+'팀')} 시책</div>
+          <button class="icon-btn" onclick="openSicheckEdit('${tid}')">✏️</button>
+        </div>
+        <div style="font-size:13px;white-space:pre-wrap;color:var(--gray-800);">${esc(sc.content||'')}</div>
+        ${dateStr ? `<div style="font-size:11px;color:var(--gray-400);margin-top:8px;">최근 수정: ${dateStr}</div>` : ''}
+      </div>`;
+    });
+  }
+  if (canEdit && !mySicheck && isSM) {
+    html += `<button class="btn-outline" style="width:100%;margin-bottom:12px;" onclick="openSicheckEdit('${teamId}')">📌 팀 시책 등록</button>`;
+  }
+  wrap.innerHTML = html;
+}
+function openSicheckEdit(teamId) {
+  const sc = allSicheck[teamId] || {};
+  const tObj = Object.values(allTeams).find(t => String(t.teamNum) === String(teamId));
+  const teamName = tObj ? `${tObj.teamNum}팀` : `${teamId}팀`;
+  const content = prompt('시책 내용을 입력하세요:', sc.content || '');
+  if (content === null) return;
+  db.collection('shared_sicheck').doc(String(teamId)).set({
+    teamName, content, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, {merge:true}).then(() => toast('시책 저장됨','success')).catch(() => toast('오류','error'));
+}
+
+/* ── 프로모션 서브탭 ── */
+let promoSubTab = 'summer'; // summer | w | winter | convention
+function renderPromoWithTabs() {
+  const el = $('promo-container'); if (!el) return;
+  const isAdmin = CU && (CU.employeeId === ADMIN_ID || CU.role === 'admin');
+  el.innerHTML = `<div class="tabs" style="margin-bottom:16px;">
+    <button class="tab ${promoSubTab==='summer'?'active':''}" onclick="switchPromoTab('summer',this)">☀️ SUMMER</button>
+    <button class="tab ${promoSubTab==='w'?'active':''}" onclick="switchPromoTab('w',this)">📊 W 진행현황</button>
+    <button class="tab ${promoSubTab==='winter'?'active':''}" onclick="switchPromoTab('winter',this)">❄️ WINTER</button>
+    <button class="tab ${promoSubTab==='convention'?'active':''}" onclick="switchPromoTab('convention',this)">🏆 CONVENTION</button>
+  </div>
+  <div id="promo-sub-content"></div>`;
+  renderPromoSubContent();
+}
+function switchPromoTab(tab, btn) {
+  promoSubTab = tab;
+  document.querySelectorAll('#promo-container .tabs .tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  renderPromoSubContent();
+}
+function renderPromoSubContent() {
+  const el = $('promo-sub-content'); if (!el) return;
+  if (promoSubTab === 'summer') {
+    _renderWPromo(el);          // 기존 W진행현황 = SUMMER로 이름만 변경
+  } else if (promoSubTab === 'w') {
+    renderWTracker(el);         // 2W/3W 연속주차 트래커
+  } else if (promoSubTab === 'convention') {
+    _renderConventionCalc(el);
+  } else {
+    _renderSeasonCalc(el, promoSubTab); // WINTER
+  }
+}
+function _renderSeasonCalc(el, season) {
+  const label = season === 'summer' ? 'SUMMER' : season === 'winter' ? 'WINTER' : 'CONVENTION';
+  const icon = season === 'summer' ? '☀️' : season === 'winter' ? '❄️' : '🏆';
+  const isAdmin = CU && (CU.employeeId === ADMIN_ID || CU.role === 'admin');
+  const isSM = isTeamLeader(CU.uid);
+  // 해당 시즌 데이터 로드
+  const seasonKey = 'season_' + season;
+  db.collection('shared_promotion').doc(seasonKey).get().then(d => {
+    const target = d.exists ? d.data() : {};
+    const endDate = target.endDate || '';
+    const startDate = target.startDate || '';
+    const days = endDate ? Math.ceil((new Date(endDate+'T23:59:59') - new Date()) / (1000*60*60*24)) : null;
+    const dday = days !== null ? (days < 0 ? '종료' : 'D-' + days) : '';
+    // D-day 기반 주단위/일단위 목표
+    const workDaysLeft = days !== null && days >= 0 ? Math.floor(days * 5/7) : 0;
+    const weeksLeft = days !== null && days >= 0 ? Math.ceil(days/7) : 0;
+    // 내 실적
+    col('mypromo_records').where('season','==',season).orderBy('createdAt','asc').get().then(s => {
+      const recs = s.docs.map(d => ({id:d.id,...d.data()}));
+      const totCount = recs.reduce((a,r) => a+(+(r.count||0)),0);
+      const totCmip  = recs.reduce((a,r) => a+(+(r.cmip||0)),0);
+      const totCanp  = recs.reduce((a,r) => a+(+(r.canp||0)),0);
+      const tgtCount = Number(target.targetCount||0);
+      const tgtCmip  = Number(target.targetCmip||0);
+      const tgtCanp  = Number(target.targetCanp||0);
+      const remCount = Math.max(0,tgtCount-totCount);
+      const wkCount  = weeksLeft>0 ? Math.ceil(remCount/weeksLeft) : 0;
+      const dyCount  = workDaysLeft>0 ? Math.ceil(remCount/workDaysLeft) : 0;
+      el.innerHTML = `
+        <div class="promo-title-card" style="margin-bottom:14px;">
+          <div class="promo-title-text">${icon} ${label} 계산기</div>
+          ${dday ? `<div class="promo-countdown${days<=7?' urgent':days<0?' ended':''}">
+            <div class="promo-countdown-main"><div class="promo-countdown-num">${dday}</div><div class="promo-countdown-label">${days<0?'종료':'일 남음'}</div></div>
+            ${startDate||endDate ? `<div class="promo-countdown-period">${startDate?startDate:''}${startDate&&endDate?' ~ ':''}${endDate?endDate:''}</div>` : ''}
+          </div>` : ''}
+          ${isAdmin ? `<button class="btn-outline" style="margin-top:10px;font-size:12px;" onclick="openSeasonTargetEdit('${season}')">⚙️ 기준 설정</button>` : ''}
+        </div>
+        ${(tgtCount||tgtCmip||tgtCanp) ? `
+        <div style="background:var(--primary-bg);border-radius:12px;padding:14px;margin-bottom:14px;">
+          <div style="font-size:13px;font-weight:700;color:var(--primary);margin-bottom:10px;">🎯 목표 달성 현황</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;text-align:center;">
+            ${tgtCount ? `<div style="background:white;border-radius:10px;padding:10px;">
+              <div style="font-size:10px;color:var(--gray-500);font-weight:700;">건수</div>
+              <div style="font-size:20px;font-weight:900;">${totCount}/${tgtCount}</div>
+              <div style="font-size:10px;color:var(--success);">잔여 ${remCount}건</div>
+            </div>` : ''}
+            ${tgtCmip ? `<div style="background:white;border-radius:10px;padding:10px;">
+              <div style="font-size:10px;color:var(--gray-500);font-weight:700;">CMIP</div>
+              <div style="font-size:16px;font-weight:900;">${(totCmip/10000).toFixed(0)}/${(tgtCmip/10000).toFixed(0)}만</div>
+            </div>` : ''}
+            ${tgtCanp ? `<div style="background:white;border-radius:10px;padding:10px;">
+              <div style="font-size:10px;color:var(--gray-500);font-weight:700;">CANP</div>
+              <div style="font-size:16px;font-weight:900;">${(totCanp/10000).toFixed(0)}/${(tgtCanp/10000).toFixed(0)}만</div>
+            </div>` : ''}
+          </div>
+          ${tgtCount && days>=0 ? `<div style="margin-top:12px;padding:10px;background:white;border-radius:8px;font-size:12px;color:var(--gray-700);">
+            <div style="font-weight:700;margin-bottom:4px;">📅 기간별 목표</div>
+            <div>🗓 주 단위 건수: <strong>${wkCount}건/주</strong></div>
+            <div style="margin-top:2px;">📆 일 단위 건수: <strong>${dyCount}건/일</strong> (영업일 기준)</div>
+            ${tgtCanp && weeksLeft>0 ? `<div style="margin-top:4px;padding-top:6px;border-top:1px solid var(--gray-100);">💰 주 단위 CANP: <strong>${((tgtCanp-totCanp)/weeksLeft/10000).toFixed(0)}만원/주</strong> 필요</div>` : ''}
+          </div>` : ''}
+        </div>` : `<div style="text-align:center;padding:30px;color:var(--gray-400);">${isAdmin?'아직 기준을 설정하지 않았습니다.':'관리자가 기준을 설정하지 않았습니다.'}</div>`}
+        <div style="background:white;border:1.5px solid var(--gray-100);border-radius:12px;padding:14px;">
+          <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;">
+            <div style="font-size:13px;font-weight:700;">📋 내 실적</div>
+            <button class="btn-outline" style="font-size:12px;padding:6px 12px;" onclick="openSeasonRecordAdd('${season}')">+ 실적 추가</button>
+          </div>
+          ${recs.length ? recs.map(r=>`<div style="display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--gray-50);">
+            <div style="flex:1;font-size:13px;">${esc(r.customerName||'')}</div>
+            <div style="font-size:12px;color:var(--gray-500);">${r.count||0}건</div>
+            <button class="icon-btn" style="font-size:12px;" onclick="delSeasonRecord('${r.id}','${season}')">🗑</button>
+          </div>`).join('') : '<div style="text-align:center;color:var(--gray-400);padding:20px;font-size:13px;">실적이 없습니다</div>'}
+        </div>`;
+    }).catch(() => { el.innerHTML = '<div style="padding:20px;text-align:center;color:var(--gray-400);">데이터 로드 실패</div>'; });
+  }).catch(() => {
+    el.innerHTML = `<div style="text-align:center;padding:40px;color:var(--gray-400);">${isAdmin ? `<button class="btn-outline" onclick="openSeasonTargetEdit('${season}')">⚙️ 기준 설정</button>` : '관리자에게 기준 설정을 요청하세요'}</div>`;
+  });
+}
+function openSeasonTargetEdit(season) {
+  const label = season === 'summer' ? 'SUMMER' : season === 'winter' ? 'WINTER' : 'CONVENTION';
+  const startDate = prompt(`${label} 시작일 (예: 2025-06-01):`, '') || '';
+  if (startDate === null) return;
+  const endDate = prompt(`${label} 종료일 (예: 2025-08-31):`, '') || '';
+  const targetCount = Number(prompt('목표 건수:', '') || 0);
+  const targetCmip  = Number(prompt('목표 CMIP (원):', '') || 0);
+  const targetCanp  = Number(prompt('목표 CANP (원):', '') || 0);
+  db.collection('shared_promotion').doc('season_'+season).set({
+    startDate, endDate, targetCount, targetCmip, targetCanp, updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+  }, {merge:true}).then(() => { toast('저장됨','success'); renderPromoSubContent(); }).catch(() => toast('오류','error'));
+}
+function openSeasonRecordAdd(season) {
+  const name = prompt('고객명:', ''); if (!name) return;
+  const count = Number(prompt('건수:', 1) || 1);
+  col('mypromo_records').add({
+    season, customerName: name, count, createdAt: firebase.firestore.FieldValue.serverTimestamp()
+  }).then(() => { loadPromo().then(renderPromoWithTabs); }).catch(() => toast('오류','error'));
+}
+async function delSeasonRecord(id, season) {
+  if (!confirm('삭제하시겠습니까?')) return;
+  try { await col('mypromo_records').doc(id).delete(); loadPromo().then(renderPromoWithTabs); } catch(e) { toast('오류','error'); }
+}
+
+/* ── 내 고객 모아보기 ── */
+let _googleMap = null;
+let _gmKeyCache = null; // Firestore에서 읽은 키 메모리 캐시
+
+// Firestore settings/config 에서 Google Maps 키 로드 (캐시 우선)
+async function _getGMKey() {
+  if (_gmKeyCache) return _gmKeyCache;
+  try {
+    const snap = await db.collection('settings').doc('config').get();
+    if (snap.exists && snap.data().googleMapsKey) {
+      _gmKeyCache = snap.data().googleMapsKey;
+      return _gmKeyCache;
+    }
+  } catch(e) { console.warn('settings 읽기 실패:', e.message); }
+  return null;
+}
+
+function openGoogleKeyModal() {
+  const isAdmin = CU && (CU.employeeId === ADMIN_ID || CU.role === 'admin');
+  if (!isAdmin) { alert('관리자만 API 키를 설정할 수 있습니다.'); return; }
+  db.collection('settings').doc('config').get().then(function(snap) {
+    const key = (snap.exists && snap.data().googleMapsKey) ? snap.data().googleMapsKey : '';
+    const inp = $('google-key-input');
+    if (inp) inp.value = key;
+    const st = $('google-key-status');
+    if (st) st.textContent = key ? '✅ 현재 키 등록됨' : '';
+    openModal('m-google-key');
+  }).catch(function() { openModal('m-google-key'); });
+}
+async function saveGoogleKey() {
+  const isAdmin = CU && (CU.employeeId === ADMIN_ID || CU.role === 'admin');
+  if (!isAdmin) { alert('관리자만 설정할 수 있습니다.'); return; }
+  const k = ($('google-key-input') ? $('google-key-input').value : '').trim();
+  if (!k) { alert('키를 입력해주세요.'); return; }
+  try {
+    await db.collection('settings').doc('config').set({ googleMapsKey: k }, { merge: true });
+    _gmKeyCache = k;
+    const st = $('google-key-status');
+    if (st) { st.style.color = 'var(--success,#22c55e)'; st.textContent = '✅ 저장되었습니다 (모든 사용자 공유)'; }
+    setTimeout(function() { closeModal('m-google-key'); }, 900);
+  } catch(e) { alert('저장 실패: ' + e.message); }
+}
+async function clearGoogleKey() {
+  const isAdmin = CU && (CU.employeeId === ADMIN_ID || CU.role === 'admin');
+  if (!isAdmin) { alert('관리자만 삭제할 수 있습니다.'); return; }
+  try {
+    await db.collection('settings').doc('config').update({ googleMapsKey: firebase.firestore.FieldValue.delete() });
+    _gmKeyCache = null;
+    const inp = $('google-key-input');
+    if (inp) inp.value = '';
+    const st = $('google-key-status');
+    if (st) { st.style.color = 'var(--danger,#ef4444)'; st.textContent = '🗑 키가 삭제되었습니다'; }
+  } catch(e) { alert('삭제 실패: ' + e.message); }
+}
+function _loadGoogleMapsSDK(key) {
+  return new Promise(function(resolve, reject) {
+    if (window.google && window.google.maps && window.google.maps.Marker) { resolve(); return; }
+    const old = document.getElementById('google-maps-sdk');
+    if (old) old.remove();
+    const timer = setTimeout(function() {
+      delete window.__gmCb;
+      reject(new Error('로드 타임아웃'));
+    }, 10000);
+    window.__gmCb = function() {
+      clearTimeout(timer);
+      delete window.__gmCb;
+      resolve();
+    };
+    const s = document.createElement('script');
+    s.id = 'google-maps-sdk';
+    s.src = 'https://maps.googleapis.com/maps/api/js?key=' + key + '&callback=__gmCb&language=ko';
+    s.async = true;
+    s.defer = true;
+    s.onerror = function() {
+      clearTimeout(timer);
+      delete window.__gmCb;
+      reject(new Error('API 키 오류 또는 네트워크 문제'));
+    };
+    document.head.appendChild(s);
+  });
+}
+function openCustomerMap() {
+  const withAddr = allCustomers.filter(function(c) { return c.addr && c.addr.trim(); });
+  openModal('m-customer-map');
+  const statusEl = $('cmap-status');
+  const mapEl = $('customer-map-container');
+  if (!mapEl) return;
+
+  if (!withAddr.length) {
+    if (statusEl) statusEl.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray-400);"><div style="font-size:36px;">🗺</div><div>주소가 등록된 고객이 없습니다</div></div>';
+    return;
+  }
+
+  if (statusEl) statusEl.innerHTML = '<div style="font-size:12px;color:var(--gray-500);text-align:center;padding:4px;">🗺 지도 준비 중...</div>';
+
+  _getGMKey().then(function(googleKey) {
+    if (!googleKey) {
+      const isAdmin = CU && (CU.employeeId === ADMIN_ID || CU.role === 'admin');
+      if (statusEl) statusEl.innerHTML = isAdmin
+        ? '<div style="font-size:13px;color:var(--gray-600);text-align:center;padding:12px;background:var(--gray-50);border-radius:8px;">🔑 Google Maps API 키가 없습니다.<br><button onclick="openGoogleKeyModal()" style="margin-top:8px;color:var(--primary,#2563eb);background:none;border:1px solid var(--primary,#2563eb);border-radius:6px;padding:4px 12px;cursor:pointer;font-weight:600;">⚙️ 지도 설정</button></div>'
+        : '<div style="font-size:13px;color:var(--gray-500);text-align:center;padding:16px;">🗺 지도 서비스를 준비 중입니다.<br>관리자에게 문의하세요.</div>';
+      mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--gray-400);font-size:14px;">API 키 등록 후 지도가 표시됩니다</div>';
+      return;
+    }
+    if (statusEl) statusEl.innerHTML = '<div style="font-size:12px;color:var(--gray-500);text-align:center;padding:4px;">🗺 Google Maps 로딩 중...</div>';
+    _loadGoogleMapsSDK(googleKey).then(function() {
+    setTimeout(function() {
+      mapEl.innerHTML = '';
+      _googleMap = null;
+      _googleMap = new window.google.maps.Map(mapEl, {
+        center: { lat: 37.5665, lng: 126.9780 },
+        zoom: 10,
+        mapTypeControl: false,
+        streetViewControl: false,
+        fullscreenControl: false
+      });
+
+      const geocoder = new window.google.maps.Geocoder();
+      const bounds = new window.google.maps.LatLngBounds();
+      let done = 0, pinned = 0;
+
+      withAddr.forEach(function(c, i) {
+        setTimeout(function() {
+          geocoder.geocode({ address: c.addr, region: 'KR' }, function(results, status) {
+            done++;
+            // 첫 번째 실패 시 오류 상태 표시
+            if (status !== 'OK' && done === 1) {
+              if (statusEl) statusEl.innerHTML = '<div style="font-size:12px;color:#ef4444;text-align:center;padding:4px;background:#fef2f2;border-radius:6px;">❌ 지오코딩 오류: <b>' + status + '</b><br>' +
+                (status === 'REQUEST_DENIED' ? '→ Google Cloud Console에서 <b>Geocoding API</b>를 활성화하세요' :
+                 status === 'OVER_QUERY_LIMIT' ? '→ API 할당량 초과' :
+                 status === 'ZERO_RESULTS' ? '→ 주소를 찾을 수 없음' : '') + '</div>';
+            } else if (status === 'OK') {
+              if (statusEl) statusEl.innerHTML = '<div style="font-size:12px;color:var(--gray-500);text-align:center;padding:4px;">📡 주소 조회 중 ' + done + '/' + withAddr.length + '...</div>';
+            }
+            if (status === 'OK' && results && results[0]) {
+              const pos = results[0].geometry.location;
+              bounds.extend(pos);
+              pinned++;
+              const marker = new window.google.maps.Marker({
+                map: _googleMap,
+                position: pos,
+                title: c.name
+              });
+              const infoWin = new window.google.maps.InfoWindow({
+                content: '<div style="padding:4px 2px;min-width:120px;font-family:inherit;"><div style="font-size:14px;font-weight:700;margin-bottom:2px;">' + esc(c.name) + '</div><div style="font-size:12px;color:#666;">' + esc(c.addr) + '</div></div>'
+              });
+              marker.addListener('click', function() {
+                infoWin.open(_googleMap, marker);
+              });
+            }
+            if (done === withAddr.length) {
+              if (pinned > 0) { try { _googleMap.fitBounds(bounds); } catch(e) {} }
+              if (statusEl && pinned > 0) statusEl.innerHTML = '<div style="font-size:12px;color:var(--gray-500);text-align:center;padding:4px;">📍 ' + pinned + '명 표시 완료 (전체 ' + withAddr.length + '명)</div>';
+            }
+          });
+        }, i * 80);
+      });
+    }, 350);
+  }).catch(function(err) {
+    if (statusEl) statusEl.innerHTML = '<div style="font-size:12px;color:var(--danger,#ef4444);text-align:center;padding:8px;">❌ Google Maps 로드 실패: ' + err.message + '</div>';
+    mapEl.innerHTML = '<div style="display:flex;align-items:center;justify-content:center;height:100%;color:var(--gray-400);font-size:14px;">지도를 불러올 수 없습니다</div>';
+    });
+  }).catch(function(e) {
+    if (statusEl) statusEl.innerHTML = '<div style="font-size:12px;color:var(--danger,#ef4444);text-align:center;padding:8px;">❌ 오류: ' + e.message + '</div>';
+  });
+}
+
+
+/* ── 보험사 연락처 타입 필터 ── */
+let extContactType = 'all';
+function switchExtContactType(t, btn) {
+  extContactType = t;
+  document.querySelectorAll('#contact-external-type-tabs .tab').forEach(b=>b.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  renderContactExternal($('contact-external-search')?$('contact-external-search').value:'');
+}
+function renderContactExternal(q) {
+  const el = $('contact-external-list'); if (!el) return;
+  const query = (q||'').toLowerCase();
+  const items = allSharedInsurance.filter(i => {
+    const typeOk = extContactType==='all' || i.insType===extContactType || i.type===extContactType;
+    const searchOk = !query || (i.name||'').toLowerCase().includes(query) || (i.tel||'').includes(query);
+    return typeOk && searchOk;
+  });
+  if (!items.length) { el.innerHTML = empty('📋','등록된 보험사 연락처가 없습니다'); return; }
+  el.innerHTML = items.map(i => `<div class="item-card" style="display:flex;align-items:center;gap:12px;">
+    <div style="flex:1;">
+      <div style="font-size:14px;font-weight:700;">${esc(i.name||'')}</div>
+      <div style="font-size:12px;color:var(--gray-500);">${esc(i.insType==='life'||i.type==='life'?'생명보험':i.insType==='general'||i.type==='general'?'손해보험':'유사보험')}</div>
+    </div>
+    ${i.tel ? `<a href="tel:${i.tel.replace(/[^0-9]/g,'')}" style="font-size:13px;color:var(--primary);font-weight:600;">${esc(i.tel)}</a>` : ''}
+  </div>`).join('');
+}
+
+/* ── W 진행현황 (insuredList.contractDate 기반, 월~일 1주) ── */
+function _getWeekKey(dateStr) {
+  const d = new Date(dateStr + 'T12:00:00');
+  const day = d.getDay(); // 0=일
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - (day === 0 ? 6 : day - 1));
+  return mon.toISOString().slice(0, 10);
+}
+function _getWeekEnd(weekKey) {
+  const d = new Date(weekKey + 'T12:00:00');
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
+}
+function _buildContractWeekMap() {
+  // allCustomers의 insuredList.contractDate 기반 주차별 집계
+  const weekMap = {}; // weekKey -> [{customerName, insurer, contractDate}]
+  const dateMap = {}; // dateStr -> [{customerName, insurer}]
+  (allCustomers || []).forEach(c => {
+    (c.insuredList || []).forEach(ins => {
+      if (!ins.contractDate || !ins.insurer) return;
+      const wk = _getWeekKey(ins.contractDate);
+      if (!weekMap[wk]) weekMap[wk] = [];
+      weekMap[wk].push({ customerName: c.name, insurer: ins.insurer, contractDate: ins.contractDate });
+      if (!dateMap[ins.contractDate]) dateMap[ins.contractDate] = [];
+      dateMap[ins.contractDate].push({ customerName: c.name, insurer: ins.insurer });
+    });
+  });
+  return { weekMap, dateMap };
+}
+let _wCalYear = new Date().getFullYear();
+let _wCalMonth = new Date().getMonth(); // 0-indexed
+let _wCalEl = null;
+function _renderWCal(weekMap, dateMap) {
+  const year = _wCalYear, month = _wCalMonth;
+  const monthLabel = `${year}년 ${month + 1}월`;
+  const firstDay = new Date(year, month, 1);
+  const lastDay  = new Date(year, month + 1, 0);
+  const startDow = firstDay.getDay(); // 0=Sun
+  const startOffset = startDow === 0 ? 6 : startDow - 1; // Mon=0
+  const todayStr = new Date().toISOString().slice(0, 10);
+  let cells = '';
+  const dayNames = ['월','화','수','목','금','토','일'];
+  const headers = dayNames.map(d => `<div style="text-align:center;font-size:11px;font-weight:700;color:var(--gray-500);padding:4px 0;">${d}</div>`).join('');
+  // 빈 칸
+  for (let i = 0; i < startOffset; i++) cells += '<div></div>';
+  for (let d = 1; d <= lastDay.getDate(); d++) {
+    const ds = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const wk = _getWeekKey(ds);
+    const contracts = dateMap[ds] || [];
+    const isToday = ds === todayStr;
+    const wkCount = (weekMap[wk] || []).length;
+    const wLevel = wkCount >= 3 ? '3w' : wkCount >= 2 ? '2w' : '';
+    const dotColor = wLevel === '3w' ? '#1d4ed8' : wLevel === '2w' ? '#059669' : '';
+    cells += `<div onclick="showWDayDetail('${ds}')" style="min-height:44px;padding:4px;border-radius:8px;cursor:pointer;background:${isToday?'var(--primary)':contracts.length?'#f0fdf4':'white'};border:1px solid ${isToday?'var(--primary)':contracts.length?'#bbf7d0':'var(--gray-100)'};position:relative;transition:all .1s;">
+      <div style="font-size:11px;font-weight:${isToday?'900':'600'};color:${isToday?'white':contracts.length?'#065f46':'var(--gray-700)'};">${d}</div>
+      ${contracts.length ? `<div style="display:flex;flex-wrap:wrap;gap:2px;margin-top:2px;">${contracts.map(ct=>`<div style="width:6px;height:6px;border-radius:50%;background:${dotColor||'#059669'};"></div>`).join('')}</div>` : ''}
+      ${contracts.length ? `<div style="font-size:9px;color:${isToday?'rgba(255,255,255,0.8)':'#059669'};font-weight:700;">${contracts.length}건</div>` : ''}
+    </div>`;
+  }
+  return `<div style="background:white;border:1.5px solid var(--gray-100);border-radius:12px;padding:12px;margin-bottom:14px;">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <button onclick="wCalMove(-1)" style="background:var(--gray-50);border:none;border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;color:var(--gray-600);">‹</button>
+      <div style="font-size:14px;font-weight:800;color:var(--gray-800);">📅 ${monthLabel}</div>
+      <button onclick="wCalMove(1)"  style="background:var(--gray-50);border:none;border-radius:8px;width:32px;height:32px;font-size:18px;cursor:pointer;color:var(--gray-600);">›</button>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(7,1fr);gap:3px;">${headers}${cells}</div>
+    <div id="w-day-detail" style="margin-top:8px;"></div>
+  </div>`;
+}
+function wCalMove(dir) {
+  _wCalMonth += dir;
+  if (_wCalMonth < 0)  { _wCalMonth = 11; _wCalYear--; }
+  if (_wCalMonth > 11) { _wCalMonth = 0;  _wCalYear++; }
+  if (_wCalEl) renderWTracker(_wCalEl);
+}
+function showWDayDetail(ds) {
+  const { dateMap } = _buildContractWeekMap();
+  const items = dateMap[ds] || [];
+  const el = $('w-day-detail');
+  if (!el) return;
+  if (!items.length) { el.innerHTML = ''; return; }
+  el.innerHTML = `<div style="background:#f0fdf4;border-radius:8px;padding:8px;font-size:12px;">
+    <div style="font-weight:700;color:#065f46;margin-bottom:6px;">📄 ${ds} 계약 (${items.length}건)</div>
+    ${items.map(i=>`<div style="padding:3px 0;border-bottom:1px solid #d1fae5;">${esc(i.customerName)} · ${esc(i.insurer)}</div>`).join('')}
+  </div>`;
+}
+function renderWTracker(el) {
+  if (!el) return;
+  _wCalEl = el;
+  const { weekMap, dateMap } = _buildContractWeekMap();
+  const todayKey = _getWeekKey(new Date().toISOString().slice(0, 10));
+  const thisWeekContracts = weekMap[todayKey] || [];
+  const thisWeekCount = thisWeekContracts.length;
+  // 이번 주 W 레벨
+  const currentW = thisWeekCount >= 3 ? '3w' : thisWeekCount >= 2 ? '2w' : '0';
+  const currentMin = currentW === '3w' ? 3 : 2;
+  // 연속 주차 (이번 주의 W 레벨 기준으로 연속 체크)
+  let streak = 0;
+  if (currentW !== '0') {
+    let cur = new Date(todayKey + 'T12:00:00');
+    for (let i = 0; i < 52; i++) {
+      const k = cur.toISOString().slice(0, 10);
+      const cnt = (weekMap[k] || []).length;
+      if (cnt >= currentMin) { streak++; cur.setDate(cur.getDate() - 7); }
+      else break;
+    }
+  }
+  // 최근 12주 히스토리
+  const historyRows = [];
+  let histCur = new Date(todayKey + 'T12:00:00');
+  for (let i = 0; i < 12; i++) {
+    const k = histCur.toISOString().slice(0, 10);
+    const kEnd = _getWeekEnd(k);
+    const cnt = (weekMap[k] || []).length;
+    const wLv = cnt >= 3 ? '3W' : cnt >= 2 ? '2W' : '-';
+    const color = cnt >= 3 ? '#1d4ed8' : cnt >= 2 ? '#059669' : 'var(--gray-300)';
+    historyRows.push(`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-50);">
+      <div style="font-size:11px;color:var(--gray-500);min-width:120px;">${k.slice(5)} ~ ${kEnd.slice(5)}</div>
+      <div style="font-size:13px;font-weight:800;color:${color};min-width:28px;">${wLv}</div>
+      <div style="font-size:11px;color:var(--gray-500);">${cnt}건</div>
+      ${i === 0 ? '<span style="font-size:10px;background:var(--primary);color:white;padding:2px 6px;border-radius:10px;">이번주</span>' : ''}
+    </div>`);
+    histCur.setDate(histCur.getDate() - 7);
+  }
+  const statusBg  = currentW === '3w' ? '#dbeafe' : currentW === '2w' ? '#d1fae5' : 'var(--gray-50)';
+  const statusCol = currentW === '3w' ? '#1e40af' : currentW === '2w' ? '#065f46' : 'var(--gray-400)';
+  const wLabel    = currentW === '0' ? '미달성' : currentW.toUpperCase();
+  const calHtml   = _renderWCal(weekMap, dateMap);
+  el.innerHTML = `
+    <div class="promo-title-card" style="margin-bottom:14px;">
+      <div class="promo-title-text">📊 W 진행현황</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">고객 가입 보험 계약일 기준</div>
+    </div>
+    <div style="background:${statusBg};border-radius:14px;padding:18px;margin-bottom:14px;text-align:center;">
+      <div style="font-size:40px;font-weight:900;color:${statusCol};">${wLabel}</div>
+      <div style="font-size:20px;font-weight:800;color:var(--gray-700);margin-top:4px;">${streak > 0 ? streak + '주차 진행중' : '이번 주 미달성'}</div>
+      <div style="font-size:13px;color:var(--gray-500);margin-top:4px;">이번 주 ${thisWeekCount}건 계약</div>
+      ${streak > 0 ? `<div style="font-size:12px;color:${statusCol};margin-top:4px;font-weight:700;">🔥 ${streak}주 연속 ${wLabel} 달성!</div>` : ''}
+    </div>
+    <div style="background:white;border:1.5px solid var(--gray-100);border-radius:12px;padding:14px;margin-bottom:14px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:10px;">이번 주 현황 (${_getWeekKey(new Date().toISOString().slice(0,10)).slice(5)} ~ ${_getWeekEnd(_getWeekKey(new Date().toISOString().slice(0,10))).slice(5)})</div>
+      <div style="display:flex;gap:10px;">
+        <div style="flex:1;text-align:center;background:${thisWeekCount>=2?'#d1fae5':'var(--gray-50)'};border-radius:10px;padding:10px;">
+          <div style="font-size:10px;font-weight:700;color:var(--gray-500);">2W</div>
+          <div style="font-size:22px;font-weight:900;color:${thisWeekCount>=2?'#065f46':'var(--gray-400)'};">${thisWeekCount>=2?'✅':'❌'}</div>
+          <div style="font-size:11px;color:var(--gray-500);">${thisWeekCount}/2건</div>
+        </div>
+        <div style="flex:1;text-align:center;background:${thisWeekCount>=3?'#dbeafe':'var(--gray-50)'};border-radius:10px;padding:10px;">
+          <div style="font-size:10px;font-weight:700;color:var(--gray-500);">3W</div>
+          <div style="font-size:22px;font-weight:900;color:${thisWeekCount>=3?'#1e40af':'var(--gray-400)'};">${thisWeekCount>=3?'✅':'❌'}</div>
+          <div style="font-size:11px;color:var(--gray-500);">${thisWeekCount}/3건</div>
+        </div>
+      </div>
+      ${thisWeekContracts.length ? `<div style="margin-top:10px;border-top:1px solid var(--gray-50);padding-top:8px;">${thisWeekContracts.map(ct=>`<div style="font-size:12px;padding:3px 0;color:var(--gray-700);">📄 ${esc(ct.customerName)} · ${esc(ct.insurer)} <span style="color:var(--gray-400);font-size:10px;">${ct.contractDate}</span></div>`).join('')}</div>` : ''}
+    </div>
+    ${calHtml}
+    <div style="background:white;border:1.5px solid var(--gray-100);border-radius:12px;padding:14px;">
+      <div style="font-size:13px;font-weight:700;margin-bottom:8px;">📅 최근 12주 현황</div>
+      ${historyRows.join('')}
+    </div>`;
+}
+function setWTarget(target) {
+  db.collection('users').doc(CU.uid).update({wTarget: target}).then(()=>{
+    loadPromo().then(renderPromoWithTabs);
+    toast(target.toUpperCase()+' 목표 설정됨','success');
+  }).catch(()=>toast('저장 실패','error'));
+}
+
+/* ── CONVENTION 계산기 (2달 합산 티어) ── */
+function _renderConventionCalc(el) {
+  if (!el) return;
+  const isAdmin = CU && (CU.employeeId===ADMIN_ID||CU.role==='admin');
+  const now = new Date();
+  const periods = [
+    {label:'1~2월', months:[1,2]},
+    {label:'3~4월', months:[3,4]},
+    {label:'5~6월', months:[5,6]},
+    {label:'7~8월', months:[7,8]},
+    {label:'9~10월', months:[9,10]},
+    {label:'11~12월', months:[11,12]},
+  ];
+  const curMonth = now.getMonth()+1;
+  db.collection('shared_promotion').doc('convention_target').get().then(d => {
+    const targetData = d.exists ? d.data() : {};
+    const tgtCanp = Number(targetData.targetCanp||0);
+
+    // 기간별 CANP 합산
+    const periodTotals = periods.map(p => {
+      const sum = (myPromoRecords||[]).reduce((acc,r) => {
+        const dt = r.createdAt ? (r.createdAt.toDate ? r.createdAt.toDate() : new Date(r.createdAt)) : null;
+        if (!dt) return acc;
+        const m = dt.getMonth()+1;
+        if (p.months.includes(m)) return acc + (+(r.canp||0));
+        return acc;
+      }, 0);
+      const isPast = now.getMonth()+1 > p.months[1] || (now.getFullYear() > (targetData.year||now.getFullYear()) && p.months[1] < 12);
+      const isCurrent = p.months.includes(curMonth);
+      const achieved = tgtCanp > 0 && sum >= tgtCanp;
+      return {...p, sum, achieved, isPast, isCurrent};
+    });
+
+    const achievedCount = periodTotals.filter(p=>p.achieved).length;
+    let tier = null, tierColor = '#6b7280', tierBg = 'var(--gray-50)';
+    if (achievedCount>=6){tier='🥇 골드';tierColor='#92400e';tierBg='#fef3c7';}
+    else if (achievedCount>=5){tier='🥈 실버';tierColor='#374151';tierBg='#f3f4f6';}
+    else if (achievedCount>=4){tier='🥉 브론즈';tierColor='#92400e';tierBg='#fde8d8';}
+    else if (achievedCount>=3){tier='⚔️ 챌린저';tierColor='var(--primary)';tierBg='var(--primary-bg)';}
+
+    el.innerHTML = `
+    <div class="promo-title-card" style="margin-bottom:14px;">
+      <div class="promo-title-text">🏆 CONVENTION</div>
+      <div style="font-size:12px;color:var(--gray-500);margin-top:4px;">2달 합산 목표 CANP 달성 시 인정</div>
+      ${isAdmin ? `<button class="btn-outline" style="margin-top:8px;font-size:12px;" onclick="openConventionTargetEdit()">⚙️ 목표 설정</button>` : ''}
+    </div>
+    ${tgtCanp ? `
+    <div style="background:var(--primary-bg);border-radius:12px;padding:12px;margin-bottom:14px;text-align:center;">
+      <div style="font-size:12px;color:var(--gray-500);font-weight:700;">목표 CANP (2달 합산)</div>
+      <div style="font-size:22px;font-weight:900;color:var(--primary);">${(tgtCanp/10000).toFixed(0)}만원</div>
+    </div>` : ''}
+    ${tier ? `<div style="background:${tierBg};border-radius:14px;padding:16px;margin-bottom:14px;text-align:center;">
+      <div style="font-size:28px;font-weight:900;color:${tierColor};">${tier}</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-top:4px;">${achievedCount}회 달성</div>
+    </div>` : `<div style="background:var(--gray-50);border-radius:12px;padding:14px;margin-bottom:14px;text-align:center;color:var(--gray-400);font-size:13px;">아직 달성 기록 없음 (3회 이상 달성 시 챌린저)</div>`}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+      ${periodTotals.map(p => `<div style="background:${p.achieved?'#d1fae5':p.isCurrent?'var(--primary-bg)':'var(--gray-50)'};border-radius:12px;padding:12px;text-align:center;border:1.5px solid ${p.achieved?'#6ee7b7':p.isCurrent?'var(--primary)':'var(--gray-100)'};">
+        <div style="font-size:12px;font-weight:700;color:var(--gray-600);">${p.label}</div>
+        <div style="font-size:16px;font-weight:900;color:${p.achieved?'#065f46':p.isCurrent?'var(--primary)':'var(--gray-400)'};">${p.achieved?'✅ 달성':'❌ 미달'}</div>
+        ${tgtCanp ? `<div style="font-size:11px;color:var(--gray-500);margin-top:2px;">${(p.sum/10000).toFixed(0)}/${(tgtCanp/10000).toFixed(0)}만</div>` : ''}
+      </div>`).join('')}
+    </div>`;
+  }).catch(()=>el.innerHTML='<div style="padding:20px;text-align:center;color:var(--gray-400);">로드 실패</div>');
+}
+function openConventionTargetEdit() {
+  const tgt = Number(prompt('목표 CANP (원, 2달 합산 기준):','') || 0);
+  if (!tgt) return;
+  db.collection('shared_promotion').doc('convention_target').set({targetCanp:tgt,updatedAt:firebase.firestore.FieldValue.serverTimestamp()},{merge:true})
+    .then(()=>{toast('저장됨','success'); loadPromo().then(renderPromoWithTabs);}).catch(()=>toast('오류','error'));
+}
+
+/* ── 팀관리: 출근/미출근 분류 모달 ── */
+async function openMemberAbsenceModal2(teamNum) {
+  const myT = Object.values(allTeams).find(t => String(t.teamNum) === String(teamNum));
+  if (!myT) { toast('팀 정보 없음','error'); return; }
+  const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
+  const isMySM = myT.leaderId === CU.uid;
+  if (!isAdmin && !isMySM) { toast('권한 없음','error'); return; }
+
+  const memberUids = [...(myT.memberIds||[])];
+  if (myT.leaderId && !memberUids.includes(myT.leaderId)) memberUids.unshift(myT.leaderId);
+
+  const existing = await db.collection('shared_teams').where('teamNum','==',myT.teamNum).limit(1).get();
+  const existingAbsent = existing.empty ? {} : (existing.docs[0].data().absentUids || {});
+  const docId = existing.empty ? null : existing.docs[0].id;
+  const today = tw_today ? tw_today() : new Date().toISOString().slice(0,10);
+  const date = twDate || today;
+
+  const members = memberUids.map(uid => {
+    const u = allUsers.find(x=>x.uid===uid);
+    const isAbsent = existingAbsent[uid] === date;
+    return u ? {uid, name:u.name, isAbsent} : null;
+  }).filter(Boolean);
+
+  // 모달 동적 생성
+  let overlay = $('m-absence-modal');
+  if (!overlay) {
+    overlay = document.createElement('div');
+    overlay.id = 'm-absence-modal';
+    overlay.className = 'overlay';
+    document.body.appendChild(overlay);
+  }
+  overlay.innerHTML = `<div class="modal" style="max-width:400px;">
+    <div class="modal-head"><div class="modal-title">출근/미출근 분류 (${teamNum}팀)</div><button class="modal-close" onclick="closeModal('m-absence-modal')">✕</button></div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">체크 = 미출근 (지각 제외)</div>
+    <div id="absence-list">${members.map(m=>`<label style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--gray-50);cursor:pointer;">
+      <input type="checkbox" id="abs-${m.uid}" ${m.isAbsent?'checked':''} style="width:18px;height:18px;accent-color:var(--danger);">
+      <span style="font-size:14px;font-weight:600;">${esc(m.name)}</span>
+      <span id="abs-label-${m.uid}" style="font-size:12px;color:${m.isAbsent?'var(--danger)':'var(--success)'};">${m.isAbsent?'미출근':'출근'}</span>
+    </label>`).join('')}</div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('m-absence-modal')">취소</button>
+      <button class="btn-primary" onclick="saveAbsence('${docId||''}','${myT.teamNum}','${date}')">저장</button>
+    </div>
+  </div>`;
+  // 체크박스 변경 시 라벨 업데이트
+  members.forEach(m => {
+    const cb = document.getElementById('abs-'+m.uid);
+    const lb = document.getElementById('abs-label-'+m.uid);
+    if(cb && lb) cb.onchange = () => {
+      lb.textContent = cb.checked?'미출근':'출근';
+      lb.style.color = cb.checked?'var(--danger)':'var(--success)';
+    };
+  });
+  overlay._memberUids = memberUids;
+  overlay._members = members;
+  openModal('m-absence-modal');
+}
+async function saveAbsence(docId, teamNum, date) {
+  const overlay = $('m-absence-modal');
+  if (!overlay) return;
+  const members = overlay._members || [];
+  const newAbsent = {};
+  members.forEach(m => {
+    const cb = document.getElementById('abs-'+m.uid);
+    if(cb && cb.checked) newAbsent[m.uid] = date;
+  });
+  try {
+    const ref = docId ? db.collection('shared_teams').doc(docId) : db.collection('shared_teams').where('teamNum','==',Number(teamNum)).limit(1);
+    if (docId) {
+      await db.collection('shared_teams').doc(docId).update({absentUids: newAbsent});
+    } else {
+      const q = await db.collection('shared_teams').where('teamNum','==',Number(teamNum)).limit(1).get();
+      if (!q.empty) await q.docs[0].ref.update({absentUids: newAbsent});
+    }
+    // allTeams 캐시 업데이트
+    Object.keys(allTeams).forEach(k => { if(String(allTeams[k].teamNum)===String(teamNum)) allTeams[k].absentUids=newAbsent; });
+    closeModal('m-absence-modal');
+    toast('저장됐습니다','success');
+    renderTeamAdmin();
+  } catch(e) { toast('저장 실패: '+e.message,'error'); }
+}
+
+
+/* ── 주민번호 자동 포맷 (xxxxxx-x) ── */
+function fmtRrnVal(v) {
+  const d = v.replace(/-/g,'').slice(0,7);
+  if (d.length > 6) return d.slice(0,6) + '-' + d.slice(6);
+  return d;
+}
+function fmtRrn(el) {
+  const pos = el.selectionStart;
+  const old = el.value;
+  const digits = old.replace(/-/g,'').slice(0,7);
+  const formatted = fmtRrnVal(digits);
+  el.value = formatted;
+  // 커서 위치 보정
+  const newPos = formatted.length === 8 && pos >= 7 ? 8 : Math.min(pos, formatted.length);
+  el.setSelectionRange(newPos, newPos);
+}
+
+function fmtPhone(v) {
+  const d = (v || '').replace(/\D/g, '');
+  if (d.startsWith('02')) {
+    // 서울 지역번호: 02-XXX-XXXX or 02-XXXX-XXXX
+    if (d.length <= 2) return d;
+    if (d.length <= 5) return d.slice(0,2) + '-' + d.slice(2);
+    if (d.length <= 9) return d.slice(0,2) + '-' + d.slice(2,5) + '-' + d.slice(5);
+    return d.slice(0,2) + '-' + d.slice(2,6) + '-' + d.slice(6,10);
+  }
+  const n = d.slice(0, 11);
+  if (n.length <= 3) return n;
+  if (n.length <= 7) return n.slice(0,3) + '-' + n.slice(3);
+  return n.slice(0,3) + '-' + n.slice(3,7) + '-' + n.slice(7);
+}
+function fmtPhoneInput(el) {
+  const cur = el.selectionStart;
+  const old = el.value;
+  el.value = fmtPhone(old);
+  // 커서가 하이픈 삽입으로 밀리지 않도록 보정
+  const diff = el.value.length - old.length;
+  el.setSelectionRange(cur + diff, cur + diff);
+}
+
 </script>
+
+<!-- 내 고객 모아보기 지도 모달 -->
+<div class="overlay" id="m-customer-map">
+  <div class="modal" style="max-width:700px;">
+    <div class="modal-head">
+      <div class="modal-title">🗺 내 고객 모아보기</div>
+      <div style="display:flex;gap:6px;align-items:center;">
+        <button onclick="openGoogleKeyModal()" style="background:var(--gray-50);border:1px solid var(--gray-200);border-radius:8px;padding:4px 8px;font-size:11px;cursor:pointer;color:var(--gray-600);">⚙️ 지도 설정</button>
+        <button class="modal-close" onclick="closeModal('m-customer-map')">✕</button>
+      </div>
+    </div>
+    <div id="cmap-status" style="font-size:12px;color:var(--gray-500);margin-bottom:8px;"></div>
+    <div style="border-radius:12px;overflow:hidden;height:440px;position:relative;">
+      <div id="customer-map-container" style="width:100%;height:100%;background:var(--gray-100);"></div>
+    </div>
+    <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-customer-map')">닫기</button></div>
+  </div>
+</div>
+<!-- Google Maps API 키 설정 모달 -->
+<div class="overlay" id="m-google-key">
+  <div class="modal" style="max-width:460px;">
+    <div class="modal-head"><div class="modal-title">⚙️ Google Maps 설정</div><button class="modal-close" onclick="closeModal('m-google-key')">✕</button></div>
+    <div style="background:#eff6ff;border:1.5px solid #bfdbfe;border-radius:10px;padding:12px;margin-bottom:14px;font-size:12px;color:#1e40af;line-height:1.8;">
+      📌 정확한 한국 주소 지도 표시를 위해 <strong>Google Maps API 키</strong>가 필요합니다.<br>
+      1. <a href="https://console.cloud.google.com" target="_blank" style="color:var(--primary,#2563eb);font-weight:600;">console.cloud.google.com</a> 접속 → 프로젝트 선택/생성<br>
+      2. API 및 서비스 → 라이브러리 → <strong>Maps JavaScript API</strong> + <strong>Geocoding API</strong> 사용 설정<br>
+      3. 사용자 인증 정보 탭 → <strong>API 키</strong> 생성 또는 복사<br>
+      4. 아래 입력란에 붙여넣기 후 저장
+    </div>
+    <div class="field">
+      <label>Google Maps API 키</label>
+      <input type="text" id="google-key-input" placeholder="예: AIzaSyA...">
+    </div>
+    <div id="google-key-status" style="font-size:12px;margin-top:4px;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="clearGoogleKey()">키 삭제</button>
+      <button class="btn-primary" onclick="saveGoogleKey()">저장</button>
+    </div>
+  </div>
+</div>
 </body>
 </html>
