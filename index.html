@@ -66,7 +66,7 @@
 
     #screen-app{display:none;min-height:100vh}
     .app-header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:white;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-    .header-brand{display:flex;align-items:center;gap:10px;flex:1} .brand-text{font-size:15px;font-weight:800;color:var(--primary)}
+    .header-brand{display:flex;align-items:center;gap:10px;flex:1} .brand-text{font-size:15px;font-weight:800;color:var(--primary)} .brand-text-pc{display:none;}
     .header-right{display:flex;align-items:center;gap:8px}
     .avatar{width:34px;height:34px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
     .avatar.admin-av{background:#fef3c7;color:#92400e} .user-name{font-size:13px;font-weight:600;color:var(--gray-700)}
@@ -74,7 +74,7 @@
     .icon-btn:hover{background:var(--gray-100)}
 
     .sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--sidebar-w);background:white;border-right:1px solid var(--gray-200);padding:16px 10px;display:none;flex-direction:column;gap:3px;z-index:100;overflow-y:auto}
-    @media(min-width:768px){.sidebar{display:flex}}
+    @media(min-width:768px){.sidebar{display:flex} .brand-text-pc{display:inline;}}
     .nav-btn{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;border:none;background:transparent;font-size:14px;font-weight:500;color:var(--gray-600);cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;width:100%}
     .nav-btn svg{width:20px;height:20px;flex-shrink:0} .nav-btn:hover{background:var(--gray-50);color:var(--gray-900)} .nav-btn.active{background:var(--primary-bg);color:var(--primary);font-weight:700}
 
@@ -436,8 +436,8 @@
 </div>
 <div id="screen-app">
   <header class="app-header">
-    <div class="header-brand"><img src="icon-192.png" alt="AZ" style="height:32px;width:32px;border-radius:8px;object-fit:contain;flex-shrink:0;" onerror="this.style.display='none'"><span class="brand-text">AZ금융서비스</span></div>
-    <div class="header-right"><button class="icon-btn" onclick="backupHtml()" title="HTML 파일 백업">💾</button><div class="avatar" id="hd-avatar">?</div><span class="user-name" id="hd-name"></span><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid var(--gray-200);border-radius:8px;" onclick="openProfileModal()">정보변경</button><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid var(--gray-200);border-radius:8px;" onclick="doLogout()">로그아웃</button></div>
+    <div class="header-brand"><img src="icon-192.png" alt="AZ금융서비스" style="height:36px;width:36px;border-radius:9px;object-fit:contain;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.15);" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block'"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="36" height="36" style="display:none;flex-shrink:0;border-radius:9px;box-shadow:0 2px 8px rgba(37,99,235,.15);vertical-align:middle;"><rect width="220" height="220" rx="20" fill="white"/><text x="14" y="128" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="100" fill="#2563eb" letter-spacing="-4">AZ</text><circle cx="179" cy="72" r="30" fill="none" stroke="#2563eb" stroke-width="6"/><polyline points="157,72 164,58 171,80 178,60 185,78 192,64 201,72" fill="none" stroke="#2563eb" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><text x="110" y="163" font-family="Arial,sans-serif" font-weight="800" font-size="12.5" fill="#2563eb" text-anchor="middle" letter-spacing="3.5">FINANCIAL</text><text x="110" y="180" font-family="Arial,sans-serif" font-weight="800" font-size="12.5" fill="#2563eb" text-anchor="middle" letter-spacing="3.5">SERVICE&#174;</text></svg><span class="brand-text brand-text-pc">AZ금융서비스</span><span class="brand-text-pc" style="font-size:13px;font-weight:700;color:var(--primary);background:rgba(37,99,235,0.08);border-radius:6px;padding:2px 8px;margin-left:8px;letter-spacing:0.5px;">에덴지점</span></div>
+    <div class="header-right"><button id="hd-backup-btn" class="icon-btn" onclick="backupHtml()" title="HTML 파일 백업" style="display:none;">💾</button><span class="user-name" id="hd-name"></span><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid var(--gray-200);border-radius:8px;" onclick="openProfileModal()">정보변경</button><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid var(--gray-200);border-radius:8px;" onclick="doLogout()">로그아웃</button></div>
   </header>
 
   <nav class="sidebar">
@@ -752,6 +752,15 @@
     <div class="field"><label>만기일</label><input type="text" id="c-car-date"></div>
     <div class="field"><label>상담 상태</label><input type="text" id="c-stage"></div>
     <div class="field"><label>실비보험사</label><input type="text" id="c-silbi" placeholder="예: 삼성화재 실비, 현대해상 실비"></div>
+    <!-- 자녀 목록 -->
+    <div class="field">
+      <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+        <label style="margin-bottom:0;">자녀</label>
+        <button type="button" onclick="addChildRow()" style="font-size:12px;font-weight:700;color:#7c3aed;background:#f5f3ff;border:1px solid #ddd6fe;border-radius:8px;padding:4px 12px;cursor:pointer;">+ 자녀 추가</button>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1.3fr;gap:4px;padding:3px 0 5px;font-size:10px;font-weight:700;color:var(--gray-400);"><div>이름</div><div>주민번호 (앞 7자리)</div></div>
+      <div id="c-child-rows" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;"></div>
+    </div>
     <!-- 가입 보험사 목록 (행 추가 방식) -->
     <div class="field">
       <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -1033,7 +1042,7 @@
     <div class="modal-head"><div class="modal-title" id="m-internal-contact-title">내부 연락처 추가</div><button class="modal-close" onclick="closeModal('m-internal-contact')">✕</button></div>
     <input type="hidden" id="internal-contact-eid">
     <div class="field"><label>직급</label>
-      <select id="internal-contact-position" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;background:var(--white);color:var(--gray-800);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22><path fill=%22%236b7280%22 d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;background-size:16px;cursor:pointer;">
+      <select id="internal-contact-position" onchange="document.getElementById('internal-contact-teamnum-field').style.display=this.value==='SM'?'block':'none'" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;background:var(--white);color:var(--gray-800);appearance:none;-webkit-appearance:none;background-image:url('data:image/svg+xml;utf8,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 20 20%22><path fill=%22%236b7280%22 d=%22M5.293 7.293a1 1 0 011.414 0L10 10.586l3.293-3.293a1 1 0 111.414 1.414l-4 4a1 1 0 01-1.414 0l-4-4a1 1 0 010-1.414z%22/></svg>');background-repeat:no-repeat;background-position:right 12px center;background-size:16px;cursor:pointer;">
         <option value="">선택</option>
         <option value="BM">BM</option>
         <option value="총무">총무</option>
@@ -1042,6 +1051,7 @@
         <option value="FC">FC</option>
       </select>
     </div>
+    <div class="field" id="internal-contact-teamnum-field"><label>팀 번호 <span style="font-size:11px;color:var(--gray-400);">(SM만 해당)</span></label><input type="number" id="internal-contact-teamnum" placeholder="예: 1" min="1" max="99" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;"></div>
     <div class="field"><label>이름 *</label><input type="text" id="internal-contact-name" placeholder="홍길동"></div>
     <div class="field"><label>전화번호</label><input type="tel" id="internal-contact-phone" placeholder="010-0000-0000" oninput="fmtPhoneInput(this)" maxlength="13"></div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-internal-contact')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveInternalContact()">저장</button></div>
@@ -1521,7 +1531,6 @@ async function saveProfileName() {
     await db.collection('users').doc(CU.uid).update({ name });
     CU.name = name;
     $('hd-name').textContent = name;
-    $('hd-avatar').textContent = name[0];
     $('profile-current-name').textContent = name;
     $('profile-name').value = '';
     toast('이름이 변경됐습니다 ✅', 'success');
@@ -1867,10 +1876,10 @@ async function savePromoTarget() {
 }
 
 async function initApp() {
-  $('hd-name').textContent = CU.name; $('hd-avatar').textContent = CU.name[0];
+  $('hd-name').textContent = CU.name;
   const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
   if (isAdmin) {
-    $('hd-avatar').classList.add('admin-av');
+    $('hd-backup-btn').style.display = '';
     $('admin-nav-btn').style.display='flex'; $('admin-bnav-btn').style.display='flex';
     $('team-admin-nav-btn').style.display='flex'; $('team-admin-bnav-btn').style.display='flex';
     $('ins-add-btn').style.display='block'; $('note-add-btn').style.display='block';
@@ -2582,6 +2591,7 @@ const INSURER_LIST = [
   '우체국보험','교직원공제회','군인공제회','새마을금고공제','신협공제'
 ];
 let _insuredRowIdx = 0;
+let _childRowIdx = 0;
 function addInsuredRow(data) {
   const idx = _insuredRowIdx++;
   const ins = data?.insurer || '';
@@ -2621,11 +2631,33 @@ function _loadInsuredRows(list) {
   _insuredRowIdx = 0;
   (list || []).forEach(item => addInsuredRow(item));
 }
-function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-ins-co','c-car-date','c-stage','c-silbi'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;_loadInsuredRows([]);openModal('m-customer');}
-function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';$('c-rrn').value=fmtRrnVal(c.rrn||'');$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-ins-co').value=c.insCo||'';$('c-car-date').value=c.carDate||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-is-prospect').checked=!!c.isProspect;_loadInsuredRows(c.insuredList||[]);closeModal('m-cdetail');openModal('m-customer');}
-async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value, d={name:n,rrn:$('c-rrn').value.replace(/-/g,'').slice(0,7),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,insCo:$('c-ins-co').value.trim(),carDate:$('c-car-date').value.trim(),stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),insuredList:_getInsuredList(),isProspect:$('c-is-prospect').checked};try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
+function addChildRow(data) {
+  const idx = _childRowIdx++;
+  const row = document.createElement('div');
+  row.id = 'child-row-' + idx;
+  row.style.cssText = 'display:grid;grid-template-columns:1fr 1.3fr auto;gap:6px;align-items:center;background:var(--gray-50);border-radius:8px;padding:7px 8px;';
+  row.innerHTML =
+    '<input type="text" class="child-name" value="' + esc(data && data.name || '') + '" placeholder="이름" style="padding:7px 8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none;width:100%;">' +
+    '<input type="text" class="child-rrn" value="' + fmtRrnVal(data && data.rrn || '') + '" placeholder="000000-0" maxlength="8" oninput="fmtRrn(this)" style="padding:7px 8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;outline:none;width:100%;letter-spacing:1px;">' +
+    '<button type="button" onclick="this.parentElement.remove()" style="width:26px;height:26px;border:none;background:#fee2e2;color:#dc2626;border-radius:6px;cursor:pointer;font-size:14px;line-height:1;padding:0;flex-shrink:0;">×</button>';
+  $('c-child-rows').appendChild(row);
+}
+function _getChildList() {
+  return Array.from($('c-child-rows').querySelectorAll('[id^=child-row-]')).map(row => ({
+    name: (row.querySelector('.child-name') && row.querySelector('.child-name').value.trim()) || '',
+    rrn:  (row.querySelector('.child-rrn')  && row.querySelector('.child-rrn').value.replace(/-/g,'').slice(0,7)) || ''
+  })).filter(function(r){ return r.name; });
+}
+function _loadChildRows(list) {
+  $('c-child-rows').innerHTML = '';
+  _childRowIdx = 0;
+  (list || []).forEach(function(item){ addChildRow(item); });
+}
+function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-ins-co','c-car-date','c-stage','c-silbi'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;_loadInsuredRows([]);_loadChildRows([]);openModal('m-customer');}
+function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';$('c-rrn').value=fmtRrnVal(c.rrn||'');$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-ins-co').value=c.insCo||'';$('c-car-date').value=c.carDate||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-is-prospect').checked=!!c.isProspect;_loadInsuredRows(c.insuredList||[]);_loadChildRows(c.children||[]);closeModal('m-cdetail');openModal('m-customer');}
+async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value, d={name:n,rrn:$('c-rrn').value.replace(/-/g,'').slice(0,7),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,insCo:$('c-ins-co').value.trim(),carDate:$('c-car-date').value.trim(),stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),insuredList:_getInsuredList(),children:_getChildList(),isProspect:$('c-is-prospect').checked};try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
 async function delCustomer(id){if(!confirm('삭제?'))return;allCustomers=allCustomers.filter(c=>c.id!==id);closeModal('m-cdetail');renderCustomers();renderHome();await col('customers').doc(id).delete();}
-function showCDetail(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;const diff=c.carDate?carDiff(c.carDate):null;const showWarn=diff!==null&&diff<=30;const ac=showWarn?carAlertClass(diff):'';const carAlertHtml=showWarn?`<div class="car-alert-box ${ac}"><div class="car-alert-left"><div class="car-alert-title">🚗 자동차보험 만기${diff<=0?'됨':'임박'}</div><div class="car-alert-sub">${esc(c.insCo||'보험사 미등록')} · 만기일 ${esc(c.carDate)}</div></div><div style="text-align:right;"><div class="car-alert-days">${diff<=0?'만기':diff}</div><div class="car-alert-days-label">${diff<=0?'':diff+'일 전'}</div></div></div>`:'';$('m-cdetail-body').innerHTML=`${carAlertHtml}<div class="detail-name">${esc(c.name)}</div>${c.stage?`<span class="badge badge-orange" style="margin-bottom:12px;">${esc(c.stage)}</span>`:''}${c.rrn?`<div class="detail-field"><label>주민번호</label><div>${esc(c.rrn)}</div></div>`:''}${c.telecom?`<div class="detail-field"><label>통신사</label><div>${esc(c.telecom)}</div></div>`:''}${c.phone?`<div class="detail-field"><label>전화번호</label><a href="tel:${c.phone.replace(/\D/g,'')}" class="action-chip chip-call">📞 ${esc(c.phone)}</a></div>`:''}${c.addr?`<div class="detail-field"><label>주소</label><div style="margin-bottom:5px;">${esc(c.addr)}</div><button class="action-chip chip-map" onclick="showMap('${eattr(c.addr)}')">🗺 지도</button></div>`:''}${c.job?`<div class="detail-field"><label>직업</label><div>${esc(c.job)}</div></div>`:''}${c.driving?`<div class="detail-field"><label>운전여부</label><div>${esc(c.driving)}</div></div>`:''}${c.insCo?`<div class="detail-field"><label>자동차보험사</label><div>${esc(c.insCo)}</div></div>`:''}${c.carDate?`<div class="detail-field"><label>자동차보험만기일</label><div style="font-weight:600;${showWarn?'color:'+( diff<=0?'#b91c1c':'#c2410c'):''}">${esc(c.carDate)}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${(c.insuredList&&c.insuredList.length)?`<div class="detail-field"><label>가입 보험사</label><div style="margin-top:6px;border:1px solid var(--gray-100);border-radius:10px;overflow:hidden;"><div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;background:var(--gray-50);padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);"><span>보험사</span><span>계약일</span><span>월보험료</span><span>이체일</span><span>은행명</span></div>${c.insuredList.map((item,i)=>`<div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;padding:6px 8px;font-size:12px;border-bottom:${i<c.insuredList.length-1?'1px solid var(--gray-50)':'none'};"><span style="font-weight:600;color:var(--primary);">${esc(item.insurer||'')}</span><span style="color:#1d4ed8;font-weight:600;">${item.contractDate||'-'}</span><span>${item.monthlyPremium?Number(item.monthlyPremium).toLocaleString()+'원':'-'}</span><span>${item.autoDebitDate?item.autoDebitDate+'일':'-'}</span><span>${esc(item.bankName||'-')}</span></div>`).join('')}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${c.isProspect?`<div class="detail-field"><label>사업대상자</label><div style="color:#92400e;font-weight:700;background:#fef3c7;padding:6px 12px;border-radius:8px;display:inline-block;">🎯 사업대상자 체크됨</div></div>`:''}<div class="modal-actions"><button class="btn-danger-ghost" onclick="delCustomer('${c.id}')">삭제</button><button class="btn-ghost" onclick="openCEdit('${c.id}')">수정</button></div>`;openModal('m-cdetail');}
+function showCDetail(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;const diff=c.carDate?carDiff(c.carDate):null;const showWarn=diff!==null&&diff<=30;const ac=showWarn?carAlertClass(diff):'';const carAlertHtml=showWarn?`<div class="car-alert-box ${ac}"><div class="car-alert-left"><div class="car-alert-title">🚗 자동차보험 만기${diff<=0?'됨':'임박'}</div><div class="car-alert-sub">${esc(c.insCo||'보험사 미등록')} · 만기일 ${esc(c.carDate)}</div></div><div style="text-align:right;"><div class="car-alert-days">${diff<=0?'만기':diff}</div><div class="car-alert-days-label">${diff<=0?'':diff+'일 전'}</div></div></div>`:'';$('m-cdetail-body').innerHTML=`${carAlertHtml}<div class="detail-name">${esc(c.name)}</div>${c.stage?`<span class="badge badge-orange" style="margin-bottom:12px;">${esc(c.stage)}</span>`:''}${c.rrn?`<div class="detail-field"><label>주민번호</label><div>${esc(c.rrn)}</div></div>`:''}${c.telecom?`<div class="detail-field"><label>통신사</label><div>${esc(c.telecom)}</div></div>`:''}${c.phone?`<div class="detail-field"><label>전화번호</label><a href="tel:${c.phone.replace(/\D/g,'')}" class="action-chip chip-call">📞 ${esc(c.phone)}</a></div>`:''}${c.addr?`<div class="detail-field"><label>주소</label><div style="margin-bottom:5px;">${esc(c.addr)}</div><button class="action-chip chip-map" onclick="showMap('${eattr(c.addr)}')">🗺 지도</button></div>`:''}${c.job?`<div class="detail-field"><label>직업</label><div>${esc(c.job)}</div></div>`:''}${c.driving?`<div class="detail-field"><label>운전여부</label><div>${esc(c.driving)}</div></div>`:''}${c.insCo?`<div class="detail-field"><label>자동차보험사</label><div>${esc(c.insCo)}</div></div>`:''}${c.carDate?`<div class="detail-field"><label>자동차보험만기일</label><div style="font-weight:600;${showWarn?'color:'+( diff<=0?'#b91c1c':'#c2410c'):''}">${esc(c.carDate)}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${(c.insuredList&&c.insuredList.length)?`<div class="detail-field"><label>가입 보험사</label><div style="margin-top:6px;border:1px solid var(--gray-100);border-radius:10px;overflow:hidden;"><div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;background:var(--gray-50);padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);"><span>보험사</span><span>계약일</span><span>월보험료</span><span>이체일</span><span>은행명</span></div>${c.insuredList.map((item,i)=>`<div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;padding:6px 8px;font-size:12px;border-bottom:${i<c.insuredList.length-1?'1px solid var(--gray-50)':'none'};"><span style="font-weight:600;color:var(--primary);">${esc(item.insurer||'')}</span><span style="color:#1d4ed8;font-weight:600;">${item.contractDate||'-'}</span><span>${item.monthlyPremium?Number(item.monthlyPremium).toLocaleString()+'원':'-'}</span><span>${item.autoDebitDate?item.autoDebitDate+'일':'-'}</span><span>${esc(item.bankName||'-')}</span></div>`).join('')}</div></div>`:''}${(c.children&&c.children.length)?`<div class="detail-field"><label>자녀</label><div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;">${c.children.map(ch=>`<div style="display:flex;align-items:center;gap:10px;background:var(--gray-50);border-radius:8px;padding:6px 10px;font-size:13px;"><span style="font-weight:700;color:#7c3aed;">👶 ${esc(ch.name||'')}</span>${ch.rrn?`<span style="color:var(--gray-500);font-size:12px;">${esc(fmtRrnVal(ch.rrn))}</span>`:''}</div>`).join('')}</div></div>`:''}${c.isProspect?`<div class="detail-field"><label>사업대상자</label><div style="color:#92400e;font-weight:700;background:#fef3c7;padding:6px 12px;border-radius:8px;display:inline-block;">🎯 사업대상자 체크됨</div></div>`:''}<div class="modal-actions"><button class="btn-danger-ghost" onclick="delCustomer('${c.id}')">삭제</button><button class="btn-ghost" onclick="openCEdit('${c.id}')">수정</button></div>`;openModal('m-cdetail');}
 let customerProspectFilter = 'all';
 function filterCustomerProspect(type, btn) {
   customerProspectFilter = type;
@@ -3877,6 +3909,14 @@ function renderManagerContact() {
   });
   let html = '<div style="display:flex;flex-direction:column;gap:16px;margin-top:10px;">';
   const allRanks = [...RANK_ORDER, ...Object.keys(groups).filter(k => !RANK_ORDER.includes(k))];
+  // SM 그룹: 팀번호 오름차순 정렬
+  if (groups['SM']) {
+    groups['SM'].sort((a, b) => {
+      const na = a.teamNum != null ? a.teamNum : 9999;
+      const nb = b.teamNum != null ? b.teamNum : 9999;
+      return na - nb;
+    });
+  }
   allRanks.forEach(rank => {
     const members = groups[rank];
     if (!members || !members.length) return;
@@ -3889,9 +3929,8 @@ function renderManagerContact() {
       </div>
       <div style="display:flex;flex-direction:column;gap:6px;padding-left:12px;border-left:2px solid ${color}20;">
         ${members.map(m => `<div class="item-card" style="display:flex;align-items:center;gap:12px;padding:10px 14px;">
-          <div style="width:36px;height:36px;border-radius:50%;background:${color}18;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:700;color:${color};flex-shrink:0;">${esc((m.name||'?')[0])}</div>
           <div style="flex:1;">
-            <div style="font-size:14px;font-weight:700;">${esc(m.name||'')}</div>
+            <div style="font-size:14px;font-weight:700;">${m.teamNum && rank==='SM' ? `<span style="font-size:11px;color:var(--white);background:${color};border-radius:10px;padding:1px 7px;margin-right:6px;">${m.teamNum}팀</span>` : ''}${esc(m.name||'')}</div>
           </div>
           ${m.phone ? `<a href="tel:${m.phone.replace(/[^0-9]/g,'')}" style="font-size:13px;color:var(--primary);font-weight:600;">${esc(m.phone)}</a>` : ''}
           ${canEdit ? `<div style="display:flex;gap:4px;"><button class="icon-btn" onclick="openInternalContactEdit('${m.id}')">✏️</button><button class="icon-btn" style="color:var(--danger);" onclick="delSharedManager('${m.id}')">🗑</button></div>` : ''}
@@ -3947,7 +3986,8 @@ function openInternalContactAdd() {
   closeModal('m-contact-type-chooser');
   $('m-internal-contact-title').textContent = '내부 연락처 추가';
   $('internal-contact-eid').value = '';
-  ['internal-contact-position','internal-contact-name','internal-contact-phone'].forEach(id => $(id).value = '');
+  ['internal-contact-position','internal-contact-name','internal-contact-phone','internal-contact-teamnum'].forEach(id => $(id).value = '');
+  $('internal-contact-teamnum-field').style.display = 'none';
   openModal('m-internal-contact');
 }
 function openInternalContactEdit(id) {
@@ -3958,6 +3998,8 @@ function openInternalContactEdit(id) {
   $('internal-contact-position').value = m.position || '';
   $('internal-contact-name').value = m.name || '';
   $('internal-contact-phone').value = m.phone || '';
+  $('internal-contact-teamnum').value = m.teamNum || '';
+  $('internal-contact-teamnum-field').style.display = m.position === 'SM' ? 'block' : 'none';
   openModal('m-internal-contact');
 }
 async function saveInternalContact() {
@@ -3967,7 +4009,8 @@ async function saveInternalContact() {
     contactType: 'internal',
     position: $('internal-contact-position').value.trim(),
     name,
-    phone: $('internal-contact-phone').value.trim()
+    phone: $('internal-contact-phone').value.trim(),
+    teamNum: parseInt($('internal-contact-teamnum').value) || null
   };
   const eid = $('internal-contact-eid').value;
   try {
@@ -4455,21 +4498,26 @@ function _tw_memberListHtml(type) {
       late = !!ta.late;
       if (done) detail = '인증 완료';
     }
-    return {uid, name: u.name, done, late, detail};
+        const absent = !!(myT.absentUids && myT.absentUids[uid]);
+    return {uid, name: u.name, done, late, detail, absent};
   }).filter(Boolean);
 
   if (!items.length) return '';
-  items.sort((a, b) => a.done === b.done ? 0 : a.done ? 1 : -1);
+  items.sort((a, b) => {
+    if (a.absent !== b.absent) return a.absent ? 1 : -1;
+    return a.done === b.done ? 0 : a.done ? 1 : -1;
+  });
 
-  const doneCount = items.filter(i => i.done).length;
+  const doneCount = items.filter(i => i.done && !i.absent).length;
+  const activeCount = items.filter(i => !i.absent).length;
   return `<div style="margin-top:14px;border-top:1px solid var(--gray-100);padding-top:10px;">
-    <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">팀원 현황 ${doneCount}/${items.length}명</div>
+    <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">팀원 현황 ${doneCount}/${activeCount}명</div>
     ${items.map(it => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-50);">
-      <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${it.done ? (it.late?'var(--warning)':'var(--success)') : 'var(--gray-300)'};" ></span>
+      <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${it.absent ? 'var(--gray-200)' : it.done ? (it.late?'var(--warning)':'var(--success)') : 'var(--gray-300)'};" ></span>
       <span style="font-size:13px;font-weight:600;min-width:50px;">${esc(it.name)}</span>
-      ${it.late ? '<span style="font-size:11px;color:var(--danger);white-space:nowrap;">⏰</span>' : ''}
-      <span style="font-size:12px;color:${it.done?'var(--gray-500)':'var(--danger)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-        ${it.done ? esc(it.detail) : '미완료'}
+      ${!it.absent && it.late ? '<span style="font-size:11px;color:var(--danger);white-space:nowrap;">⏰</span>' : ''}
+      <span style="font-size:12px;color:${it.absent?'var(--gray-400)':it.done?'var(--gray-500)':'var(--danger)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+        ${it.absent ? '미출근' : it.done ? esc(it.detail) : '미완료'}
       </span>
     </div>`).join('')}
   </div>`;
@@ -4501,11 +4549,20 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
     (a.status ? `<span class="tw-status-chip done">✅ ${STATUS.find(s=>s.k===a.status)?.l||a.status}</span>` :
     `<span class="tw-status-chip pending">미체크</span>`);
 
+  const _today = tw_today();
+  const _ydObj = new Date(); _ydObj.setDate(_ydObj.getDate()-1);
+  const _yesterday = _ydObj.getFullYear()+'-'+String(_ydObj.getMonth()+1).padStart(2,'0')+'-'+String(_ydObj.getDate()).padStart(2,'0');
+  const _isToday = twDate === _today;
+  const _isTodayOrYesterday = _isToday || twDate === _yesterday;
+
   const btns = STATUS.map(s => {
     const isSelected = a.status === s.k;
     const t = allTimes[s.k] ? new Date(allTimes[s.k].toDate ? allTimes[s.k].toDate() : allTimes[s.k]).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
     // 비활성화 조건
     let disabled = false;
+    // 날짜 제한: 기상·출발·도착은 오늘만 / 직출·OFF는 전날·오늘만
+    if ((s.k === 'wake' || s.k === 'depart' || s.k === 'arrive') && !_isToday) disabled = true;
+    if ((s.k === 'direct' || s.k === 'off') && !_isTodayOrYesterday) disabled = true;
     if (!a.status && (s.k === 'depart' || s.k === 'arrive')) disabled = true; // 기상 전
     if (a.status === 'depart' && (s.k === 'wake' || s.k === 'depart')) disabled = true; // 출발 후
     return `<button class="tw-attend-btn ${isSelected?'selected':''}${disabled?' opacity-40':''}" ${disabled?'disabled style="opacity:.4;cursor:not-allowed;"':''} onclick="${disabled?'':'selectAttend(\''+s.k+'\')'}">
@@ -4526,6 +4583,16 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
 }
 
 async function selectAttend(status) {
+  // 날짜 제한 가드
+  const _chkToday = tw_today();
+  const _chkYdObj = new Date(); _chkYdObj.setDate(_chkYdObj.getDate()-1);
+  const _chkYesterday = _chkYdObj.getFullYear()+'-'+String(_chkYdObj.getMonth()+1).padStart(2,'0')+'-'+String(_chkYdObj.getDate()).padStart(2,'0');
+  if ((status === 'wake' || status === 'depart' || status === 'arrive') && twDate !== _chkToday) {
+    toast('기상·출발·도착은 오늘만 체크 가능합니다', 'error'); return;
+  }
+  if ((status === 'direct' || status === 'off') && twDate !== _chkToday && twDate !== _chkYesterday) {
+    toast('직출·OFF는 전날·오늘만 체크 가능합니다', 'error'); return;
+  }
   const now = new Date();
   const myR = twReports[CU.uid] || {};
   const prevAllTimes = (myR.attend || {}).allTimes || {};
@@ -5027,7 +5094,7 @@ async function openMemberAbsenceModal(date) {
   const memberUids = (myT.memberIds||[]).filter(uid => uid !== myT.leaderId);
   const existing = await db.collection('shared_teams').where('teamNum','==',myT.teamNum).limit(1).get();
   const absentUids = existing.empty ? [] : (existing.docs[0].data().absentUids || {});
-  const absentSet = new Set(Object.keys(absentUids).filter(uid => absentUids[uid] === date));
+  const absentSet = new Set(Object.keys(absentUids).filter(uid => !!absentUids[uid]));
   const names = memberUids.map(uid => {
     const u = allUsers.find(x => x.uid === uid);
     return u ? {uid, name: u.name, absent: absentSet.has(uid)} : null;
@@ -5072,6 +5139,8 @@ async function _autoRecordLates() {
   if (!CU) return;
   const myT = myTeam();
   if (myT && myT.leaderId === CU.uid) return; // 팀장 제외
+  // 미출근자는 지각 기록 제외
+  if (myT && myT.absentUids && myT.absentUids[CU.uid]) return;
   const now = new Date();
   const isWD = tw_isWeekday(twDate);
   const myR = twReports[CU.uid] || {};
@@ -5197,7 +5266,7 @@ async function _autoRecordLatesForTeam() {
     if (uid === CU.uid) continue; // 본인은 _autoRecordLates()에서 이미 처리
     // 미출근자 지각 제외 (팀에서 absent로 표시된 경우)
     const myTForAbsent = Object.values(allTeams).find(t => (t.memberIds||[]).includes(uid) || t.leaderId===uid);
-    if (myTForAbsent && myTForAbsent.absentUids && myTForAbsent.absentUids[uid] === twDate) continue;
+    if (myTForAbsent && myTForAbsent.absentUids && myTForAbsent.absentUids[uid]) continue;  // 미출근자 지각 제외
     const r = twReports[uid] || {};
     const goal = (twGoals[uid] || {})[weekNum] || {};
 
@@ -5315,6 +5384,12 @@ async function _tw_lateSection(canEdit) {
   let uids = isAdmin
     ? allUsers.map(u => u.uid).filter(uid => !Object.values(allTeams).some(t => t.leaderId === uid))
     : (myT ? (myT.memberIds||[]).filter(uid => uid && uid !== leaderUid) : [CU.uid]);
+
+  // 미출근자 제외
+  uids = uids.filter(uid => {
+    const t = Object.values(allTeams).find(t => (t.memberIds||[]).includes(uid) || t.leaderId===uid);
+    return !(t && t.absentUids && t.absentUids[uid]);
+  });
 
   // twDate 기준으로 기간 계산 → 날짜 이동 시 해당 날짜의 정산기간 표시
   const {start, end} = _getLateFeePeriod(twDate);
@@ -6146,7 +6221,7 @@ async function openMemberAbsenceModal2(teamNum) {
 
   const members = memberUids.map(uid => {
     const u = allUsers.find(x=>x.uid===uid);
-    const isAbsent = existingAbsent[uid] === date;
+    const isAbsent = !!existingAbsent[uid];  // 날짜 무관, 설정 여부만 확인
     return u ? {uid, name:u.name, isAbsent} : null;
   }).filter(Boolean);
 
@@ -6182,27 +6257,35 @@ async function openMemberAbsenceModal2(teamNum) {
   });
   overlay._memberUids = memberUids;
   overlay._members = members;
+  overlay._existingAbsent = existingAbsent;
+  overlay._date = date;
   openModal('m-absence-modal');
 }
 async function saveAbsence(docId, teamNum, date) {
   const overlay = $('m-absence-modal');
   if (!overlay) return;
   const members = overlay._members || [];
-  const newAbsent = {};
+  const savedDate = overlay._date || date;
+  // 기존 데이터에서 현재 날짜만 업데이트 (다른 날짜 항목 보존)
+  const updatedAbsent = Object.assign({}, overlay._existingAbsent || {});
   members.forEach(m => {
     const cb = document.getElementById('abs-'+m.uid);
-    if(cb && cb.checked) newAbsent[m.uid] = date;
+    if (!cb) return;
+    if (cb.checked) {
+      updatedAbsent[m.uid] = true;   // 미출근: 해제 전까지 유지
+    } else {
+      delete updatedAbsent[m.uid];   // 출근: 즉시 해제
+    }
   });
   try {
-    const ref = docId ? db.collection('shared_teams').doc(docId) : db.collection('shared_teams').where('teamNum','==',Number(teamNum)).limit(1);
     if (docId) {
-      await db.collection('shared_teams').doc(docId).update({absentUids: newAbsent});
+      await db.collection('shared_teams').doc(docId).update({absentUids: updatedAbsent});
     } else {
       const q = await db.collection('shared_teams').where('teamNum','==',Number(teamNum)).limit(1).get();
-      if (!q.empty) await q.docs[0].ref.update({absentUids: newAbsent});
+      if (!q.empty) await q.docs[0].ref.update({absentUids: updatedAbsent});
     }
     // allTeams 캐시 업데이트
-    Object.keys(allTeams).forEach(k => { if(String(allTeams[k].teamNum)===String(teamNum)) allTeams[k].absentUids=newAbsent; });
+    Object.keys(allTeams).forEach(k => { if(String(allTeams[k].teamNum)===String(teamNum)) allTeams[k].absentUids=updatedAbsent; });
     closeModal('m-absence-modal');
     toast('저장됐습니다','success');
     renderTeamAdmin();
