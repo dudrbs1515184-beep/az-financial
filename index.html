@@ -504,7 +504,7 @@
 
     <!-- 고객관리 -->
     <section id="sec-customers" class="section">
-      <div class="sec-head"><h2 class="sec-title">고객관리</h2><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-ghost" onclick="openCustomerMap()" style="font-size:13px;font-weight:600;">🗺 내 고객 모아보기</button><button class="btn-ghost" onclick="importFromSheets()" style="font-size:13px;font-weight:600;">불러오기</button><button class="btn-ghost" onclick="syncToSheets()" style="font-size:13px;font-weight:600;">내보내기</button><button class="icon-btn" onclick="openGsConfig()">⚙️</button><button class="btn-outline" onclick="openCAdd()">+ 고객 추가</button></div></div>
+      <div class="sec-head"><h2 class="sec-title">고객관리</h2><div style="display:flex;gap:8px;flex-wrap:wrap;"><button class="btn-ghost" onclick="openCustomerMap()" style="font-size:13px;font-weight:600;">🗺 내 고객 모아보기</button><button class="btn-ghost" onclick="importFromSheets()" style="font-size:13px;font-weight:600;">불러오기</button><button class="btn-ghost" onclick="syncToSheets()" style="font-size:13px;font-weight:600;">내보내기</button><button class="icon-btn" onclick="openGsConfig()">⚙️</button><button class="btn-ghost" onclick="openBulkImport()" style="font-size:13px;font-weight:600;">📋 대량 등록</button><button class="btn-outline" onclick="openCAdd()">+ 고객 추가</button></div></div>
       <div id="gs-status" style="display:none;font-size:12px;color:var(--gray-500);margin-bottom:8px;padding:8px;background:var(--gray-50);border-radius:8px;"></div>
       <div class="tabs">
         <button class="tab active" onclick="filterCustomerProspect('all',this)">전체</button>
@@ -741,6 +741,12 @@
   <div class="modal">
     <div class="modal-head"><div class="modal-title" id="m-c-title">고객 추가</div><button class="modal-close" onclick="closeModal('m-customer')">✕</button></div>
     <input type="hidden" id="c-eid">
+    <!-- 빠른 입력 영역 -->
+    <div style="background:#f0f9ff;border:1.5px solid #bae6fd;border-radius:10px;padding:12px 14px;margin-bottom:12px;">
+      <div style="font-size:12px;font-weight:700;color:#0369a1;margin-bottom:8px;">⚡ 빠른 입력 (텍스트 붙여넣기)</div>
+      <textarea id="c-quick-input" rows="4" placeholder="예시)&#10;홍길동&#10;901215-1234567&#10;010-1234-5678 SKT&#10;서울시 강남구 테헤란로 123&#10;회사원&#10;예" style="width:100%;padding:9px 12px;border:1.5px solid #bae6fd;border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;background:white;outline:none;font-family:inherit;"></textarea>
+      <button type="button" onclick="parseCustomerQuickInput()" style="margin-top:8px;width:100%;padding:9px;background:#0369a1;color:white;border:none;border-radius:8px;font-size:13px;font-weight:700;cursor:pointer;">자동 채우기</button>
+    </div>
     <div class="field"><label>이름 *</label><input type="text" id="c-name"></div>
     <div class="field"><label>주민번호 (앞 7자리)</label><input type="text" id="c-rrn" maxlength="8" placeholder="예: 900101-1" oninput="fmtRrn(this)"></div>
     <div class="field"><label>통신사</label><select id="c-telecom"><option value="">선택</option><option value="SKT">SKT</option><option value="KT">KT</option><option value="LGU+">LGU+</option><option value="SKT 알뜰폰">SKT 알뜰폰</option><option value="KT 알뜰폰">KT 알뜰폰</option><option value="LGU+ 알뜰폰">LGU+ 알뜰폰</option><option value="기타">기타</option></select></div>
@@ -780,6 +786,24 @@
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-customer')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveCustomer()">저장</button></div>
   </div>
 </div>
+<!-- 대량 고객 등록 모달 -->
+<div class="overlay" id="m-bulk-import">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-head">
+      <div class="modal-title">📋 고객 대량 등록</div>
+      <button class="modal-close" onclick="closeModal('m-bulk-import')">✕</button>
+    </div>
+    <div style="font-size:12px;color:var(--gray-500);background:var(--gray-50);border-radius:8px;padding:10px 12px;margin-bottom:12px;line-height:1.7;">
+      고객 1명당 <b>빈 줄</b>로 구분해서 입력하세요.<br>
+      순서: 이름 → 주민번호 → 전화번호(통신사) → 주소 → 직업 → 운전여부<br>
+      <span style="color:var(--gray-400);">* 없는 항목은 건너뛰어도 됩니다</span>
+    </div>
+    <textarea id="bulk-input" rows="10" placeholder="홍길동&#10;901215-1234567&#10;010-1234-5678 SKT&#10;서울시 강남구&#10;회사원&#10;예&#10;&#10;김철수&#10;850320-2345678&#10;010-9876-5432 KT&#10;부산시 해운대구&#10;자영업&#10;아니오" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;resize:vertical;box-sizing:border-box;font-family:inherit;outline:none;"></textarea>
+    <button type="button" onclick="parseBulkImport()" style="margin-top:10px;width:100%;padding:10px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">분석하기</button>
+    <div id="bulk-preview" style="margin-top:14px;"></div>
+  </div>
+</div>
+
 <div class="overlay" id="m-cdetail"><div class="modal"><div class="modal-head"><div class="modal-title">상세 정보</div><button class="modal-close" onclick="closeModal('m-cdetail')">✕</button></div><div id="m-cdetail-body"></div></div></div>
 <div class="overlay" id="m-insurance">
   <div class="modal">
@@ -1494,6 +1518,12 @@ auth.onAuthStateChanged(async (fbUser) => {
     if (CU.status === 'pending') { $('pending-name-msg').textContent = CU.name + '님,'; showScreen('pending'); return; }
     if (CU.status === 'rejected') { await auth.signOut(); showErr('l-err', '❌ 승인이 거절되었습니다.'); return; }
     await initApp(); showScreen('app');
+    // 마지막 접속 시간 저장
+    try {
+      await db.collection('users').doc(fbUser.uid).update({
+        lastLoginAt: firebase.firestore.FieldValue.serverTimestamp()
+      });
+    } catch(e) {}
   } catch (e) { showScreen('login'); showErr('l-err', '❌ 접속 오류: ' + e.message); }
 });
 async function doLogin() {
@@ -2653,8 +2683,213 @@ function _loadChildRows(list) {
   _childRowIdx = 0;
   (list || []).forEach(function(item){ addChildRow(item); });
 }
-function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-ins-co','c-car-date','c-stage','c-silbi'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;_loadInsuredRows([]);_loadChildRows([]);openModal('m-customer');}
+function openBulkImport() {
+  $('bulk-input').value = '';
+  $('bulk-preview').innerHTML = '';
+  openModal('m-bulk-import');
+}
+
+function _parseSingleCustomer(lines) {
+  let name='', rrn='', phone='', telecom='', addr='', job='', driving='';
+  const telecomKw = [
+    ['SKT 알뜰폰',['SKT알뜰','SKT 알뜰']],
+    ['KT 알뜰폰', ['KT알뜰','KT 알뜰']],
+    ['LGU+ 알뜰폰',['LGU+알뜰','LG알뜰','LGU+ 알뜰','LG 알뜰']],
+    ['SKT',['SKT']],['KT',['KT']],['LGU+',['LGU+','LG유플','LG유플러스','LGU플러스','LGU+','LG']],
+  ];
+  function detectTelecom(str) {
+    const s = str.replace(/\s/g,'').toUpperCase();
+    for (const [val, keys] of telecomKw)
+      if (keys.some(k => s.includes(k.replace(/\s/g,'').toUpperCase()))) return val;
+    return '';
+  }
+  lines.forEach(line => {
+    const rrnM = line.match(/(\d{6})-?(\d{1,7})/);
+    if (rrnM && line.replace(/[^0-9]/g,'').length >= 7) { rrn = rrnM[1]+'-'+rrnM[2][0]; return; }
+    const phoneM = line.match(/(0\d{1,2})[-\s]?(\d{3,4})[-\s]?(\d{4})/);
+    if (phoneM) {
+      phone = phoneM[1]+'-'+phoneM[2]+'-'+phoneM[3];
+      const rest = line.replace(phoneM[0],'').trim();
+      if (!telecom && rest) telecom = detectTelecom(rest);
+      return;
+    }
+    const tc = detectTelecom(line);
+    if (tc && line.replace(/\s/g,'').length <= 10) { telecom = tc; return; }
+    if (!driving) {
+      // 운전 - X / 운전-X / 운전X → 아니오
+      if (/운전\s*[-:]\s*[Xx✗×]/.test(line) || /운전\s*[Xx]$/.test(line) || /운전\s*(아니|없|no)/i.test(line)) { driving='아니오'; return; }
+      // 운전 - O / 운전-O / 운전O / 운전 - 예 → 예
+      if (/운전\s*[-:]\s*[Oo✓○]/.test(line) || /운전\s*[Oo]$/.test(line) || /운전\s*(예|네|있|yes)/i.test(line)) { driving='예'; return; }
+      // 단독 키워드
+      if (/^(예|네|있음|yes)$/i.test(line)) { driving='예'; return; }
+      if (/^(아니오|아니|없음|무면허|no)$/i.test(line)) { driving='아니오'; return; }
+      // O / X 단독
+      if (/^[Oo]$/.test(line)) { driving='예'; return; }
+      if (/^[Xx]$/.test(line)) { driving='아니오'; return; }
+    }
+    if (!addr && line.length >= 5 && /시|도|구|동|로|길|읍|면|리/.test(line)) { addr=line; return; }
+    if (!name) { const _nl = line.replace(/^[^가-힣]+/, '').replace(/[(（].*?[)）]/g, '').trim(); if (/^[가-힣]{2,5}$/.test(_nl)) { name=_nl; return; } }
+    if (!job && line.length >= 2) { job=line; }
+  });
+  return {name, rrn, phone, telecom, addr, job, driving};
+}
+
+let _bulkParsed = [];
+function parseBulkImport() {
+  const raw = $('bulk-input').value.trim();
+  if (!raw) { toast('텍스트를 입력해주세요', 'error'); return; }
+
+  // 빈 줄로 고객 구분
+  const blocks = raw.split(/\n\s*\n/).map(b => b.trim()).filter(Boolean);
+  _bulkParsed = blocks.map(block => _parseSingleCustomer(block.split('\n').map(l=>l.trim()).filter(Boolean)));
+  const valid = _bulkParsed.filter(c => c.name);
+
+  if (!valid.length) { $('bulk-preview').innerHTML = '<div style="color:var(--danger);text-align:center;padding:16px;">이름을 인식한 고객이 없습니다. 형식을 확인해주세요.</div>'; return; }
+
+  const rows = _bulkParsed.map((c, i) => {
+    const ok = !!c.name;
+    return `<tr style="background:${ok?'white':'#fff1f1'};">
+      <td style="padding:7px 10px;font-size:13px;font-weight:${ok?'700':'400'};color:${ok?'var(--gray-800)':'var(--danger)'};">${esc(c.name||'❌ 이름 없음')}</td>
+      <td style="padding:7px 6px;font-size:12px;color:var(--gray-600);">${esc(c.rrn||'-')}</td>
+      <td style="padding:7px 6px;font-size:12px;color:var(--gray-600);">${esc(c.phone||'-')}</td>
+      <td style="padding:7px 6px;font-size:12px;color:var(--gray-600);">${esc(c.telecom||'-')}</td>
+      <td style="padding:7px 6px;font-size:12px;color:var(--gray-600);">${esc(c.addr||'-')}</td>
+      <td style="padding:7px 6px;font-size:12px;color:var(--gray-600);">${esc(c.job||'-')}</td>
+      <td style="padding:7px 6px;font-size:12px;color:var(--gray-600);">${esc(c.driving||'-')}</td>
+    </tr>`;
+  }).join('');
+
+  $('bulk-preview').innerHTML = `
+    <div style="font-size:13px;font-weight:700;margin-bottom:8px;">총 ${blocks.length}명 분석 · 등록 가능 <span style="color:var(--primary);">${valid.length}명</span>${blocks.length-valid.length>0?` · <span style="color:var(--danger);">이름 없음 ${blocks.length-valid.length}명 (제외됨)</span>`:''}</div>
+    <div style="overflow-x:auto;border:1px solid var(--gray-100);border-radius:10px;margin-bottom:12px;">
+      <table style="width:100%;border-collapse:collapse;font-size:12px;">
+        <thead><tr style="background:var(--gray-50);">
+          <th style="padding:7px 10px;text-align:left;font-size:11px;color:var(--gray-500);">이름</th>
+          <th style="padding:7px 6px;text-align:left;font-size:11px;color:var(--gray-500);">주민번호</th>
+          <th style="padding:7px 6px;text-align:left;font-size:11px;color:var(--gray-500);">전화번호</th>
+          <th style="padding:7px 6px;text-align:left;font-size:11px;color:var(--gray-500);">통신사</th>
+          <th style="padding:7px 6px;text-align:left;font-size:11px;color:var(--gray-500);">주소</th>
+          <th style="padding:7px 6px;text-align:left;font-size:11px;color:var(--gray-500);">직업</th>
+          <th style="padding:7px 6px;text-align:left;font-size:11px;color:var(--gray-500);">운전</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+    <button type="button" onclick="saveBulkImport()" style="width:100%;padding:11px;background:#16a34a;color:white;border:none;border-radius:8px;font-size:14px;font-weight:700;cursor:pointer;">✅ ${valid.length}명 전체 등록</button>`;
+}
+
+let _bulkSaving = false;
+async function saveBulkImport() {
+  if (_bulkSaving) return;
+  const valid = _bulkParsed.filter(c => c.name);
+  if (!valid.length) return;
+  _bulkSaving = true;
+  const btn = $('bulk-preview').querySelector('button');
+  if (btn) { btn.disabled = true; btn.textContent = '저장 중...'; }
+  let saved = 0;
+  try {
+    for (const c of valid) {
+      const d = {
+        name: c.name,
+        rrn: c.rrn ? c.rrn.replace(/-/g,'').slice(0,7) : '',
+        telecom: c.telecom||'', phone: c.phone||'',
+        addr: c.addr||'', job: c.job||'', driving: c.driving||'',
+        insCo:'', carDate:'', stage:'', silbi:'',
+        insuredList:[], children:[], isProspect:false,
+        createdAt: firebase.firestore.FieldValue.serverTimestamp()
+      };
+      await col('customers').add(d);
+      saved++;
+    }
+    // 저장 완료 후 Firestore에서 새로 불러와 렌더링 (중복 방지)
+    await loadCustomers();
+    closeModal('m-bulk-import');
+    renderCustomers(); renderHome();
+    toast(`${saved}명 등록 완료`, 'success');
+  } catch(e) {
+    toast('저장 중 오류: ' + e.message, 'error');
+    if (btn) { btn.disabled = false; btn.textContent = `✅ ${valid.length}명 전체 등록`; }
+  } finally {
+    _bulkSaving = false;
+  }
+}
+
+function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';$('c-quick-input').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-ins-co','c-car-date','c-stage','c-silbi'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;_loadInsuredRows([]);_loadChildRows([]);openModal('m-customer');}
 function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';$('c-rrn').value=fmtRrnVal(c.rrn||'');$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-ins-co').value=c.insCo||'';$('c-car-date').value=c.carDate||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-is-prospect').checked=!!c.isProspect;_loadInsuredRows(c.insuredList||[]);_loadChildRows(c.children||[]);closeModal('m-cdetail');openModal('m-customer');}
+function parseCustomerQuickInput() {
+  const raw = $('c-quick-input').value.trim();
+  if (!raw) { toast('텍스트를 입력해주세요', 'error'); return; }
+
+  const lines = raw.split(/\n/).map(l => l.trim()).filter(Boolean);
+  let name='', rrn='', phone='', telecom='', addr='', job='', driving='';
+
+  const telecomKw = [
+    ['SKT 알뜰폰',['SKT알뜰','SKT 알뜰']],
+    ['KT 알뜰폰', ['KT알뜰','KT 알뜰']],
+    ['LGU+ 알뜰폰',['LGU+알뜰','LG알뜰','LGU+ 알뜰','LG 알뜰']],
+    ['SKT',['SKT']],['KT',['KT']],['LGU+',['LGU+','LG유플','LG유플러스','LGU플러스','LGU+','LG']],
+  ];
+
+  function detectTelecom(str) {
+    const s = str.replace(/\s/g,'').toUpperCase();
+    for (const [val, keys] of telecomKw) {
+      if (keys.some(k => s.includes(k.replace(/\s/g,'').toUpperCase()))) return val;
+    }
+    return '';
+  }
+
+  lines.forEach(line => {
+    // 주민번호: 숫자 6자리 + (-)? + 숫자 1~7자리 로 구성된 라인
+    const rrnM = line.match(/(\d{6})-?(\d{1,7})/);
+    if (rrnM) {
+      const full = line.replace(/[^0-9]/g,'');
+      if (full.length >= 7) { rrn = rrnM[1] + '-' + rrnM[2][0]; return; }
+    }
+    // 전화번호
+    const phoneM = line.match(/(0\d{1,2})[-\s]?(\d{3,4})[-\s]?(\d{4})/);
+    if (phoneM) {
+      phone = phoneM[1] + '-' + phoneM[2] + '-' + phoneM[3];
+      const rest = line.replace(phoneM[0],'').trim();
+      if (!telecom && rest) telecom = detectTelecom(rest);
+      return;
+    }
+    // 통신사만
+    const tc = detectTelecom(line);
+    if (tc && line.replace(/\s/g,'').length <= 10) { telecom = tc; return; }
+    // 운전여부
+    if (!driving) {
+      // 운전 - X / 운전-X / 운전X → 아니오
+      if (/운전\s*[-:]\s*[Xx✗×]/.test(line) || /운전\s*[Xx]$/.test(line) || /운전\s*(아니|없|no)/i.test(line)) { driving='아니오'; return; }
+      // 운전 - O / 운전-O / 운전O / 운전 - 예 → 예
+      if (/운전\s*[-:]\s*[Oo✓○]/.test(line) || /운전\s*[Oo]$/.test(line) || /운전\s*(예|네|있|yes)/i.test(line)) { driving='예'; return; }
+      // 단독 키워드
+      if (/^(예|네|있음|yes)$/i.test(line)) { driving='예'; return; }
+      if (/^(아니오|아니|없음|무면허|no)$/i.test(line)) { driving='아니오'; return; }
+      // O / X 단독
+      if (/^[Oo]$/.test(line)) { driving='예'; return; }
+      if (/^[Xx]$/.test(line)) { driving='아니오'; return; }
+    }
+    // 주소: 시/도/구/동/로/길 포함 + 5자 이상
+    if (!addr && line.length >= 5 && /시|도|구|동|로|길|읍|면|리/.test(line)) { addr=line; return; }
+    // 이름: 한글 2~5자
+    if (!name) { const _nl = line.replace(/^[^가-힣]+/, '').replace(/[(（].*?[)）]/g, '').trim(); if (/^[가-힣]{2,5}$/.test(_nl)) { name=_nl; return; } }
+    // 직업: 나머지
+    if (!job && line.length >= 2) { job=line; }
+  });
+
+  let filled = 0;
+  if (name)    { $('c-name').value = name; filled++; }
+  if (rrn)     { $('c-rrn').value = rrn; fmtRrn($('c-rrn')); filled++; }
+  if (phone)   { $('c-phone').value = phone; fmtPhoneInput($('c-phone')); filled++; }
+  if (telecom) { $('c-telecom').value = telecom; filled++; }
+  if (addr)    { $('c-addr').value = addr; filled++; }
+  if (job)     { $('c-job').value = job; filled++; }
+  if (driving) { $('c-driving').value = driving; filled++; }
+
+  if (filled > 0) toast(`${filled}개 항목 자동 입력됨`, 'success');
+  else toast('인식된 항목이 없습니다. 형식을 확인해주세요', 'error');
+}
+
 async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value, d={name:n,rrn:$('c-rrn').value.replace(/-/g,'').slice(0,7),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,insCo:$('c-ins-co').value.trim(),carDate:$('c-car-date').value.trim(),stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),insuredList:_getInsuredList(),children:_getChildList(),isProspect:$('c-is-prospect').checked};try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
 async function delCustomer(id){if(!confirm('삭제?'))return;allCustomers=allCustomers.filter(c=>c.id!==id);closeModal('m-cdetail');renderCustomers();renderHome();await col('customers').doc(id).delete();}
 function showCDetail(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;const diff=c.carDate?carDiff(c.carDate):null;const showWarn=diff!==null&&diff<=30;const ac=showWarn?carAlertClass(diff):'';const carAlertHtml=showWarn?`<div class="car-alert-box ${ac}"><div class="car-alert-left"><div class="car-alert-title">🚗 자동차보험 만기${diff<=0?'됨':'임박'}</div><div class="car-alert-sub">${esc(c.insCo||'보험사 미등록')} · 만기일 ${esc(c.carDate)}</div></div><div style="text-align:right;"><div class="car-alert-days">${diff<=0?'만기':diff}</div><div class="car-alert-days-label">${diff<=0?'':diff+'일 전'}</div></div></div>`:'';$('m-cdetail-body').innerHTML=`${carAlertHtml}<div class="detail-name">${esc(c.name)}</div>${c.stage?`<span class="badge badge-orange" style="margin-bottom:12px;">${esc(c.stage)}</span>`:''}${c.rrn?`<div class="detail-field"><label>주민번호</label><div>${esc(c.rrn)}</div></div>`:''}${c.telecom?`<div class="detail-field"><label>통신사</label><div>${esc(c.telecom)}</div></div>`:''}${c.phone?`<div class="detail-field"><label>전화번호</label><a href="tel:${c.phone.replace(/\D/g,'')}" class="action-chip chip-call">📞 ${esc(c.phone)}</a></div>`:''}${c.addr?`<div class="detail-field"><label>주소</label><div style="margin-bottom:5px;">${esc(c.addr)}</div><button class="action-chip chip-map" onclick="showMap('${eattr(c.addr)}')">🗺 지도</button></div>`:''}${c.job?`<div class="detail-field"><label>직업</label><div>${esc(c.job)}</div></div>`:''}${c.driving?`<div class="detail-field"><label>운전여부</label><div>${esc(c.driving)}</div></div>`:''}${c.insCo?`<div class="detail-field"><label>자동차보험사</label><div>${esc(c.insCo)}</div></div>`:''}${c.carDate?`<div class="detail-field"><label>자동차보험만기일</label><div style="font-weight:600;${showWarn?'color:'+( diff<=0?'#b91c1c':'#c2410c'):''}">${esc(c.carDate)}</div></div>`:''}${c.silbi?`<div class="detail-field"><label>실비보험사</label><div style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</div></div>`:''}${(c.insuredList&&c.insuredList.length)?`<div class="detail-field"><label>가입 보험사</label><div style="margin-top:6px;border:1px solid var(--gray-100);border-radius:10px;overflow:hidden;"><div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;background:var(--gray-50);padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);"><span>보험사</span><span>계약일</span><span>월보험료</span><span>이체일</span><span>은행명</span></div>${c.insuredList.map((item,i)=>`<div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;padding:6px 8px;font-size:12px;border-bottom:${i<c.insuredList.length-1?'1px solid var(--gray-50)':'none'};"><span style="font-weight:600;color:var(--primary);">${esc(item.insurer||'')}</span><span style="color:#1d4ed8;font-weight:600;">${item.contractDate||'-'}</span><span>${item.monthlyPremium?Number(item.monthlyPremium).toLocaleString()+'원':'-'}</span><span>${item.autoDebitDate?item.autoDebitDate+'일':'-'}</span><span>${esc(item.bankName||'-')}</span></div>`).join('')}</div></div>`:''}${(c.children&&c.children.length)?`<div class="detail-field"><label>자녀</label><div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;">${c.children.map(ch=>`<div style="display:flex;align-items:center;gap:10px;background:var(--gray-50);border-radius:8px;padding:6px 10px;font-size:13px;"><span style="font-weight:700;color:#7c3aed;">👶 ${esc(ch.name||'')}</span>${ch.rrn?`<span style="color:var(--gray-500);font-size:12px;">${esc(fmtRrnVal(ch.rrn))}</span>`:''}</div>`).join('')}</div></div>`:''}${c.isProspect?`<div class="detail-field"><label>사업대상자</label><div style="color:#92400e;font-weight:700;background:#fef3c7;padding:6px 12px;border-radius:8px;display:inline-block;">🎯 사업대상자 체크됨</div></div>`:''}<div class="modal-actions"><button class="btn-danger-ghost" onclick="delCustomer('${c.id}')">삭제</button><button class="btn-ghost" onclick="openCEdit('${c.id}')">수정</button></div>`;openModal('m-cdetail');}
@@ -4149,6 +4384,7 @@ function renderTeamAdmin() {
         <span style="font-size:11px;color:var(--primary);margin-left:5px;background:var(--primary-bg);padding:1px 6px;border-radius:4px;">${roleLabel}</span>
         <span style="font-size:11px;color:var(--gray-400);margin-left:5px;">${esc(u.employeeId||'')} · ${teamLabel}</span>
       </div>
+      <span style="font-size:11px;color:var(--gray-400);">${u.lastLoginAt ? (() => { const d = u.lastLoginAt.toDate ? u.lastLoginAt.toDate() : new Date(u.lastLoginAt.seconds*1000); return d.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); })() : '기록없음'}</span>
       ${isAdmin ? `<button style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;" onclick="deleteUserAccount('${u.uid}','${eattr(u.name)}')">삭제</button>` : ''}
     </div>`;
   }).join('');
