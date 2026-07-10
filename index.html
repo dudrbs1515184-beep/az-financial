@@ -3204,18 +3204,10 @@ function renderCustomers(q=''){
   if(customerProspectFilter === 'prospect') l = l.filter(c => c.isProspect);
   if(q){const lq=q.toLowerCase();l=l.filter(c=>c.name?.includes(lq)||c.phone?.includes(lq));}
 
-  // 정렬 우선순위: 1순위 사업대상자 고정 → 2순위 생일 7일 이내 → 3순위 자동차보험 30일 이내
+  // 정렬: 1순위 사업대상자 → 2순위 가나다순
   l.sort((a,b)=>{
     const pa=a.isProspect?0:1, pb=b.isProspect?0:1;
     if(pa!==pb)return pa-pb;
-    const bda=bdayDiff(a.rrn), bdb=bdayDiff(b.rrn);
-    const bwa=bda!==null&&bda>=0&&bda<=7, bwb=bdb!==null&&bdb>=0&&bdb<=7;
-    if(bwa&&!bwb)return -1; if(!bwa&&bwb)return 1;
-    if(bwa&&bwb)return bda-bdb;
-    const da=_minCarDiff(a), db=_minCarDiff(b);
-    const wa=da!==null&&da<=30, wb=db!==null&&db<=30;
-    if(wa&&!wb)return -1; if(!wa&&wb)return 1;
-    if(wa&&wb)return da-db;
     return (a.name||'').localeCompare(b.name||'','ko');
   });
 
@@ -3257,7 +3249,6 @@ function renderCustomers(q=''){
       </div>
       <div class="card-meta">${c.phone?`<div class="meta-item">📞 ${esc(c.phone)}</div>`:''}${c.telecom?`<div class="meta-item">📱 ${esc(c.telecom)}</div>`:''}</div>
       ${showCar?`<div class="car-expiry-row ${ac}">🚗 자동차보험 만기임박 <span class="car-days">${carDiffLabel(diff)}</span></div>`:''}
-      ${showBday?`<div class="car-expiry-row car-soon" style="background:#fdf4ff;color:#7c3aed;">🎂 생일 임박 <span class="car-days" style="background:#ede9fe;color:#7c3aed;">${bd===0?'오늘 🎉':`D-${bd}`}</span></div>`:''}
       <div style="margin-top:9px;padding-top:8px;border-top:1px solid var(--gray-100);">
         <button onclick="event.stopPropagation();openCoverage('${c.id}')" style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;background:${hasCov?'linear-gradient(135deg,#1e40af,#2563eb)':'var(--gray-50)'};color:${hasCov?'white':'var(--gray-500)'};border:1px solid ${hasCov?'transparent':'var(--gray-200)'};border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;">🛡 보장보기${hasCov?'':' <span style=\'font-size:10px;opacity:.7;margin-left:2px;\'>미입력</span>'}</button>
       </div>
@@ -5256,17 +5247,19 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   const _today = tw_today();
   const _ydObj = new Date(); _ydObj.setDate(_ydObj.getDate()-1);
   const _yesterday = _ydObj.getFullYear()+'-'+String(_ydObj.getMonth()+1).padStart(2,'0')+'-'+String(_ydObj.getDate()).padStart(2,'0');
+  const _futureObj = new Date(); _futureObj.setDate(_futureObj.getDate()+7);
+  const _futureLimit = _futureObj.getFullYear()+'-'+String(_futureObj.getMonth()+1).padStart(2,'0')+'-'+String(_futureObj.getDate()).padStart(2,'0');
   const _isToday = twDate === _today;
-  const _isTodayOrYesterday = _isToday || twDate === _yesterday;
+  const _inDirectOffRange = twDate >= _yesterday && twDate <= _futureLimit;
 
   const btns = STATUS.map(s => {
     const isSelected = a.status === s.k;
     const t = allTimes[s.k] ? new Date(allTimes[s.k].toDate ? allTimes[s.k].toDate() : allTimes[s.k]).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
     // 비활성화 조건
     let disabled = false;
-    // 날짜 제한: 기상·출발·도착은 오늘만 / 직출·OFF는 전날·오늘만
+    // 날짜 제한: 기상·출발·도착은 오늘만 / 직출·OFF는 어제~7일 후
     if ((s.k === 'wake' || s.k === 'depart' || s.k === 'arrive') && !_isToday) disabled = true;
-    if ((s.k === 'direct' || s.k === 'off') && !_isTodayOrYesterday) disabled = true;
+    if ((s.k === 'direct' || s.k === 'off') && !_inDirectOffRange) disabled = true;
     if (!a.status && (s.k === 'depart' || s.k === 'arrive')) disabled = true; // 기상 전
     if (a.status === 'depart' && (s.k === 'wake' || s.k === 'depart')) disabled = true; // 출발 후
     if (a.status === 'arrive' && (s.k === 'wake' || s.k === 'depart' || s.k === 'arrive')) disabled = true; // 도착 후
@@ -5277,12 +5270,19 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
     </button>`;
   }).join('');
 
+  // 직출·OFF 취소 버튼 (선택된 경우)
+  const canCancelDirectOff = (a.status === 'direct' || a.status === 'off') && canEdit;
+  const cancelBtn = canCancelDirectOff
+    ? `<button onclick="cancelAttend()" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px solid var(--gray-300);background:#fff5f5;color:#dc2626;font-size:13px;cursor:pointer;">✕ ${a.status==='direct'?'직출':'OFF'} 체크 취소</button>`
+    : '';
+
   const attendAutoNote = !a.status ? _autoLateNote(a) : '';
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div>${chip}</div>
     ${attendAutoNote}
-    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (직출·OFF 면제)</p>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (직출·OFF 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${btns}</div>
+    ${cancelBtn}
     ${memberList}
   </div>`;
 }
@@ -5295,8 +5295,13 @@ async function selectAttend(status) {
   if ((status === 'wake' || status === 'depart' || status === 'arrive') && twDate !== _chkToday) {
     toast('기상·출발·도착은 오늘만 체크 가능합니다', 'error'); return;
   }
-  if ((status === 'direct' || status === 'off') && twDate !== _chkToday && twDate !== _chkYesterday) {
-    toast('직출·OFF는 전날·오늘만 체크 가능합니다', 'error'); return;
+  // 직출·OFF: 어제~7일 후 허용
+  if (status === 'direct' || status === 'off') {
+    const _chkFutureObj = new Date(); _chkFutureObj.setDate(_chkFutureObj.getDate()+7);
+    const _chkFuture = _chkFutureObj.getFullYear()+'-'+String(_chkFutureObj.getMonth()+1).padStart(2,'0')+'-'+String(_chkFutureObj.getDate()).padStart(2,'0');
+    if (twDate < _chkYesterday || twDate > _chkFuture) {
+      toast('직출·OFF는 어제~7일 후까지만 체크 가능합니다', 'error'); return;
+    }
   }
   const now = new Date();
   const myR = twReports[CU.uid] || {};
@@ -5315,12 +5320,10 @@ async function selectAttend(status) {
   if (!prevStatus && (status === 'depart' || status === 'arrive')) {
     toast('먼저 기상을 체크해주세요', 'error'); return;
   }
-  // OFF 체크: 전날 자정(00:00) 까지만 정상, 그 이후는 지각 처리
+  // 지각 판정: OFF/직출은 면제, 기상·출발·도착은 08:00 기준
   let isLate = false;
   if (status === 'off') {
-    // 해당 날짜 00:00:00 = 그날 자정
-    const prevMidnight = new Date(twDate); prevMidnight.setHours(0,0,0,0);
-    isLate = now >= prevMidnight; // 당일 00:00 이후 체크하면 지각
+    isLate = false; // OFF는 지각 없음
   } else {
     const exempt = status === 'direct';
     const hour8 = new Date(twDate); hour8.setHours(8,0,0,0);
@@ -5340,9 +5343,27 @@ async function selectAttend(status) {
     twReports[CU.uid].attend = {...attendData, time: now, allTimes: {...prevAllTimes, [status]: now}};
     if (isLate) await recordLate(CU.uid, twDate, 'attendance');
     renderTeamwork(true);
-    const msg = status==='off' ? (isLate?'OFF 체크 (지각 처리됨)':'OFF 체크 완료') : (isLate?'출근 체크 (지각 처리됨)':'출근 체크 완료');
+    const msg = status==='off' ? 'OFF 체크 완료' : (isLate?'출근 체크 (지각 처리됨)':'출근 체크 완료');
     toast(msg, isLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
+}
+
+async function cancelAttend() {
+  const myR = twReports[CU.uid] || {};
+  const prevStatus = (myR.attend || {}).status;
+  if (prevStatus !== 'direct' && prevStatus !== 'off') {
+    toast('직출·OFF 체크만 취소할 수 있습니다', 'error'); return;
+  }
+  const label = prevStatus === 'direct' ? '직출' : 'OFF';
+  if (!confirm(`${label} 체크를 취소하시겠습니까?`)) return;
+  try {
+    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).update({
+      attend: firebase.firestore.FieldValue.delete()
+    });
+    if (twReports[CU.uid]) twReports[CU.uid].attend = {};
+    renderTeamwork(true);
+    toast(`${label} 체크가 취소되었습니다`, 'success');
+  } catch(e) { toast('취소 중 오류가 발생했습니다', 'error'); }
 }
 
 async function _tw_goalSection(canEdit, isLeader) {
@@ -5350,8 +5371,10 @@ async function _tw_goalSection(canEdit, isLeader) {
   const weekNum = _getWeekNum(twDate);
   const myGoal = (twGoals[CU.uid] || {})[weekNum] || {};
 
-  const monDL = _getWeekDeadline(twDate, 1, 12, 1);
-  let deadlineLabel = now <= monDL ? '✅ 마감 전' : '⚠️ 마감 초과';
+  const monDL = _getWeekDeadline(twDate, 1, 12, 1);  // 목표: 월요일 12:00
+  const sunDL = _getWeekDeadline(twDate, 0, 18, 0);  // 달성: 일요일 18:00
+  const goalDLLabel = now <= monDL ? '✅ 마감 전' : '⚠️ 마감 초과';
+  const achDLLabel  = now <= sunDL ? '✅ 마감 전' : '⚠️ 마감 초과';
 
   const isLate = myGoal.late;
   const hasDone = myGoal.goalCount !== undefined || myGoal.achCount !== undefined;
@@ -5361,9 +5384,10 @@ async function _tw_goalSection(canEdit, isLeader) {
   const teamTableHtml = _tw_goalTableHtml(weekNum);
 
   // 팀장: 입력 없이 표만 표시
+  const weekRange = _getWeekRange(twDate);
   if (isLeader) {
     return `<div class="tw-section">
-      <div class="tw-section-head"><div class="tw-section-title">🎯 목표취합</div></div>
+      <div class="tw-section-head"><div class="tw-section-title">🎯 목표취합</div><span style="font-size:12px;color:var(--gray-500);">${weekRange}</span></div>
       ${teamTableHtml}
     </div>`;
   }
@@ -5390,7 +5414,9 @@ async function _tw_goalSection(canEdit, isLeader) {
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">🎯 목표취합</div>${chip}</div>
     ${goalAutoNote}
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">매주 월요일 12:00 마감 · ${deadlineLabel}</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">${weekRange}</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:2px;">📋 목표 마감: 월요일 12:00 · ${goalDLLabel}</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">📊 달성 마감: 일요일 18:00 · ${achDLLabel}</div>
     ${myRows}
     <button class="btn-outline" style="width:100%;padding:11px;" onclick="openGoalModal()">
       ${hasDone ? '수정하기' : '목표·달성 입력하기'}
@@ -5492,17 +5518,35 @@ function _tw_goalTableHtml(weekNum) {
 }
 
 function _getWeekNum(dateStr) {
-  const d = new Date(dateStr);
-  const oneJan = new Date(d.getFullYear(),0,1);
-  return Math.ceil((((d-oneJan)/86400000)+oneJan.getDay()+1)/7);
+  const d = new Date(dateStr + 'T00:00:00');
+  // 월요일을 주 시작으로: 해당 주 월요일로 앵커링
+  const day = d.getDay() || 7; // 일요일(0) → 7
+  const mon = new Date(d);
+  mon.setDate(d.getDate() - (day - 1));
+  const oneJan = new Date(mon.getFullYear(), 0, 1);
+  return Math.ceil((((mon - oneJan) / 86400000) + oneJan.getDay() + 1) / 7);
+}
+
+function _getWeekRange(dateStr) {
+  // 해당 주 월요일~일요일 범위 반환: "7월 6일~12일" 형식
+  const d = new Date(dateStr + 'T00:00:00');
+  const day = d.getDay() || 7;
+  const mon = new Date(d); mon.setDate(d.getDate() - (day - 1));
+  const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+  const mM = mon.getMonth()+1, mD = mon.getDate();
+  const sM = sun.getMonth()+1, sD = sun.getDate();
+  if (mM === sM) return `${mM}월 ${mD}일~${sD}일`;
+  return `${mM}월 ${mD}일~${sM}월 ${sD}일`;
 }
 
 function _getWeekDeadline(dateStr, targetDay, hour, min) {
-  const d = new Date(dateStr);
-  const curDay = d.getDay();
-  const diff = ((targetDay - curDay) % 7 + 7) % 7;
+  const d = new Date(dateStr + 'T00:00:00');
+  // 월요일(1) 기준 주에서 targetDay 위치 계산
+  const curDay = d.getDay() || 7; // 일요일(0) → 7
+  const monBasedTarget = targetDay === 0 ? 7 : targetDay;
+  const diff = monBasedTarget - curDay; // 음수: 이전 날짜 (같은 주 내)
   const dl = new Date(d);
-  dl.setDate(dl.getDate() + diff);
+  dl.setDate(d.getDate() + diff);
   dl.setHours(hour, min, 0, 0);
   return dl;
 }
@@ -5522,11 +5566,16 @@ async function openGoalModal() {
     $('goal-ach-action').value    = g.achAction  != null ? g.achAction  : '';
   } catch(e) {}
   const monDL = _getWeekDeadline(twDate, 1, 12, 1);
+  const sunDL = _getWeekDeadline(twDate, 0, 18, 0);
   const now = new Date();
-  let info = '매주 월요일 12:00 마감';
-  if (now > monDL) info += ' — ⚠️ 마감 초과 (지각 처리)';
-  else info += ' — ✅ 마감 전';
-  $('goals-deadline-info').textContent = info;
+  const _wr = _getWeekRange(twDate);
+  const _goalStatus = now > monDL ? '⚠️ 마감 초과' : '✅ 마감 전';
+  const _achStatus  = now > sunDL  ? '⚠️ 마감 초과' : '✅ 마감 전';
+  $('goals-deadline-info').innerHTML =
+    `<span style="font-weight:600;">${_wr}</span><br>` +
+    `📋 목표: 월요일 12:00 마감 · ${_goalStatus}<br>` +
+    `📊 달성: 일요일 18:00 마감 · ${_achStatus}<br>` +
+    `<span style="color:#dc2626;font-size:11px;">※ 늦으면 목표취합 지각 처리</span>`;
   openModal('m-goals');
 }
 
@@ -5541,11 +5590,17 @@ async function saveGoal() {
   const achAction  = Number($('goal-ach-action').value)    || 0;
   const weekNum = _getWeekNum(twDate);
   const now = new Date();
-  const monDL = _getWeekDeadline(twDate, 1, 12, 1);
-  // 이미 제출된 기록이 있고 late===false이면 수정해도 지각 유지 안 함
+  const monDL = _getWeekDeadline(twDate, 1, 12, 1); // 목표 마감: 월요일 12:00
+  const sunDL = _getWeekDeadline(twDate, 0, 18, 0); // 달성 마감: 일요일 18:00
   const existingGoal = (twGoals[CU.uid]||{})[weekNum] || {};
-  const alreadySubmitted = existingGoal.goalCount !== undefined || existingGoal.achCount !== undefined;
-  const isLate = (alreadySubmitted && existingGoal.late === false) ? false : (now > monDL);
+  // 목표 필드 입력 여부
+  const hasGoalInput = goalCount || goalCanp || goalCis || goalAction;
+  const hasAchInput  = achCount  || achCanp  || achCis  || achAction;
+  // 기존 기록이 있고 late===false이면 유지
+  const prevLateOk = existingGoal.late === false;
+  const goalLate = !prevLateOk && hasGoalInput && (now > monDL);
+  const achLate  = !prevLateOk && hasAchInput  && (now > sunDL);
+  const isLate = goalLate || achLate;
 
   try {
     await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).set(
@@ -5557,7 +5612,8 @@ async function saveGoal() {
     if (isLate) await recordLate(CU.uid, twDate, 'goal');
     closeModal('m-goals');
     renderTeamwork();
-    toast(isLate ? '저장됨 (지각 처리)' : '저장됨', isLate ? 'error' : 'success');
+    const lateMsg = goalLate && achLate ? '목표·달성 지각' : goalLate ? '목표 지각' : achLate ? '달성 지각' : '';
+    toast(isLate ? `저장됨 (${lateMsg} 처리)` : '저장됨', isLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
 }
 
@@ -5897,7 +5953,7 @@ async function _autoRecordLates() {
     }
   }
 
-  // 2. 목표취합 (그 주 월요일 12:00 마감)
+  // 2. 목표취합 (목표: 월요일 12:00 / 달성: 일요일 18:00 — 자동지각은 월요일 기준)
   if (now > monDL) {
     const hasDone = myGoal.goalCount !== undefined || myGoal.achCount !== undefined;
     if (!hasDone && !myGoal.late && !myGoal.autoLatedAt) {
