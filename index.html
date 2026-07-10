@@ -5114,9 +5114,9 @@ async function renderTeamwork(skipReload) {
   if (typeof renderSicheck === 'function') renderSicheck();
   const attendHtml  = _tw_attendSection(myR, isWD, canEdit, isLeader);
   const goalHtml    = await _tw_goalSection(canEdit, isLeader);
-  const actHtml     = _tw_actSection(myR, canEdit, isLeader);
-  const revHtml     = _tw_reviewSection(myR, canEdit, isLeader);
-  const taHtml      = _tw_taSection(myR, canEdit, isLeader);
+  const actHtml     = _tw_actSection(myR, canEdit, isLeader, isAdmin);
+  const revHtml     = _tw_reviewSection(myR, canEdit, isLeader, isAdmin);
+  const taHtml      = _tw_taSection(myR, canEdit, isLeader, isAdmin);
   const lateHtml    = await _tw_lateSection(canEdit);
   // 팀원 현황 요약 — 관리자 + 해당팀 팀장만 표시
   const teamStatusHtml = (isAdmin || isLeader) ? _tw_teamStatus() : '';
@@ -5321,13 +5321,27 @@ async function selectAttend(status) {
     toast('먼저 기상을 체크해주세요', 'error'); return;
   }
   // 지각 판정: OFF/직출은 면제, 기상·출발·도착은 08:00 기준
+  // depart/arrive는 기상 시각 기준으로 판정 (기상이 8시 전이면 지각 아님)
   let isLate = false;
   if (status === 'off') {
     isLate = false; // OFF는 지각 없음
   } else {
     const exempt = status === 'direct';
     const hour8 = new Date(twDate); hour8.setHours(8,0,0,0);
-    isLate = !exempt && now > hour8 && tw_isWeekday(twDate);
+    if (!exempt && tw_isWeekday(twDate)) {
+      if (status === 'depart' || status === 'arrive') {
+        // 기상(wake) 시각이 있으면 그 시각 기준, 없으면 현재 시각 기준
+        const wakeRaw = prevAllTimes.wake;
+        let refTime = now;
+        if (wakeRaw) {
+          refTime = wakeRaw.toDate ? wakeRaw.toDate() : (wakeRaw instanceof Date ? wakeRaw : new Date(wakeRaw));
+        }
+        isLate = refTime > hour8;
+      } else {
+        // 기상(wake): 현재 시각 기준
+        isLate = now > hour8;
+      }
+    }
   }
 
   const attendData = {
@@ -5364,6 +5378,68 @@ async function cancelAttend() {
     renderTeamwork(true);
     toast(`${label} 체크가 취소되었습니다`, 'success');
   } catch(e) { toast('취소 중 오류가 발생했습니다', 'error'); }
+}
+
+async function adminEditTime(section, field) {
+  // 관리자 전용: 활동보고·하루후기·TA인증 완료 시간 수정
+  const myR = twReports[CU.uid] || {};
+  let currentTs = null;
+  if (section === 'activity') currentTs = (myR.activity||{})[field];
+  else if (section === 'review') currentTs = (myR.review||{})[field];
+  else if (section === 'ta') currentTs = (myR.ta||{}).checkedAt || (myR.ta||{}).savedAt;
+
+  let currentTime = '';
+  if (currentTs) {
+    try {
+      const d = currentTs.toDate ? currentTs.toDate() : new Date(currentTs.seconds*1000||currentTs);
+      currentTime = d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit',hour12:false});
+    } catch(e) {}
+  }
+
+  const input = prompt(`완료 시간 수정 (HH:MM)
+현재: ${currentTime||'없음'}`, currentTime||'');
+  if (input === null) return;
+  const parts = input.trim().split(':');
+  if (parts.length !== 2) { toast('HH:MM 형식으로 입력하세요', 'error'); return; }
+  const h = parseInt(parts[0]), m = parseInt(parts[1]);
+  if (isNaN(h)||isNaN(m)||h<0||h>23||m<0||m>59) { toast('올바른 시간을 입력하세요', 'error'); return; }
+
+  const newDate = new Date(twDate + 'T00:00:00');
+  newDate.setHours(h, m, 0, 0);
+
+  // 지각 재판정
+  let newLate = false;
+  if (section === 'activity') {
+    const dl12 = new Date(twDate); dl12.setHours(12, 0, 0, 0);
+    newLate = newDate > dl12;
+  } else if (section === 'review' || section === 'ta') {
+    const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6, 0, 0, 0);
+    newLate = newDate > dlNext6;
+  }
+
+  try {
+    const newTs = firebase.firestore.Timestamp.fromDate(newDate);
+    let updateData = {};
+    if (section === 'activity') {
+      updateData = {activity: {[field]: newTs, late: newLate}};
+      if (!twReports[CU.uid].activity) twReports[CU.uid].activity = {};
+      twReports[CU.uid].activity[field] = newDate;
+      twReports[CU.uid].activity.late = newLate;
+    } else if (section === 'review') {
+      updateData = {review: {[field]: newTs, late: newLate}};
+      if (!twReports[CU.uid].review) twReports[CU.uid].review = {};
+      twReports[CU.uid].review[field] = newDate;
+      twReports[CU.uid].review.late = newLate;
+    } else if (section === 'ta') {
+      updateData = {ta: {checkedAt: newTs, late: newLate}};
+      if (!twReports[CU.uid].ta) twReports[CU.uid].ta = {};
+      twReports[CU.uid].ta.checkedAt = newDate;
+      twReports[CU.uid].ta.late = newLate;
+    }
+    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set(updateData, {merge:true});
+    renderTeamwork(true);
+    toast(`시간 수정 완료 (${newLate?'지각':'정상'})`, newLate?'error':'success');
+  } catch(e) { toast('저장 오류','error'); }
 }
 
 async function _tw_goalSection(canEdit, isLeader) {
@@ -5624,7 +5700,7 @@ function _fmtSavedAt(ts) {
     return d.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
   } catch(e) { return '-'; }
 }
-function _tw_actSection(myR, canEdit, isLeader) {
+function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
   const a = myR.activity || {};
   const hasDone = !!a.content;
   const chip = _chipStatus(hasDone, a.late, '미작성');
@@ -5636,12 +5712,15 @@ function _tw_actSection(myR, canEdit, isLeader) {
     </div>`;
   }
   const actAutoNote = !hasDone ? _autoLateNote(a) : '';
+  const adminTimeBtn = isAdmin && hasDone
+    ? `<button onclick="adminEditTime('activity','firstSavedAt')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>`
+    : '';
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📝 활동보고</div>${chip}</div>
     ${actAutoNote}
     <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">당일 12:00 마감</div>
     ${hasDone ? `<div style="background:var(--gray-50);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;margin-bottom:10px;">${esc(a.content)}</div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">📌 등록: ${_fmtSavedAt(a.firstSavedAt)}</div>` : ''}
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">📌 등록: ${_fmtSavedAt(a.firstSavedAt)}${adminTimeBtn}</div>` : ''}
     <button class="btn-outline" style="width:100%;padding:11px;" onclick="openActivityModal()">
       ${hasDone ? '수정하기' : '활동보고 작성'}
     </button>
@@ -5659,7 +5738,7 @@ async function saveActivity() {
   const content = $('activity-content').value.trim();
   if (!content) { toast('내용을 입력하세요','error'); return; }
   const now = new Date();
-  const deadline = new Date(twDate); deadline.setHours(12,1,0,0);
+  const deadline = new Date(twDate); deadline.setHours(12,0,0,0); // 12:00 마감
   // 이미 제출된 기록이 있고 late===false이면 수정해도 지각 유지 안 함
   const existingAct = (twReports[CU.uid]||{}).activity || {};
   const isLate = (existingAct.content && existingAct.late === false) ? false : (now > deadline);
@@ -5676,12 +5755,12 @@ async function saveActivity() {
     twReports[CU.uid].activity = {content, late: isLate, firstSavedAt};
     if (isLate) await recordLate(CU.uid, twDate, 'activity');
     closeModal('m-activity');
-    renderTeamwork();
+    renderTeamwork(true);
     toast(isLate ? '저장됨 (지각 처리)' : '저장됨', isLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
 }
 
-function _tw_reviewSection(myR, canEdit, isLeader) {
+function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
   const r = myR.review || {};
   const hasDone = !!r.content;
   const chip = _chipStatus(hasDone, r.late, '미작성');
@@ -5698,7 +5777,7 @@ function _tw_reviewSection(myR, canEdit, isLeader) {
     ${revAutoNote}
     <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">다음날 06:00 마감 (늦으면 전날 지각)</div>
     ${hasDone ? `<div style="background:var(--gray-50);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;margin-bottom:10px;">${esc(r.content)}</div>
-    <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">📌 등록: ${_fmtSavedAt(r.firstSavedAt)}</div>` : ''}
+    <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">📌 등록: ${_fmtSavedAt(r.firstSavedAt)}${isAdmin && hasDone ? '<button onclick="adminEditTime(\'review\',\'firstSavedAt\')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>' : ''}</div>` : ''}
     <button class="btn-outline" style="width:100%;padding:11px;" onclick="openReviewModal()">
       ${hasDone ? '수정하기' : '하루후기 작성'}
     </button>
@@ -5717,7 +5796,7 @@ async function saveReview() {
   if (!content) { toast('내용을 입력하세요','error'); return; }
   const now = new Date();
   // 마감: 다음날 06:00 (twDate 기준으로 그 다음날 06:00)
-  const targetDate = new Date(twDate); targetDate.setDate(targetDate.getDate()+1); targetDate.setHours(6,1,0,0);
+  const targetDate = new Date(twDate); targetDate.setDate(targetDate.getDate()+1); targetDate.setHours(6,0,0,0); // 06:00 마감
   // 이미 제출된 기록이 있고 late===false이면 수정해도 지각 유지 안 함
   const existingRev = (twReports[CU.uid]||{}).review || {};
   const isLate = (existingRev.content && existingRev.late === false) ? false : (now > targetDate);
@@ -5734,12 +5813,12 @@ async function saveReview() {
     twReports[CU.uid].review = {content, late: isLate, firstSavedAt: firstRevSavedAt};
     if (isLate) await recordLate(CU.uid, twDate, 'review');
     closeModal('m-review');
-    renderTeamwork();
+    renderTeamwork(true);
     toast(isLate ? '저장됨 (하루후기 지각)' : '저장됨', isLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
 }
 
-function _tw_taSection(myR, canEdit, isLeader) {
+function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
   const memberList = _tw_memberListHtml('ta');
   if (isLeader) {
     return `<div class="tw-section">
@@ -5767,7 +5846,7 @@ function _tw_taSection(myR, canEdit, isLeader) {
       ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center;">
            <div style="font-size:18px;margin-bottom:4px;">✅</div>
            <div style="font-weight:700;color:#166534;">팀방 사진 인증 완료</div>
-           ${checkedTime ? `<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">완료 시각 ${checkedTime}</div>` : ''}
+           ${checkedTime ? `<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">완료 시각 ${checkedTime}${isAdmin ? '<button onclick="adminEditTime(\'ta\',\'checkedAt\')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>' : ''}</div>` : ''}
          </div>
          <button onclick="cancelTa()" style="margin-top:10px;width:100%;padding:9px;background:none;border:1.5px solid #fca5a5;border-radius:9px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;">
            ✕ 인증 취소
@@ -5927,15 +6006,22 @@ async function _autoRecordLates() {
   if (myT && myT.absentUids && myT.absentUids[CU.uid]) return;
   const now = new Date();
   const isWD = tw_isWeekday(twDate);
-  const myR = twReports[CU.uid] || {};
   const weekNum = _getWeekNum(twDate);
   const myGoal = (twGoals[CU.uid]||{})[weekNum] || {};
   const srv = () => firebase.firestore.FieldValue.serverTimestamp();
 
   const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
-  const dl12    = new Date(twDate); dl12.setHours(12,1,0,0);
-  const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0);
+  const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
+  const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
   const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
+
+  // 자동지각 전 서버에서 최신 데이터 재확인 (Firestore 캐시 우회)
+  try {
+    const _freshSnap = await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).get({source:'server'});
+    if (_freshSnap.exists) { twReports[CU.uid] = _freshSnap.data(); }
+    else { delete twReports[CU.uid]; }
+  } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 */ }
+  const myR = twReports[CU.uid] || {};
 
   // 1. 출근보고 (평일 08:00 마감)
   if (isWD && now > dl8) {
@@ -5943,8 +6029,11 @@ async function _autoRecordLates() {
     if (!a.status && !a.late && !a.autoLatedAt) {
       try {
         await recordLate(CU.uid, twDate, 'attendance');
+        // update: attend.status 등 기존 필드 보존 (content 덮어쓰기 방지)
         await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
-          .set({attend: {late:true, autoLatedAt:srv()}}, {merge:true});
+          .update({'attend.late':true,'attend.autoLatedAt':srv()})
+          .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+            .set({attend:{late:true,autoLatedAt:srv()}},{merge:true}));
         if (!twReports[CU.uid]) twReports[CU.uid] = {};
         if (!twReports[CU.uid].attend) twReports[CU.uid].attend = {};
         twReports[CU.uid].attend.late = true;
@@ -5969,14 +6058,20 @@ async function _autoRecordLates() {
     }
   }
 
+  // OFF 체크한 날은 활동보고·하루후기·TA 지각 제외
+  const _isOff = (myR.attend||{}).status === 'off';
+
   // 3. 활동보고 (당일 12:00 마감)
-  if (now > dl12) {
+  if (!_isOff && now > dl12) {
     const act = myR.activity || {};
     if (!act.content && !act.late && !act.autoLatedAt) {
       try {
         await recordLate(CU.uid, twDate, 'activity');
+        // update: activity.content 기존 필드 보존
         await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
-          .set({activity: {late:true, autoLatedAt:srv()}}, {merge:true});
+          .update({'activity.late':true,'activity.autoLatedAt':srv()})
+          .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+            .set({activity:{late:true,autoLatedAt:srv()}},{merge:true}));
         if (!twReports[CU.uid]) twReports[CU.uid] = {};
         if (!twReports[CU.uid].activity) twReports[CU.uid].activity = {};
         twReports[CU.uid].activity.late = true;
@@ -5986,13 +6081,15 @@ async function _autoRecordLates() {
   }
 
   // 4. 하루후기 (다음날 06:00 마감)
-  if (now > dlNext6) {
+  if (!_isOff && now > dlNext6) {
     const rv = myR.review || {};
     if (!rv.content && !rv.late && !rv.autoLatedAt) {
       try {
         await recordLate(CU.uid, twDate, 'review');
         await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
-          .set({review: {late:true, autoLatedAt:srv()}}, {merge:true});
+          .update({'review.late':true,'review.autoLatedAt':srv()})
+          .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+            .set({review:{late:true,autoLatedAt:srv()}},{merge:true}));
         if (!twReports[CU.uid]) twReports[CU.uid] = {};
         if (!twReports[CU.uid].review) twReports[CU.uid].review = {};
         twReports[CU.uid].review.late = true;
@@ -6002,13 +6099,15 @@ async function _autoRecordLates() {
   }
 
   // 5. TA인증 (다음날 06:00 마감)
-  if (now > dlNext6) {
+  if (!_isOff && now > dlNext6) {
     const ta = myR.ta || {};
     if (!ta.checked && !ta.url && !ta.late && !ta.autoLatedAt) {
       try {
         await recordLate(CU.uid, twDate, 'ta');
         await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
-          .set({ta: {late:true, autoLatedAt:srv()}}, {merge:true});
+          .update({'ta.late':true,'ta.autoLatedAt':srv()})
+          .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+            .set({ta:{late:true,autoLatedAt:srv()}},{merge:true}));
         if (!twReports[CU.uid]) twReports[CU.uid] = {};
         if (!twReports[CU.uid].ta) twReports[CU.uid].ta = {};
         twReports[CU.uid].ta.late = true;
@@ -6031,8 +6130,8 @@ async function _autoRecordLatesForTeam() {
   const srv = () => firebase.firestore.FieldValue.serverTimestamp();
 
   const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
-  const dl12    = new Date(twDate); dl12.setHours(12,1,0,0);
-  const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0);
+  const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
+  const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
   const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
 
   // 팀장 uid 집합 (팀장은 지각처리 제외)
@@ -6051,7 +6150,14 @@ async function _autoRecordLatesForTeam() {
     // 미출근자 지각 제외 (팀에서 absent로 표시된 경우)
     const myTForAbsent = Object.values(allTeams).find(t => (t.memberIds||[]).includes(uid) || t.leaderId===uid);
     if (myTForAbsent && myTForAbsent.absentUids && myTForAbsent.absentUids[uid]) continue;  // 미출근자 지각 제외
-    const r = twReports[uid] || {};
+    // 서버에서 최신 데이터 재확인 (캐시로 인한 오판 방지)
+    let r;
+    try {
+      const _fSnap = await db.collection('users').doc(uid).collection('tw_reports').doc(twDate).get({source:'server'});
+      r = _fSnap.exists ? _fSnap.data() : {};
+      twReports[uid] = r;
+    } catch(e) { r = twReports[uid] || {}; }
+    const _uidIsOff = (r.attend||{}).status === 'off'; // OFF 체크한 날은 활동/하루후기/TA 지각 제외
     const goal = (twGoals[uid] || {})[weekNum] || {};
 
     // 1. 출근보고 (평일 08:00 마감)
@@ -6061,7 +6167,9 @@ async function _autoRecordLatesForTeam() {
         try {
           await recordLate(uid, twDate, 'attendance');
           await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
-            .set({attend:{late:true, autoLatedAt:srv()}}, {merge:true});
+            .update({'attend.late':true,'attend.autoLatedAt':srv()})
+            .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+              .set({attend:{late:true,autoLatedAt:srv()}},{merge:true}));
           if (!twReports[uid]) twReports[uid] = {};
           if (!twReports[uid].attend) twReports[uid].attend = {};
           twReports[uid].attend.late = true; twReports[uid].attend.autoLatedAt = now;
@@ -6085,13 +6193,15 @@ async function _autoRecordLatesForTeam() {
     }
 
     // 3. 활동보고 (당일 12:01 마감)
-    if (now > dl12) {
+    if (!_uidIsOff && now > dl12) {
       const act = r.activity || {};
       if (!act.content && !act.late && !act.autoLatedAt) {
         try {
           await recordLate(uid, twDate, 'activity');
           await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
-            .set({activity:{late:true, autoLatedAt:srv()}}, {merge:true});
+            .update({'activity.late':true,'activity.autoLatedAt':srv()})
+            .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+              .set({activity:{late:true,autoLatedAt:srv()}},{merge:true}));
           if (!twReports[uid]) twReports[uid] = {};
           if (!twReports[uid].activity) twReports[uid].activity = {};
           twReports[uid].activity.late = true; twReports[uid].activity.autoLatedAt = now;
@@ -6100,13 +6210,15 @@ async function _autoRecordLatesForTeam() {
     }
 
     // 4. 하루후기 (다음날 06:01 마감)
-    if (now > dlNext6) {
+    if (!_uidIsOff && now > dlNext6) {
       const rv = r.review || {};
       if (!rv.content && !rv.late && !rv.autoLatedAt) {
         try {
           await recordLate(uid, twDate, 'review');
           await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
-            .set({review:{late:true, autoLatedAt:srv()}}, {merge:true});
+            .update({'review.late':true,'review.autoLatedAt':srv()})
+            .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+              .set({review:{late:true,autoLatedAt:srv()}},{merge:true}));
           if (!twReports[uid]) twReports[uid] = {};
           if (!twReports[uid].review) twReports[uid].review = {};
           twReports[uid].review.late = true; twReports[uid].review.autoLatedAt = now;
@@ -6115,13 +6227,15 @@ async function _autoRecordLatesForTeam() {
     }
 
     // 5. TA인증 (다음날 06:01 마감)
-    if (now > dlNext6) {
+    if (!_uidIsOff && now > dlNext6) {
       const ta = r.ta || {};
       if (!ta.checked && !ta.url && !ta.late && !ta.autoLatedAt) {
         try {
           await recordLate(uid, twDate, 'ta');
           await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
-            .set({ta:{late:true, autoLatedAt:srv()}}, {merge:true});
+            .update({'ta.late':true,'ta.autoLatedAt':srv()})
+            .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+              .set({ta:{late:true,autoLatedAt:srv()}},{merge:true}));
           if (!twReports[uid]) twReports[uid] = {};
           if (!twReports[uid].ta) twReports[uid].ta = {};
           twReports[uid].ta.late = true; twReports[uid].ta.autoLatedAt = now;
