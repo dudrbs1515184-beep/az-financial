@@ -5211,7 +5211,7 @@ function _tw_memberListHtml(type) {
       <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${it.absent ? 'var(--gray-200)' : it.done ? (it.late?'var(--warning)':'var(--success)') : 'var(--gray-300)'};" ></span>
       <span style="font-size:13px;font-weight:600;min-width:50px;">${esc(it.name)}</span>
       ${!it.absent && it.late ? '<span style="font-size:11px;color:var(--danger);white-space:nowrap;">⏰</span>' : ''}
-      <span style="font-size:12px;color:${it.absent?'var(--gray-400)':it.done?'var(--gray-500)':'var(--danger)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
+      <span style="font-size:12px;color:${it.absent?'var(--gray-400)':it.done?(it.late?'var(--danger)':'var(--gray-500)'):'var(--gray-400)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
         ${it.absent ? '미출근' : it.done ? esc(it.detail) : '미완료'}
       </span>
     </div>`).join('')}
@@ -5687,7 +5687,7 @@ async function saveGoal() {
     twGoals[CU.uid][weekNum] = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate};
     if (isLate) await recordLate(CU.uid, twDate, 'goal');
     closeModal('m-goals');
-    renderTeamwork();
+    renderTeamwork(true);
     const lateMsg = goalLate && achLate ? '목표·달성 지각' : goalLate ? '목표 지각' : achLate ? '달성 지각' : '';
     toast(isLate ? `저장됨 (${lateMsg} 처리)` : '저장됨', isLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
@@ -5872,7 +5872,7 @@ async function checkTa() {
     if (!twReports[CU.uid]) twReports[CU.uid] = {};
     twReports[CU.uid].ta = {checked: true, late: isLate};
     if (isLate) await recordLate(CU.uid, twDate, 'ta');
-    renderTeamwork();
+    renderTeamwork(true);
     toast(isLate ? '인증 완료 (TA 지각)' : '인증 완료 ✅', isLate ? 'error' : 'success');
   } catch(e) { toast('오류', 'error'); }
 }
@@ -5889,7 +5889,7 @@ async function cancelTa() {
       {ta: {checked: false, checkedAt: null, late: false}}, {merge: true}
     );
     if (twReports[CU.uid]) twReports[CU.uid].ta = {};
-    renderTeamwork();
+    renderTeamwork(true);
     toast('TA인증 취소됨');
   } catch(e) { toast('오류', 'error'); }
 }
@@ -6000,6 +6000,7 @@ async function recordLate(uid, date, type) {
 /* ── 마감 초과 자동 지각처리 ── */
 async function _autoRecordLates() {
   if (!CU) return;
+  if (twDate !== tw_today()) return; // 오늘 날짜가 아니면 자동지각 실행 안 함
   const myT = myTeam();
   if (myT && myT.leaderId === CU.uid) return; // 팀장 제외
   // 미출근자는 지각 기록 제외
@@ -6119,6 +6120,7 @@ async function _autoRecordLates() {
 
 /* ── 관리자·팀장: 미로그인 팀원도 자동 지각처리 ── */
 async function _autoRecordLatesForTeam() {
+  if (twDate !== tw_today()) return; // 오늘 날짜가 아니면 자동지각 실행 안 함
   const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
   const myT = myTeam();
   const isLeader = !isAdmin && !!(myT && myT.leaderId === CU.uid);
