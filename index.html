@@ -803,6 +803,8 @@
       </div>
       <div id="c-insured-rows" style="display:flex;flex-direction:column;gap:4px;max-height:200px;overflow-y:auto;"></div>
     </div>
+    <div class="field"><label>📅 마지막 연락일</label><input type="date" id="c-last-contact" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;box-sizing:border-box;outline:none;"></div>
+    <div class="field"><label>📝 메모</label><textarea id="c-memo" rows="3" placeholder="고객 관련 메모를 입력하세요..." style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;resize:vertical;box-sizing:border-box;font-family:inherit;outline:none;min-height:80px;"></textarea></div>
     <div class="field" style="display:flex;align-items:center;gap:10px;padding:10px 0;">
       <input type="checkbox" id="c-is-prospect" style="width:18px;height:18px;cursor:pointer;accent-color:var(--primary);flex-shrink:0;">
       <label for="c-is-prospect" style="font-size:14px;font-weight:600;cursor:pointer;color:var(--gray-800);">🎯 사업대상자로 체크</label>
@@ -3176,13 +3178,23 @@ async function saveBulkImport() {
   }
 }
 
-function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-stage','c-silbi','c-silbi-date'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;_loadCarRows([]);_loadInsuredRows([]);_loadChildRows([]);openModal('m-customer');}
-function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';$('c-rrn').value=fmtRrnVal(c.rrn||'');$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-silbi-date').value=c.silbiDate||'';$('c-is-prospect').checked=!!c.isProspect;_loadCarRows(_getCarInsurances(c));_loadInsuredRows(c.insuredList||[]);_loadChildRows(c.children||[]);closeModal('m-cdetail');openModal('m-customer');}
+function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-stage','c-silbi','c-silbi-date'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;$('c-last-contact').value='';$('c-memo').value='';_loadCarRows([]);_loadInsuredRows([]);_loadChildRows([]);openModal('m-customer');}
+function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';$('c-rrn').value=fmtRrnVal(c.rrn||'');$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-silbi-date').value=c.silbiDate||'';$('c-is-prospect').checked=!!c.isProspect;$('c-last-contact').value=c.lastContact||'';$('c-memo').value=c.memo||'';_loadCarRows(_getCarInsurances(c));_loadInsuredRows(c.insuredList||[]);_loadChildRows(c.children||[]);closeModal('m-cdetail');openModal('m-customer');}
 
 
-async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value;const _ci=_getCarInsList(),_fc=_ci[0]||{};const d={name:n,rrn:$('c-rrn').value.replace(/-/g,'').slice(0,7),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,carInsurances:_ci,insCo:_fc.insCo||'',carDate:_fc.carDate||'',stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),silbiDate:$('c-silbi-date').value||'',insuredList:_getInsuredList(),children:_getChildList(),isProspect:$('c-is-prospect').checked};if(!eid&&allCustomers.some(c=>c.name===d.name&&c.rrn===d.rrn&&d.rrn)){toast('이미 등록된 고객입니다 (이름+주민번호 동일)','error');return;}try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
+async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value;const _ci=_getCarInsList(),_fc=_ci[0]||{};const d={name:n,rrn:$('c-rrn').value.replace(/-/g,'').slice(0,7),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,carInsurances:_ci,insCo:_fc.insCo||'',carDate:_fc.carDate||'',stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),silbiDate:$('c-silbi-date').value||'',insuredList:_getInsuredList(),children:_getChildList(),isProspect:$('c-is-prospect').checked,lastContact:$('c-last-contact').value,memo:$('c-memo').value.trim()};if(!eid&&allCustomers.some(c=>c.name===d.name&&c.rrn===d.rrn&&d.rrn)){toast('이미 등록된 고객입니다 (이름+주민번호 동일)','error');return;}try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
 async function delCustomer(id){if(!confirm('삭제?'))return;allCustomers=allCustomers.filter(c=>c.id!==id);closeModal('m-cdetail');renderCustomers();renderHome();await col('customers').doc(id).delete();}
-function showCDetail(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;const _cars=_getCarInsurances(c);const carAlertHtml=_cars.filter(ci=>ci.carDate).map(ci=>{const diff=carDiff(ci.carDate);if(diff===null||diff>30)return'';const ac=carAlertClass(diff);return`<div class="car-alert-box ${ac}"><div class="car-alert-left"><div class="car-alert-title">🚗 자동차보험 만기${diff<=0?'됨':'임박'}</div><div class="car-alert-sub">${esc(ci.insCo||'보험사 미등록')} · 만기일 ${esc(ci.carDate)}</div></div><div style="text-align:right;"><div class="car-alert-days">${diff<=0?'만기':diff}</div><div class="car-alert-days-label">${diff<=0?'':diff+'일 전'}</div></div></div>`;}).join('');$('m-cdetail-body').innerHTML=`${carAlertHtml}<div class="detail-name">${esc(c.name)}</div>${c.stage?`<span class="badge badge-orange" style="margin-bottom:12px;">${esc(c.stage)}</span>`:''}${c.rrn?`<div class="detail-field"><label>주민번호</label><div>${esc(c.rrn)}</div></div>`:''}${c.telecom?`<div class="detail-field"><label>통신사</label><div>${esc(c.telecom)}</div></div>`:''}${c.phone?`<div class="detail-field"><label>전화번호</label><a href="tel:${c.phone.replace(/\D/g,'')}" class="action-chip chip-call">📞 ${esc(c.phone)}</a></div>`:''}${c.addr?`<div class="detail-field"><label>주소</label><div style="margin-bottom:5px;">${esc(c.addr)}</div><button class="action-chip chip-map" onclick="showMap('${eattr(c.addr)}')">🗺 지도</button></div>`:''}${c.job?`<div class="detail-field"><label>직업</label><div>${esc(c.job)}</div></div>`:''}${c.driving?`<div class="detail-field"><label>운전여부</label><div>${esc(c.driving)}</div></div>`:''}${(()=>{const cars=_getCarInsurances(c);if(!cars.length)return'';return`<div class="detail-field"><label>🚗 자동차보험</label><div style="margin-top:6px;display:flex;flex-direction:column;gap:5px;">${cars.map(ci=>{const df=ci.carDate?carDiff(ci.carDate):null;const w=df!==null&&df<=30;return`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--gray-50);border-radius:8px;padding:6px 10px;font-size:13px;"><span style="font-weight:600;color:var(--primary);">${esc(ci.insCo||'미등록')}</span><span style="font-weight:600;${w?'color:'+(df<=0?'#b91c1c':'#c2410c'):''}">${ci.carDate||'-'}${df!==null&&df<=30?` (${df<=0?'만기':'D-'+df})`:''}</span></div>`;}).join('')}</div></div>`;})()}${(()=>{if(!c.silbi)return'';const gi=c.silbiDate?_silbiGenInfo(c.silbiDate):null;const gc=c.silbiDate?_silbiGenColor(c.silbiDate):null;const rd=gi&&gi.cycle?_silbiRenewalDate(c.silbiDate,gi.cycle):null;const diff=rd?_silbiRenewalDiff(c.silbiDate,gi.cycle):null;return`<div class="detail-field"><label>실비보험사</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:${rd?'6px':'0'};"><span style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</span>${gi?`<span style="background:${gc.bg};color:${gc.fg};font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;">${gi.gen}</span>`:''}</div>${c.silbiDate?`<div style="font-size:12px;color:var(--gray-500);margin-bottom:4px;">📅 가입: ${c.silbiDate.replace('-','년 ')}월${gi&&gi.cycle?` · 재가입주기 ${gi.cycle}년`:'  · 재가입 없음'}</div>`:''}${rd?`<div style="font-size:12px;color:${diff!==null&&diff<=30?'#b91c1c':'var(--gray-600)'};font-weight:600;margin-bottom:4px;">🔄 재가입: ${rd.replace('-','년 ')}월${diff!==null?` (${diff<=0?'기간 도래':diff+'일 전'})`:''}</div>`:''}${rd&&!c.silbiRenewed&&diff!==null&&diff<=30?`<button onclick="setSilbiRenewed('${c.id}')" style="font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid #166534;color:#166534;background:#dcfce7;cursor:pointer;">✅ 재가입 완료 처리</button>`:''}${rd&&c.silbiRenewed?`<span style="font-size:12px;color:#166534;font-weight:700;">✅ 재가입 완료</span><button onclick="setSilbiRenewed('${c.id}',true)" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--gray-300);color:var(--gray-500);background:white;cursor:pointer;margin-left:8px;">취소</button>`:''}${c.silbiDate&&!gi?.cycle?'':''}`;})()}${(c.insuredList&&c.insuredList.length)?`<div class="detail-field"><label>가입 보험사</label><div style="margin-top:6px;border:1px solid var(--gray-100);border-radius:10px;overflow:hidden;"><div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;background:var(--gray-50);padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);"><span>보험사</span><span>계약일</span><span>월보험료</span><span>이체일</span><span>은행명</span></div>${c.insuredList.map((item,i)=>`<div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;padding:6px 8px;font-size:12px;border-bottom:${i<c.insuredList.length-1?'1px solid var(--gray-50)':'none'};"><span style="font-weight:600;color:var(--primary);">${esc(item.insurer||'')}</span><span style="color:#1d4ed8;font-weight:600;">${item.contractDate||'-'}</span><span>${item.monthlyPremium?Number(item.monthlyPremium).toLocaleString()+'원':'-'}</span><span>${item.autoDebitDate?item.autoDebitDate+'일':'-'}</span><span>${esc(item.bankName||'-')}</span></div>`).join('')}</div></div>`:''}${(c.children&&c.children.length)?`<div class="detail-field"><label>자녀</label><div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;">${c.children.map(ch=>`<div style="display:flex;align-items:center;gap:10px;background:var(--gray-50);border-radius:8px;padding:6px 10px;font-size:13px;"><span style="font-weight:700;color:#7c3aed;">👶 ${esc(ch.name||'')}</span>${ch.rrn?`<span style="color:var(--gray-500);font-size:12px;">${esc(fmtRrnVal(ch.rrn))}</span>`:''}</div>`).join('')}</div></div>`:''}${c.isProspect?`<div class="detail-field"><label>사업대상자</label><div style="color:#92400e;font-weight:700;background:#fef3c7;padding:6px 12px;border-radius:8px;display:inline-block;">🎯 사업대상자 체크됨</div></div>`:''}<div class="modal-actions"><button class="btn-danger-ghost" onclick="delCustomer('${c.id}')">삭제</button><button class="btn-ghost" onclick="openCEdit('${c.id}')">수정</button></div>`;openModal('m-cdetail');}
+async function updateLastContact(id) {
+  const today = new Date().toISOString().slice(0,10);
+  try {
+    await col('customers').doc(id).update({lastContact: today});
+    const i = allCustomers.findIndex(c=>c.id===id);
+    if (i>=0) allCustomers[i].lastContact = today;
+    showCDetail(id);
+    toast('연락일 갱신 완료', 'success');
+  } catch(e) { toast('오류','error'); }
+}
+function showCDetail(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;const _cars=_getCarInsurances(c);const carAlertHtml=_cars.filter(ci=>ci.carDate).map(ci=>{const diff=carDiff(ci.carDate);if(diff===null||diff>30)return'';const ac=carAlertClass(diff);return`<div class="car-alert-box ${ac}"><div class="car-alert-left"><div class="car-alert-title">🚗 자동차보험 만기${diff<=0?'됨':'임박'}</div><div class="car-alert-sub">${esc(ci.insCo||'보험사 미등록')} · 만기일 ${esc(ci.carDate)}</div></div><div style="text-align:right;"><div class="car-alert-days">${diff<=0?'만기':diff}</div><div class="car-alert-days-label">${diff<=0?'':diff+'일 전'}</div></div></div>`;}).join('');$('m-cdetail-body').innerHTML=`${carAlertHtml}<div class="detail-name">${esc(c.name)}</div>${c.stage?`<span class="badge badge-orange" style="margin-bottom:12px;">${esc(c.stage)}</span>`:''}${c.rrn?`<div class="detail-field"><label>주민번호</label><div>${esc(c.rrn)}</div></div>`:''}${c.telecom?`<div class="detail-field"><label>통신사</label><div>${esc(c.telecom)}</div></div>`:''}${c.phone?`<div class="detail-field"><label>전화번호</label><a href="tel:${c.phone.replace(/\D/g,'')}" class="action-chip chip-call">📞 ${esc(c.phone)}</a></div>`:''}${c.addr?`<div class="detail-field"><label>주소</label><div style="margin-bottom:5px;">${esc(c.addr)}</div><button class="action-chip chip-map" onclick="showMap('${eattr(c.addr)}')">🗺 지도</button></div>`:''}${c.job?`<div class="detail-field"><label>직업</label><div>${esc(c.job)}</div></div>`:''}${c.driving?`<div class="detail-field"><label>운전여부</label><div>${esc(c.driving)}</div></div>`:''}${(()=>{const cars=_getCarInsurances(c);if(!cars.length)return'';return`<div class="detail-field"><label>🚗 자동차보험</label><div style="margin-top:6px;display:flex;flex-direction:column;gap:5px;">${cars.map(ci=>{const df=ci.carDate?carDiff(ci.carDate):null;const w=df!==null&&df<=30;return`<div style="display:flex;justify-content:space-between;align-items:center;background:var(--gray-50);border-radius:8px;padding:6px 10px;font-size:13px;"><span style="font-weight:600;color:var(--primary);">${esc(ci.insCo||'미등록')}</span><span style="font-weight:600;${w?'color:'+(df<=0?'#b91c1c':'#c2410c'):''}">${ci.carDate||'-'}${df!==null&&df<=30?` (${df<=0?'만기':'D-'+df})`:''}</span></div>`;}).join('')}</div></div>`;})()}${(()=>{if(!c.silbi)return'';const gi=c.silbiDate?_silbiGenInfo(c.silbiDate):null;const gc=c.silbiDate?_silbiGenColor(c.silbiDate):null;const rd=gi&&gi.cycle?_silbiRenewalDate(c.silbiDate,gi.cycle):null;const diff=rd?_silbiRenewalDiff(c.silbiDate,gi.cycle):null;return`<div class="detail-field"><label>실비보험사</label><div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:${rd?'6px':'0'};"><span style="color:#2e7d32;font-weight:600;">🏥 ${esc(c.silbi)}</span>${gi?`<span style="background:${gc.bg};color:${gc.fg};font-size:11px;font-weight:700;padding:2px 8px;border-radius:8px;">${gi.gen}</span>`:''}</div>${c.silbiDate?`<div style="font-size:12px;color:var(--gray-500);margin-bottom:4px;">📅 가입: ${c.silbiDate.replace('-','년 ')}월${gi&&gi.cycle?` · 재가입주기 ${gi.cycle}년`:'  · 재가입 없음'}</div>`:''}${rd?`<div style="font-size:12px;color:${diff!==null&&diff<=30?'#b91c1c':'var(--gray-600)'};font-weight:600;margin-bottom:4px;">🔄 재가입: ${rd.replace('-','년 ')}월${diff!==null?` (${diff<=0?'기간 도래':diff+'일 전'})`:''}</div>`:''}${rd&&!c.silbiRenewed&&diff!==null&&diff<=30?`<button onclick="setSilbiRenewed('${c.id}')" style="font-size:12px;padding:5px 12px;border-radius:8px;border:1px solid #166534;color:#166534;background:#dcfce7;cursor:pointer;">✅ 재가입 완료 처리</button>`:''}${rd&&c.silbiRenewed?`<span style="font-size:12px;color:#166534;font-weight:700;">✅ 재가입 완료</span><button onclick="setSilbiRenewed('${c.id}',true)" style="font-size:11px;padding:3px 8px;border-radius:6px;border:1px solid var(--gray-300);color:var(--gray-500);background:white;cursor:pointer;margin-left:8px;">취소</button>`:''}${c.silbiDate&&!gi?.cycle?'':''}`;})()}${(c.insuredList&&c.insuredList.length)?`<div class="detail-field"><label>가입 보험사</label><div style="margin-top:6px;border:1px solid var(--gray-100);border-radius:10px;overflow:hidden;"><div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;background:var(--gray-50);padding:5px 8px;font-size:10px;font-weight:700;color:var(--gray-400);"><span>보험사</span><span>계약일</span><span>월보험료</span><span>이체일</span><span>은행명</span></div>${c.insuredList.map((item,i)=>`<div style="display:grid;grid-template-columns:1.5fr 1.1fr 1fr 0.7fr 0.9fr;gap:0;padding:6px 8px;font-size:12px;border-bottom:${i<c.insuredList.length-1?'1px solid var(--gray-50)':'none'};"><span style="font-weight:600;color:var(--primary);">${esc(item.insurer||'')}</span><span style="color:#1d4ed8;font-weight:600;">${item.contractDate||'-'}</span><span>${item.monthlyPremium?Number(item.monthlyPremium).toLocaleString()+'원':'-'}</span><span>${item.autoDebitDate?item.autoDebitDate+'일':'-'}</span><span>${esc(item.bankName||'-')}</span></div>`).join('')}</div></div>`:''}${(c.children&&c.children.length)?`<div class="detail-field"><label>자녀</label><div style="margin-top:4px;display:flex;flex-direction:column;gap:4px;">${c.children.map(ch=>`<div style="display:flex;align-items:center;gap:10px;background:var(--gray-50);border-radius:8px;padding:6px 10px;font-size:13px;"><span style="font-weight:700;color:#7c3aed;">👶 ${esc(ch.name||'')}</span>${ch.rrn?`<span style="color:var(--gray-500);font-size:12px;">${esc(fmtRrnVal(ch.rrn))}</span>`:''}</div>`).join('')}</div></div>`:''}${c.isProspect?`<div class="detail-field"><label>사업대상자</label><div style="color:#92400e;font-weight:700;background:#fef3c7;padding:6px 12px;border-radius:8px;display:inline-block;">🎯 사업대상자 체크됨</div></div>`:''}${c.lastContact?`<div class="detail-field"><label>📅 마지막 연락일</label><div style="font-weight:600;color:#1d4ed8;">${esc(c.lastContact)}</div><button onclick="updateLastContact('${c.id}')" style="margin-top:6px;font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid var(--primary);color:var(--primary);background:var(--primary-bg);cursor:pointer;">📅 오늘로 갱신</button></div>`:`<div class="detail-field"><label>📅 마지막 연락일</label><button onclick="updateLastContact('${c.id}')" style="font-size:12px;padding:4px 12px;border-radius:8px;border:1px solid var(--primary);color:var(--primary);background:var(--primary-bg);cursor:pointer;">📅 오늘 연락</button></div>`}${`<div class="detail-field"><label>📝 메모</label><div style="background:var(--gray-50);border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7;white-space:pre-wrap;color:${c.memo?'var(--gray-800)':'var(--gray-400)'};">${c.memo?esc(c.memo):'메모 없음 (수정에서 입력)'}</div></div>`}<div class="modal-actions"><button class="btn-danger-ghost" onclick="delCustomer('${c.id}')">삭제</button><button class="btn-ghost" onclick="openCEdit('${c.id}')">수정</button></div>`;openModal('m-cdetail');}
 let customerProspectFilter = 'all';
 function filterCustomerProspect(type, btn) {
   customerProspectFilter = type;
@@ -4993,7 +5005,7 @@ async function removeTeamMember(uid) {
 /* ── 팀 업무 ── */
 function tw_today() {
   const _d = new Date();
-  if (_d.getHours() < 6) _d.setDate(_d.getDate() - 1); // 06시 이전은 전날로 간주
+  if (_d.getHours() < 5) _d.setDate(_d.getDate() - 1); // 05시 이전은 전날로 간주
   return _d.getFullYear() + '-' +
     String(_d.getMonth()+1).padStart(2,'0') + '-' +
     String(_d.getDate()).padStart(2,'0');
@@ -5672,19 +5684,22 @@ async function saveGoal() {
   // 목표 필드 입력 여부
   const hasGoalInput = goalCount || goalCanp || goalCis || goalAction;
   const hasAchInput  = achCount  || achCanp  || achCis  || achAction;
-  // 기존 기록이 있고 late===false이면 유지
-  const prevLateOk = existingGoal.late === false;
-  const goalLate = !prevLateOk && hasGoalInput && (now > monDL);
-  const achLate  = !prevLateOk && hasAchInput  && (now > sunDL);
+  // 목표/달성 각각 별도 지각 기준
+  const prevGoalLateOk = existingGoal.goalLate === false ||
+                         (existingGoal.goalLate === undefined && existingGoal.late === false);
+  const prevAchLateOk  = existingGoal.achLate === false ||
+                         (existingGoal.achLate === undefined && existingGoal.late === false);
+  const goalLate = !prevGoalLateOk && hasGoalInput && (now > monDL);
+  const achLate  = !prevAchLateOk  && hasAchInput  && (now > sunDL);
   const isLate = goalLate || achLate;
 
   try {
     await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).set(
       {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction,
-       late: isLate, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}
+       late: isLate, goalLate, achLate, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}
     );
     if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
-    twGoals[CU.uid][weekNum] = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate};
+    twGoals[CU.uid][weekNum] = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate, goalLate, achLate};
     if (isLate) await recordLate(CU.uid, twDate, 'goal');
     closeModal('m-goals');
     renderTeamwork(true);
@@ -5820,6 +5835,14 @@ async function saveReview() {
 
 function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
   const memberList = _tw_memberListHtml('ta');
+  const _isSaturdayTa = new Date(twDate).getDay() === 6; // 토요일 TA 불필요
+  if (_isSaturdayTa) {
+    return `<div class="tw-section">
+      <div class="tw-section-head"><div class="tw-section-title">📸 TA인증</div></div>
+      <div style="font-size:13px;color:var(--gray-400);padding:8px 0;">토요일은 TA인증 불필요 🎉</div>
+      ${memberList}
+    </div>`;
+  }
   if (isLeader) {
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">📸 TA인증</div></div>
@@ -5864,7 +5887,8 @@ async function checkTa() {
   const targetDate = new Date(twDate);
   targetDate.setDate(targetDate.getDate() + 1);
   targetDate.setHours(6, 1, 0, 0);
-  const isLate = now > targetDate;
+  const _isSat = new Date(twDate).getDay() === 6;
+  const isLate = !_isSat && (now > targetDate); // 토요일은 지각 없음
   try {
     await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set(
       {ta: {checked: true, late: isLate, checkedAt: firebase.firestore.FieldValue.serverTimestamp()}}, {merge: true}
@@ -6099,8 +6123,9 @@ async function _autoRecordLates() {
     }
   }
 
-  // 5. TA인증 (다음날 06:00 마감)
-  if (!_isOff && now > dlNext6) {
+  // 5. TA인증 (다음날 06:00 마감, 토요일 제외)
+  const _twDaySelf = new Date(twDate).getDay(); // 0=일,6=토
+  if (!_isOff && now > dlNext6 && _twDaySelf !== 6) {
     const ta = myR.ta || {};
     if (!ta.checked && !ta.url && !ta.late && !ta.autoLatedAt) {
       try {
@@ -6228,8 +6253,9 @@ async function _autoRecordLatesForTeam() {
       }
     }
 
-    // 5. TA인증 (다음날 06:01 마감)
-    if (!_uidIsOff && now > dlNext6) {
+    // 5. TA인증 (다음날 06:01 마감, 토요일 제외)
+    const _twDayTeam = new Date(twDate).getDay(); // 0=일,6=토
+    if (!_uidIsOff && now > dlNext6 && _twDayTeam !== 6) {
       const ta = r.ta || {};
       if (!ta.checked && !ta.url && !ta.late && !ta.autoLatedAt) {
         try {
