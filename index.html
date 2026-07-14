@@ -5341,8 +5341,11 @@ async function selectAttend(status) {
     const exempt = status === 'direct';
     const hour8 = new Date(twDate); hour8.setHours(8,0,0,0);
     if (!exempt && tw_isWeekday(twDate)) {
-      if (status === 'depart' || status === 'arrive') {
-        // 기상(wake) 시각이 있으면 그 시각 기준, 없으면 현재 시각 기준
+      if (status === 'arrive') {
+        // 도착 시각(현재 시각) 기준 — 08:00 이후 도착이면 지각
+        isLate = now > hour8;
+      } else if (status === 'depart') {
+        // 출발은 기상 시각 기준 (기상이 08:00 전이면 출발 지각 없음)
         const wakeRaw = prevAllTimes.wake;
         let refTime = now;
         if (wakeRaw) {
@@ -5680,26 +5683,36 @@ async function saveGoal() {
   const now = new Date();
   const monDL = _getWeekDeadline(twDate, 1, 12, 1); // 목표 마감: 월요일 12:00
   const sunDL = _getWeekDeadline(twDate, 0, 18, 0); // 달성 마감: 일요일 18:00
-  const existingGoal = (twGoals[CU.uid]||{})[weekNum] || {};
+
+  // 서버에서 최신 데이터 읽기 (캐시 stale 방지)
+  let existingGoal = {};
+  try {
+    const _snap = await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).get({source:'server'});
+    if (_snap.exists) existingGoal = _snap.data();
+  } catch(e) { existingGoal = (twGoals[CU.uid]||{})[weekNum] || {}; }
+
   // 목표 필드 입력 여부
   const hasGoalInput = goalCount || goalCanp || goalCis || goalAction;
   const hasAchInput  = achCount  || achCanp  || achCis  || achAction;
-  // 목표/달성 각각 별도 지각 기준
-  const prevGoalLateOk = existingGoal.goalLate === false ||
-                         (existingGoal.goalLate === undefined && existingGoal.late === false);
-  const prevAchLateOk  = existingGoal.achLate === false ||
-                         (existingGoal.achLate === undefined && existingGoal.late === false);
-  const goalLate = !prevGoalLateOk && hasGoalInput && (now > monDL);
-  const achLate  = !prevAchLateOk  && hasAchInput  && (now > sunDL);
+
+  // 최초 저장 시각 기준으로 지각 판단 (이후 수정 시 지각 재판단 없음)
+  const isFirstGoalSave = hasGoalInput && !existingGoal.firstGoalSavedAt;
+  const isFirstAchSave  = hasAchInput  && !existingGoal.firstAchSavedAt;
+  const firstGoalTime = existingGoal.firstGoalSavedAt?.toDate?.() || now;
+  const firstAchTime  = existingGoal.firstAchSavedAt?.toDate?.()  || now;
+  const goalLate = hasGoalInput && (firstGoalTime > monDL);
+  const achLate  = hasAchInput  && (firstAchTime  > sunDL);
   const isLate = goalLate || achLate;
 
   try {
-    await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).set(
-      {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction,
-       late: isLate, goalLate, achLate, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}
-    );
+    const _srv = firebase.firestore.FieldValue.serverTimestamp();
+    const saveData = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction,
+       late: isLate, goalLate, achLate, updatedAt: _srv};
+    if (isFirstGoalSave) saveData.firstGoalSavedAt = _srv; // 최초 목표 저장 시각
+    if (isFirstAchSave)  saveData.firstAchSavedAt  = _srv; // 최초 달성 저장 시각
+    await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).set(saveData, {merge:true});
     if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
-    twGoals[CU.uid][weekNum] = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate, goalLate, achLate};
+    twGoals[CU.uid][weekNum] = {...existingGoal, ...saveData};
     if (isLate) await recordLate(CU.uid, twDate, 'goal');
     closeModal('m-goals');
     renderTeamwork(true);
@@ -6051,7 +6064,8 @@ async function _autoRecordLates() {
   // 1. 출근보고 (평일 08:00 마감)
   if (isWD && now > dl8) {
     const a = myR.attend || {};
-    if (!a.status && !a.late && !a.autoLatedAt) {
+    const _attendDone = a.status === 'arrive' || a.status === 'direct' || a.status === 'off';
+    if (!_attendDone && !a.late && !a.autoLatedAt) {
       try {
         await recordLate(CU.uid, twDate, 'attendance');
         // update: attend.status 등 기존 필드 보존 (content 덮어쓰기 방지)
@@ -6190,7 +6204,8 @@ async function _autoRecordLatesForTeam() {
     // 1. 출근보고 (평일 08:00 마감)
     if (isWD && now > dl8) {
       const a = r.attend || {};
-      if (!a.status && !a.late && !a.autoLatedAt) {
+      const _teamAttendDone = a.status === 'arrive' || a.status === 'direct' || a.status === 'off';
+      if (!_teamAttendDone && !a.late && !a.autoLatedAt) {
         try {
           await recordLate(uid, twDate, 'attendance');
           await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
