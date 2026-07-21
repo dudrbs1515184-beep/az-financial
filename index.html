@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <link rel="manifest" href="manifest.json">
-  <meta name="theme-color" content="#2563eb">
+  <meta name="theme-color" content="#0f2458">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="AZ금융">
@@ -20,19 +20,23 @@
   <style>
     :root {
       --primary:#2563eb; --primary-dark:#1d4ed8;
-      --primary-light:#bfdbfe; --primary-bg:#eff6ff;
+      --primary-light:#bfdbfe; --primary-bg:#eef4ff;
       --gray-50:#f8fafc; --gray-100:#f1f5f9; --gray-200:#e2e8f0;
       --gray-300:#cbd5e1; --gray-400:#94a3b8; --gray-500:#64748b;
       --gray-600:#475569; --gray-700:#334155; --gray-800:#1e293b; --gray-900:#0f172a;
       --danger:#ef4444; --success:#10b981; --warning:#f59e0b;
-      --nav-h:64px; --header-h:56px; --sidebar-w:220px;
-      --shadow-xs:0 1px 3px rgba(0,0,0,.05);
-      --shadow-sm:0 2px 8px rgba(0,0,0,.06);
-      --shadow-md:0 4px 16px rgba(0,0,0,.08);
-      --radius-sm:10px; --radius-md:14px; --radius-lg:18px;
+      --nav-h:64px; --header-h:58px; --sidebar-w:230px;
+      --shadow-xs:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
+      --shadow-sm:0 4px 16px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.05);
+      --shadow-md:0 10px 32px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.06);
+      --shadow-blue:0 4px 16px rgba(37,99,235,.2);
+      --gold:#f59e0b; --gold-light:#fef3c7;
+      --radius-sm:12px; --radius-md:16px; --radius-lg:22px;
+      --navy:#0f2458; --navy-dark:#08163a; --navy-light:#1a3470;
+      --nav-text:rgba(255,255,255,.72); --nav-text-active:#fff;
     }
     *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-    body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#f0f4f9;color:var(--gray-900);min-height:100vh;font-size:15px;line-height:1.5;}
+    body{font-family:-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;background:#f4f6fb;color:var(--gray-900);min-height:100vh;font-size:15px;line-height:1.5;}
 
     #screen-loading{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:white;z-index:9999;flex-direction:column;gap:16px}
     .spinner{width:40px;height:40px;border:3px solid var(--primary-light);border-top-color:var(--primary);border-radius:50%;animation:spin .8s linear infinite}
@@ -65,29 +69,31 @@
     .auth-error{color:var(--danger);font-size:13px;text-align:center;margin-top:10px;display:none}
 
     #screen-app{display:none;min-height:100vh}
-    .app-header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:white;border-bottom:1px solid var(--gray-200);display:flex;align-items:center;padding:0 16px;gap:12px;z-index:200;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-    .header-brand{display:flex;align-items:center;gap:10px;flex:1} .brand-text{font-size:15px;font-weight:800;color:var(--primary)} .brand-text-pc{display:none;}
+    .app-header{position:fixed;top:0;left:0;right:0;height:var(--header-h);background:linear-gradient(135deg,var(--navy-dark) 0%,var(--navy) 60%,var(--navy-light) 100%);border-bottom:none;display:flex;align-items:center;padding:0 16px;gap:12px;z-index:200;box-shadow:0 3px 16px rgba(0,0,0,.28)}
+    .header-brand{display:flex;align-items:center;gap:10px;flex:1} .brand-text{font-size:15px;font-weight:800;color:#fff} .brand-text-pc{display:none;}
     .header-right{display:flex;align-items:center;gap:8px}
-    .avatar{width:34px;height:34px;border-radius:50%;background:var(--primary-light);color:var(--primary);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0}
-    .avatar.admin-av{background:#fef3c7;color:#92400e} .user-name{font-size:13px;font-weight:600;color:var(--gray-700)}
-    .icon-btn{width:34px;height:34px;border:none;background:transparent;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:var(--gray-500);transition:background .15s}
-    .icon-btn:hover{background:var(--gray-100)}
+    .avatar{width:34px;height:34px;border-radius:50%;background:rgba(255,255,255,.18);color:#fff;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;flex-shrink:0;border:1.5px solid rgba(255,255,255,.25)}
+    .avatar.admin-av{background:rgba(251,191,36,.25);color:#fde68a} .user-name{font-size:13px;font-weight:600;color:rgba(255,255,255,.9)}
+    .icon-btn{width:34px;height:34px;border:none;background:transparent;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:16px;color:rgba(255,255,255,.8);transition:background .15s}
+    .icon-btn:hover{background:rgba(255,255,255,.12)}
 
-    .sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--sidebar-w);background:white;border-right:1px solid var(--gray-200);padding:16px 10px;display:none;flex-direction:column;gap:3px;z-index:100;overflow-y:auto}
+    .sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--sidebar-w);background:var(--navy);border-right:none;padding:16px 10px;display:none;flex-direction:column;gap:3px;z-index:100;overflow-y:auto;box-shadow:4px 0 20px rgba(0,0,0,.25)}
     @media(min-width:768px){.sidebar{display:flex} .brand-text-pc{display:inline;}}
-    .nav-btn{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;border:none;background:transparent;font-size:14px;font-weight:500;color:var(--gray-600);cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;width:100%}
-    .nav-btn svg{width:20px;height:20px;flex-shrink:0} .nav-btn:hover{background:var(--gray-50);color:var(--gray-900)} .nav-btn.active{background:var(--primary-bg);color:var(--primary);font-weight:700}
+    .nav-btn{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;border:none;background:transparent;font-size:14px;font-weight:500;color:var(--nav-text);cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;width:100%}
+    .nav-btn svg{width:20px;height:20px;flex-shrink:0} .nav-btn:hover{background:rgba(255,255,255,.1);color:var(--nav-text-active)} .nav-btn.active{background:rgba(255,255,255,.18);color:var(--nav-text-active);font-weight:700}
 
-    .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:white;border-top:1px solid var(--gray-200);display:flex;z-index:200;overflow-x:auto}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:linear-gradient(to top,var(--navy-dark),var(--navy));border-top:none;display:flex;z-index:200;overflow-x:auto;box-shadow:0 -3px 16px rgba(0,0,0,.28)}
     @media(min-width:768px){.bottom-nav{display:none}}
-    .bnav-btn{flex:1;min-width:52px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--gray-400);font-family:inherit;padding:6px 2px;transition:color .15s}
-    .bnav-btn svg{width:20px;height:20px} .bnav-btn span{font-size:9px;font-weight:500;white-space:nowrap} .bnav-btn.active{color:var(--primary)}
+    .bnav-btn{flex:1;min-width:52px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--nav-text);font-family:inherit;padding:6px 2px;transition:color .15s}
+    .bnav-btn svg{width:20px;height:20px} .bnav-btn span{font-size:9px;font-weight:500;white-space:nowrap} .bnav-btn.active{color:#93c5fd}
 
-    .main{padding-top:calc(var(--header-h) + 20px);padding-bottom:calc(var(--nav-h) + 20px);padding-left:16px;padding-right:16px;}
+    .main{padding-top:calc(var(--header-h) + 20px);padding-bottom:calc(var(--nav-h) + 20px);padding-left:16px;padding-right:16px;min-height:100vh;background:#f4f6fb;}
     @media(min-width:768px){.main{padding-left:calc(var(--sidebar-w) + 24px);padding-right:24px;padding-bottom:32px;}}
 
-    .section{display:none} .section.active{display:block}
-    .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--gray-100);}
+    .section{display:none} .section.active{display:block;animation:secFadeIn .25s ease;}
+    @keyframes secFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:14px;border-bottom:2px solid var(--gray-200);}
+    .sec-head-accent{background:linear-gradient(90deg,var(--navy) 0%,var(--primary) 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
     .sec-title{font-size:20px;font-weight:800;color:var(--gray-900);letter-spacing:-.3px;}
 
     .search-wrap{position:relative;margin-bottom:16px}
@@ -107,7 +113,7 @@
     .todo-filter{padding:7px 12px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;font-family:inherit;outline:none;background:white;cursor:pointer}
 
     /* ── 캘린더 ── */
-    .cal-wrap{background:white;border:1.5px solid var(--gray-100);border-radius:var(--radius-md);padding:16px;margin-bottom:14px;box-shadow:var(--shadow-xs);}
+    .cal-wrap{background:#fff;border:1px solid var(--gray-100);border-radius:var(--radius-md);padding:16px;margin-bottom:14px;box-shadow:var(--shadow-sm);}
     .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px} .cal-title{font-size:15px;font-weight:700;color:var(--gray-800)}
     .cal-nav{background:none;border:1px solid var(--gray-200);border-radius:8px;width:30px;height:30px;cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px} .cal-dow{text-align:center;font-size:10px;font-weight:600;color:var(--gray-400);padding:4px 0}
@@ -123,8 +129,8 @@
     .cal-day.today .cal-todo-done{background:rgba(255,255,255,0.15);color:rgba(255,255,255,0.55);}
     .cal-selected-date{font-size:13px;font-weight:600;color:var(--gray-700);margin:10px 0 8px;padding-top:10px;border-top:1px solid var(--gray-100)}
 
-    .item-card{background:white;border:1.5px solid var(--gray-100);border-radius:var(--radius-md);padding:16px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow-xs);transition:box-shadow .15s,border-color .15s;}
-    .item-card:hover{box-shadow:var(--shadow-sm);border-color:var(--primary-light);}
+    .item-card{background:#fff;border:1px solid var(--gray-100);border-radius:var(--radius-md);padding:16px;margin-bottom:10px;cursor:pointer;box-shadow:var(--shadow-sm);transition:box-shadow .2s,border-color .2s,transform .2s;}
+    .item-card:hover{box-shadow:var(--shadow-blue);border-color:var(--primary-light);transform:translateY(-2px);}
     .card-name{font-size:16px;font-weight:700;color:var(--gray-900);margin-bottom:8px;} .card-meta{display:flex;flex-wrap:wrap;gap:6px;}
     .meta-item{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;color:var(--gray-600);background:var(--gray-50);border:1px solid var(--gray-100);border-radius:20px;padding:3px 10px;}
 
@@ -160,10 +166,10 @@
     .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
     .stat-card{background:white;border:1px solid var(--gray-100);border-radius:var(--radius-md);padding:16px 12px;text-align:center;cursor:pointer;box-shadow:var(--shadow-xs);transition:box-shadow .15s,transform .15s;}
     .stat-card:hover{box-shadow:var(--shadow-sm);transform:translateY(-2px);}
-    .stat-num{font-size:26px;font-weight:900;color:var(--primary);line-height:1.1;} .stat-label{font-size:11px;font-weight:600;color:var(--gray-500);margin-top:5px;letter-spacing:.2px;}
+    .stat-num{font-size:26px;font-weight:900;color:var(--navy);line-height:1.1;} .stat-label{font-size:11px;font-weight:600;color:var(--gray-500);margin-top:5px;letter-spacing:.2px;}
     .alert-section{margin-bottom:20px} .alert-title{font-size:13px;font-weight:700;color:var(--gray-600);margin-bottom:8px;display:flex;align-items:center;gap:6px;text-transform:uppercase;letter-spacing:.5px;}
-    .alert-card{background:white;border:1.5px solid var(--gray-100);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow-xs);transition:box-shadow .15s;}
-    .alert-card:hover{box-shadow:var(--shadow-sm);}
+    .alert-card{background:#fff;border:1px solid var(--gray-100);border-radius:var(--radius-sm);padding:12px 16px;display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;cursor:pointer;box-shadow:var(--shadow-sm);transition:box-shadow .2s,transform .2s;}
+    .alert-card:hover{box-shadow:var(--shadow-md);transform:translateY(-1px);}
     .alert-card.urgent{border-color:#fca5a5;background:#fff5f5} .alert-card.soon{border-color:#fcd34d;background:#fffbeb}
     .alert-name{font-size:14px;font-weight:700;color:var(--gray-900)} .alert-sub{font-size:12px;color:var(--gray-500);margin-top:2px}
     .badge-danger{background:#fee2e2;color:#991b1b} .badge-bday{background:#f0fdf4;color:#166534}
@@ -191,9 +197,9 @@
     .car-danger .car-alert-days-label{color:#fca5a5;} .car-warn .car-alert-days-label{color:#fde68a;} .car-soon .car-alert-days-label{color:#fed7aa;}
     @keyframes pulse-border{0%,100%{box-shadow:0 0 0 0 rgba(252,165,165,.4);}50%{box-shadow:0 0 0 5px rgba(252,165,165,0);}}
 
-    .admin-card{background:white;border:1.5px solid var(--gray-100);border-radius:var(--radius-md);padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-xs);}
+    .admin-card{background:#fff;border:1px solid var(--gray-100);border-radius:var(--radius-md);padding:16px;margin-bottom:10px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;box-shadow:var(--shadow-sm);}
     .emp-name{font-size:15px;font-weight:700;color:var(--gray-900)} .emp-id{font-size:12px;color:var(--gray-500);margin-top:2px}
-    .pending-badge-chip{background:var(--danger);color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;display:none}
+    .pending-badge-chip{background:#f87171;color:white;font-size:10px;font-weight:700;padding:2px 7px;border-radius:20px;margin-left:6px;display:none}
 
     .empty{text-align:center;padding:52px 24px;color:var(--gray-400)} .empty-icon{font-size:44px;margin-bottom:12px} .empty-text{font-size:14px}
     .toast{position:fixed;top:72px;left:50%;transform:translateX(-50%);background:var(--gray-900);color:white;padding:12px 20px;border-radius:12px;font-size:14px;font-weight:600;z-index:9999;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap}
@@ -300,9 +306,9 @@
     .team-member-chip{display:inline-flex;align-items:center;gap:6px;padding:5px 12px;background:var(--gray-50);border:1px solid var(--gray-200);border-radius:99px;font-size:13px;margin:3px;}
     .team-member-chip.leader{background:var(--primary-bg);border-color:var(--primary-light);color:var(--primary);font-weight:700;}
     /* ── 팀 업무 ── */
-    .tw-section{background:white;border:1.5px solid var(--gray-100);border-radius:var(--radius-md);padding:16px;margin-bottom:12px;box-shadow:var(--shadow-sm);}
+    .tw-section{background:#fff;border:1px solid #e5eaf3;border-radius:var(--radius-md);padding:18px;margin-bottom:14px;box-shadow:var(--shadow-sm);}
     .tw-section-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;}
-    .tw-section-title{font-size:15px;font-weight:700;color:var(--gray-800);}
+    .tw-section-title{font-size:15px;font-weight:700;color:var(--navy);}
     .tw-status-chip{padding:4px 10px;border-radius:99px;font-size:12px;font-weight:700;}
     .tw-status-chip.done{background:#dcfce7;color:#166534;}
     .tw-status-chip.late{background:#fee2e2;color:#991b1b;}
@@ -366,8 +372,8 @@
     }
 
     /* ── 전문성 향상 ── */
-    .app-header{background:white;backdrop-filter:blur(8px);}
-    .brand-text{font-size:16px;letter-spacing:-.5px;}
+    .app-header{backdrop-filter:blur(8px);} /* background는 main 규칙의 dark navy 유지 */
+    .brand-text{font-size:16px;letter-spacing:-.5px;color:#fff;}
     .sec-title{letter-spacing:-.4px;}
     .sec-head{padding-bottom:12px;}
     .item-card{transition:box-shadow .15s,border-color .15s,transform .12s;}
@@ -375,7 +381,7 @@
     .btn-primary{border-radius:11px;letter-spacing:.2px;}
     .field label{font-size:11px;letter-spacing:.6px;font-weight:700;}
     .promo-metric-label{letter-spacing:1px;}
-    .home-motto{font-size:22px;font-weight:900;color:var(--gray-900);letter-spacing:-.5px;line-height:1.3;}
+    .home-motto{font-size:22px;font-weight:900;color:#fff;letter-spacing:-.5px;line-height:1.3;}
     .stat-card:active{transform:scale(.97);}
 
     /* ── 홈 화면 stat 카드 색상 개선 ── */
@@ -385,16 +391,59 @@
 
     /* ── 바텀 네비 개선 ── */
     .bnav-btn{font-family:inherit;min-height:60px;}
-    .bnav-btn.active{color:var(--primary);}
+    .bnav-btn.active{color:#93c5fd;}
     .bnav-btn span{font-size:9.5px;font-weight:600;}
-    .bottom-nav{box-shadow:0 -1px 0 var(--gray-100),0 -4px 12px rgba(0,0,0,.04);}
+    /* bottom-nav shadow: see main rule */
 
     /* ── 토스트 개선 ── */
     .toast{border-radius:14px;font-size:13px;padding:12px 22px;box-shadow:0 6px 20px rgba(0,0,0,.12);}
 
     /* ── 사이드바 hover 라인 ── */
-    .nav-btn.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:var(--primary);border-radius:0 3px 3px 0;}
+    .nav-btn.active::before{content:'';position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:20px;background:rgba(255,255,255,.8);border-radius:0 3px 3px 0;}
     .nav-btn{position:relative;}
+
+    /* ── 딥블루 프리미엄 추가 스타일 ── */
+    /* 헤더 내 버튼 border-color 조정 */
+    .header-right .btn-ghost{border-color:rgba(255,255,255,.25);color:rgba(255,255,255,.85);background:rgba(255,255,255,.08);}
+    .header-right .btn-ghost:hover{background:rgba(255,255,255,.15);border-color:rgba(255,255,255,.4);}
+    /* 섹션 카드 개선 */
+    .stat-card{background:#fff;border:1px solid var(--gray-100);box-shadow:var(--shadow-sm);}
+    .stat-card:hover{box-shadow:0 6px 24px rgba(29,78,216,.18);transform:translateY(-3px);}
+    /* 알림 섹션 개선 */
+    .alert-title{font-size:13px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.6px;}
+    /* 공지사항 카드 스타일 */
+    .notice-card{background:linear-gradient(135deg,#0d1f4e 0%,#1e40af 60%,#2563eb 100%);border-radius:var(--radius-md);padding:16px 18px;margin-bottom:14px;color:white;position:relative;overflow:hidden;box-shadow:0 6px 20px rgba(37,99,235,.3);}
+    .notice-card::before{content:'';position:absolute;right:-20px;top:-20px;width:100px;height:100px;border-radius:50%;background:rgba(255,255,255,.06);}
+    .notice-card-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;}
+    .notice-card-title{font-size:12px;font-weight:700;letter-spacing:1px;opacity:.75;text-transform:uppercase;}
+    .notice-card-actions{display:flex;gap:6px;}
+    .notice-card-btn{background:rgba(255,255,255,.15);border:none;color:white;border-radius:7px;padding:5px 10px;font-size:12px;font-weight:600;cursor:pointer;}
+    .notice-card-btn:hover{background:rgba(255,255,255,.25);}
+    .notice-content{font-size:14px;font-weight:500;line-height:1.6;opacity:.95;}
+    .notice-meta{margin-top:8px;font-size:11px;opacity:.6;}
+    .notice-empty{text-align:center;padding:14px;background:var(--gray-50);border-radius:var(--radius-sm);color:var(--gray-400);font-size:13px;}
+    .notice-write-btn{display:flex;align-items:center;gap:8px;width:100%;padding:12px 16px;border:2px dashed #bbd0f7;border-radius:var(--radius-sm);background:transparent;color:var(--navy);font-size:13px;font-weight:700;cursor:pointer;justify-content:center;transition:all .15s;margin-bottom:14px;}
+    .notice-write-btn:hover{background:var(--primary-bg);border-color:var(--primary);}
+    /* 성과 대시보드 */
+    .dashboard-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:14px;}
+    @media(max-width:480px){.dashboard-grid{grid-template-columns:1fr;}}
+    .dash-card{background:#fff;border-radius:var(--radius-md);padding:16px;box-shadow:var(--shadow-sm);border:1px solid var(--gray-100);}
+    .dash-card-title{font-size:12px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px;}
+    .dash-row{display:flex;align-items:center;justify-content:space-between;padding:6px 0;border-bottom:1px solid var(--gray-100);}
+    .dash-row:last-child{border-bottom:none;}
+    .dash-label{font-size:13px;color:var(--gray-600);}
+    .dash-val{font-size:14px;font-weight:700;color:var(--navy);}
+    .dash-val.hit{color:var(--success);}
+    .dash-val.miss{color:var(--danger);}
+    .dash-progress-bar{height:6px;background:var(--gray-100);border-radius:3px;margin-top:4px;overflow:hidden;}
+    .dash-progress-fill{height:100%;background:linear-gradient(90deg,var(--primary),#60a5fa);border-radius:3px;transition:width .5s ease;}
+    .dash-progress-fill.done{background:linear-gradient(90deg,var(--success),#34d399);}
+    /* 팀원 활동이력 모달 */
+    .history-date-label{font-size:12px;font-weight:700;color:var(--navy);padding:8px 0 4px;border-bottom:2px solid var(--primary-light);margin-bottom:8px;margin-top:16px;}
+    .history-entry{background:var(--gray-50);border-radius:10px;padding:12px 14px;margin-bottom:8px;}
+    .history-entry-type{font-size:11px;font-weight:700;color:var(--primary);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+    .history-entry-content{font-size:13px;color:var(--gray-800);line-height:1.55;}
+    .history-entry-meta{font-size:11px;color:var(--gray-400);margin-top:4px;}
   </style>
 </head>
 <body>
@@ -436,8 +485,8 @@
 </div>
 <div id="screen-app">
   <header class="app-header">
-    <div class="header-brand"><img src="icon-192.png" alt="AZ금융서비스" style="height:36px;width:36px;border-radius:9px;object-fit:contain;flex-shrink:0;box-shadow:0 2px 8px rgba(37,99,235,.15);" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block'"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="36" height="36" style="display:none;flex-shrink:0;border-radius:9px;box-shadow:0 2px 8px rgba(37,99,235,.15);vertical-align:middle;"><rect width="220" height="220" rx="20" fill="white"/><text x="14" y="128" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="100" fill="#2563eb" letter-spacing="-4">AZ</text><circle cx="179" cy="72" r="30" fill="none" stroke="#2563eb" stroke-width="6"/><polyline points="157,72 164,58 171,80 178,60 185,78 192,64 201,72" fill="none" stroke="#2563eb" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><text x="110" y="163" font-family="Arial,sans-serif" font-weight="800" font-size="12.5" fill="#2563eb" text-anchor="middle" letter-spacing="3.5">FINANCIAL</text><text x="110" y="180" font-family="Arial,sans-serif" font-weight="800" font-size="12.5" fill="#2563eb" text-anchor="middle" letter-spacing="3.5">SERVICE&#174;</text></svg><span class="brand-text brand-text-pc">AZ금융서비스</span><span class="brand-text-pc" style="font-size:13px;font-weight:700;color:var(--primary);background:rgba(37,99,235,0.08);border-radius:6px;padding:2px 8px;margin-left:8px;letter-spacing:0.5px;">에덴지점</span><a href="https://az.azlife.kr/login" target="_blank" rel="noopener noreferrer" class="brand-text-pc" style="font-size:12px;font-weight:700;color:#2563eb;background:rgba(37,99,235,0.1);border:1px solid rgba(37,99,235,0.25);border-radius:6px;padding:2px 10px;margin-left:6px;text-decoration:none;white-space:nowrap;">에즈라이프 →</a></div>
-    <div class="header-right"><button id="hd-backup-btn" class="icon-btn" onclick="backupHtml()" title="HTML 파일 백업" style="display:none;">💾</button><span class="user-name" id="hd-name"></span><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid var(--gray-200);border-radius:8px;" onclick="openProfileModal()">정보변경</button><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid var(--gray-200);border-radius:8px;" onclick="doLogout()">로그아웃</button></div>
+    <div class="header-brand"><img src="icon-192.png" alt="AZ금융서비스" style="height:36px;width:36px;border-radius:9px;object-fit:contain;flex-shrink:0;box-shadow:0 2px 8px rgba(0,0,0,.3);" onerror="this.style.display='none';this.nextElementSibling.style.display='inline-block'"><svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 220 220" width="36" height="36" style="display:none;flex-shrink:0;border-radius:9px;box-shadow:0 2px 8px rgba(37,99,235,.15);vertical-align:middle;"><rect width="220" height="220" rx="20" fill="white"/><text x="14" y="128" font-family="Arial Black,Impact,sans-serif" font-weight="900" font-size="100" fill="#2563eb" letter-spacing="-4">AZ</text><circle cx="179" cy="72" r="30" fill="none" stroke="#2563eb" stroke-width="6"/><polyline points="157,72 164,58 171,80 178,60 185,78 192,64 201,72" fill="none" stroke="#2563eb" stroke-width="4.5" stroke-linecap="round" stroke-linejoin="round"/><text x="110" y="163" font-family="Arial,sans-serif" font-weight="800" font-size="12.5" fill="#2563eb" text-anchor="middle" letter-spacing="3.5">FINANCIAL</text><text x="110" y="180" font-family="Arial,sans-serif" font-weight="800" font-size="12.5" fill="#2563eb" text-anchor="middle" letter-spacing="3.5">SERVICE&#174;</text></svg><span class="brand-text brand-text-pc">AZ금융서비스</span><span class="brand-text-pc" style="font-size:13px;font-weight:700;color:rgba(255,255,255,.8);background:rgba(255,255,255,.1);border-radius:6px;padding:2px 8px;margin-left:8px;letter-spacing:0.5px;">에덴지점</span><a href="https://az.azlife.kr/login" target="_blank" rel="noopener noreferrer" class="brand-text-pc" style="font-size:12px;font-weight:700;color:#93c5fd;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);border-radius:6px;padding:2px 10px;margin-left:6px;text-decoration:none;white-space:nowrap;">에즈라이프 →</a></div>
+    <div class="header-right"><button id="hd-backup-btn" class="icon-btn" onclick="backupHtml()" title="HTML 파일 백업" style="display:none;">💾</button><span class="user-name" id="hd-name"></span><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid rgba(255,255,255,.25);border-radius:8px;color:rgba(255,255,255,.88);background:rgba(255,255,255,.1);" onclick="openProfileModal()">정보변경</button><button class="btn-ghost" style="padding:6px 12px;font-size:13px;font-weight:600;border:1.5px solid rgba(255,255,255,.25);border-radius:8px;color:rgba(255,255,255,.88);background:rgba(255,255,255,.1);" onclick="doLogout()">로그아웃</button></div>
   </header>
 
   <nav class="sidebar">
@@ -474,19 +523,27 @@
   <main class="main">
     <!-- 홈 -->
     <section id="sec-home" class="section active">
-      <div style="margin-bottom:18px;padding:18px 20px;background:linear-gradient(135deg,var(--primary-bg) 0%,white 100%);border-radius:var(--radius-lg);border:1.5px solid var(--primary-light);">
+      <!-- 공지사항 -->
+      <div id="home-notice-section" style="margin-bottom:14px;"></div>
+      <!-- 인사말 -->
+      <div style="margin-bottom:18px;padding:20px 22px;background:linear-gradient(135deg,var(--navy) 0%,#1e40af 60%,#2563eb 100%);border-radius:var(--radius-lg);border:none;position:relative;overflow:hidden;box-shadow:0 6px 24px rgba(37,99,235,.28);">
+        <div style="position:absolute;right:-12px;top:-12px;width:80px;height:80px;border-radius:50%;background:rgba(29,78,216,.06);"></div>
         <h2 id="home-greeting" class="home-motto">안녕하세요 👋</h2>
       </div>
+      <!-- 통계 카드 -->
       <div class="stat-grid">
         <div class="stat-card" onclick="goSection('customers')"><div class="stat-num" id="stat-customers">0</div><div class="stat-label">👥 총 고객</div></div>
         <div class="stat-card" onclick="goSection('todo')"><div class="stat-num" id="stat-todos">0</div><div class="stat-label">✅ 미완료 할일</div></div>
         <div class="stat-card" onclick="goProspectsInCustomers()"><div class="stat-num" id="stat-prospects">0</div><div class="stat-label">⭐ 사업대상자</div></div>
       </div>
+      <!-- 이번 주 성과 대시보드 -->
+      <div id="home-dashboard-section" style="margin-bottom:14px;display:none;"></div>
+      <!-- 알림 섹션들 -->
       <div class="alert-section" id="home-silbi-section" style="display:none;"><div class="alert-title">🏥 실비보험 재가입 시기 임박</div><div id="home-silbi-list"></div></div>
       <div class="alert-section" id="home-car-section" style="display:none;"><div class="alert-title">🚗 자동차보험 만기 예정</div><div id="home-car-list"></div></div>
       <div class="alert-section" id="home-bday-section" style="display:none;"><div class="alert-title">🎂 다가오는 생일 (7일 이내)</div><div id="home-bday-list"></div></div>
       <div class="alert-section" id="home-todo-section" style="display:none;">
-        <div class="alert-title">📋 할 일</div>
+        <div class="alert-title">📋 오늘의 할 일</div>
         <div id="home-todo-list"></div>
       </div>
       <div id="home-empty" style="display:none;"><div class="empty"><div class="empty-icon">✨</div><div class="empty-text">모든 업무가 정상입니다!</div></div></div>
@@ -724,6 +781,46 @@
       <div id="team-admin-container"></div>
     </section>
   </main>
+</div>
+
+<!-- 공지사항 작성/수정 모달 -->
+<div class="overlay" id="m-notice">
+  <div class="modal">
+    <div class="modal-head">
+      <div class="modal-title">📢 공지사항 작성</div>
+      <button class="modal-close" onclick="closeModal('m-notice')">✕</button>
+    </div>
+    <input type="hidden" id="notice-edit-id">
+    <div class="field">
+      <label>공지 내용</label>
+      <textarea id="notice-content" rows="5" placeholder="공지 내용을 입력하세요..."></textarea>
+    </div>
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer;">
+        <input type="checkbox" id="notice-pinned" style="width:16px;height:16px;accent-color:var(--primary);">
+        📌 상단 고정 (삭제 전까지 유지)
+      </label>
+    </div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('m-notice')">취소</button>
+      <button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveNotice()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 팀원 활동이력 모달 -->
+<div class="overlay" id="m-member-history">
+  <div class="modal" style="max-width:540px;">
+    <div class="modal-head">
+      <div class="modal-title" id="member-history-title">팀원 활동이력</div>
+      <button class="modal-close" onclick="closeModal('m-member-history')">✕</button>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;">
+      <select id="member-history-month" style="padding:8px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:13px;outline:none;" onchange="renderMemberHistory()">
+      </select>
+    </div>
+    <div id="member-history-body" style="max-height:60vh;overflow-y:auto;"></div>
+  </div>
 </div>
 
 <!-- 구글 캘린더 설정 모달 -->
@@ -1000,10 +1097,7 @@
     <div class="modal-head"><div class="modal-title">할일 수정</div><button class="modal-close" onclick="closeModal('m-todo-edit')">✕</button></div>
     <input type="hidden" id="todo-edit-id">
     <div class="field"><label>내용 *</label><input type="text" id="todo-edit-text" placeholder="할 일 내용"></div>
-    <div style="display:flex;gap:10px;">
-      <div class="field" style="flex:1;"><label>날짜 *</label><input type="date" id="todo-edit-date"></div>
-      <div class="field" style="flex:0 0 120px;"><label>시간</label><input type="time" id="todo-edit-time"></div>
-    </div>
+    <div class="field"><label>날짜 *</label><input type="date" id="todo-edit-date"></div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-todo-edit')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveTodoEdit()">저장</button></div>
   </div>
 </div>
@@ -1313,6 +1407,7 @@ let allSharedManagerContact = [];
 let promoData = null, myPromoRecords = [], promoRecEditId = null, promoEditTargetUid = null, promoTeamRecordsCache = {};
 let allTeams = {}, allUsers = [], twDate = tw_today();
 let twReports = {}, twGoals = {}, twTeamGoals = {};
+let allNotices = [];
 let jeonFilter = 'general', gongFilter = 'general', claimFilter = 'general', monFilter = 'life', managerFilter = 'general';
 let customerMindmap = {nodes:[]}, lineageMindmap = {nodes:[]};
 let mmDrag = {on:false,nodeId:null,type:'',sx:0,sy:0,nx:0,ny:0};
@@ -2036,6 +2131,10 @@ async function initApp() {
   db.collection('shared_claim').onSnapshot(s => { allSharedClaim=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-claim').classList.contains('active')) renderClaim(); });
   db.collection('shared_ins_contact').onSnapshot(s => { allSharedInsContact=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-insurance').classList.contains('active')) renderInsurance(); });
   db.collection('shared_manager_contact').onSnapshot(s => { allSharedManagerContact=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-manager').classList.contains('active')) renderManagerContact(); });
+  db.collection('notices').orderBy('createdAt','desc').onSnapshot(s => {
+    allNotices = s.docs.map(d => ({id:d.id, ...d.data()}));
+    renderHomeNotice();
+  });
   seedIfEmpty('shared_monitoring', [
     // 생명보험사
     {insType:'life', name:'푸본현대생명', url:'https://www.fubonhyundai.com/process/Mhpev006.do?sPlyno=202308084371', tel:'', status:'active'},
@@ -2184,15 +2283,15 @@ async function delSharedGongsi(id) {
 /* ── 할일 수정 ── */
 function openTodoEdit(id) {
   const t=allTodos.find(x=>x.id===id); if(!t) return;
-  $('todo-edit-id').value=id; $('todo-edit-text').value=t.text||''; $('todo-edit-date').value=t.date||''; $('todo-edit-time').value=t.time||'';
+  $('todo-edit-id').value=id; $('todo-edit-text').value=t.text||''; $('todo-edit-date').value=t.date||'';
   openModal('m-todo-edit');
 }
 async function saveTodoEdit() {
-  const id=$('todo-edit-id').value, text=$('todo-edit-text').value.trim(), date=$('todo-edit-date').value, time=$('todo-edit-time').value||'';
+  const id=$('todo-edit-id').value, text=$('todo-edit-text').value.trim(), date=$('todo-edit-date').value;
   if(!id||!text) return;
   try {
-    await col('todos').doc(id).update({text,date,time});
-    const t=allTodos.find(x=>x.id===id); if(t){t.text=text;t.date=date;t.time=time;}
+    await col('todos').doc(id).update({text,date});
+    const t=allTodos.find(x=>x.id===id); if(t){t.text=text;t.date=date;}
     closeModal('m-todo-edit'); renderCal(); renderTodos(); renderHome(); toast('수정됨','success');
   } catch(e){toast('오류','error');}
 }
@@ -2777,9 +2876,202 @@ async function setSilbiRenewed(customerId, reset=false) {
     toast(reset ? '재가입 완료 취소됨' : '재가입 완료 처리됨', 'success');
   } catch(e) { toast('오류','error'); }
 }
+
+/* ── 공지사항 ── */
+function isNoticeWriter() {
+  if (!CU) return false;
+  return CU.employeeId === ADMIN_ID || CU.role === 'admin' || CU.role === 'asm' || isTeamLeader(CU.uid);
+}
+function renderHomeNotice() {
+  const el = $('home-notice-section');
+  if (!el) return;
+  const canWrite = isNoticeWriter();
+  if (!allNotices.length && !canWrite) { el.innerHTML = ''; return; }
+  let html = '';
+  if (canWrite) {
+    html += `<button class="notice-write-btn" onclick="openNoticeModal()">📢 공지사항 작성</button>`;
+  }
+  if (allNotices.length) {
+    html += allNotices.map(n => {
+      const ts = n.createdAt ? (n.createdAt.toDate ? n.createdAt.toDate() : new Date(n.createdAt.seconds*1000)) : new Date();
+      const dateStr = ts.toLocaleDateString('ko-KR',{month:'short',day:'numeric'}) + ' ' + ts.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+      const canEdit = canWrite || n.authorId === CU.uid;
+      return `<div class="notice-card">
+        <div class="notice-card-header">
+          <span class="notice-card-title">${n.pinned ? '📌 공지사항' : '📢 공지사항'}</span>
+          ${canEdit ? `<div class="notice-card-actions">
+            <button class="notice-card-btn" onclick="openNoticeModal('${n.id}')">수정</button>
+            <button class="notice-card-btn" onclick="deleteNotice('${n.id}')">삭제</button>
+          </div>` : ''}
+        </div>
+        <div class="notice-content">${esc(n.content||'').replace(/\n/g,'<br>')}</div>
+        <div class="notice-meta">${esc(n.authorName||'')} · ${dateStr}</div>
+      </div>`;
+    }).join('');
+  } else {
+    html += '<div class="notice-empty">등록된 공지사항이 없습니다</div>';
+  }
+  el.innerHTML = html;
+}
+function openNoticeModal(id) {
+  const n = id ? allNotices.find(x => x.id === id) : null;
+  $('notice-edit-id').value = id || '';
+  $('notice-content').value = n ? (n.content||'') : '';
+  $('notice-pinned').checked = n ? !!n.pinned : false;
+  openModal('m-notice');
+}
+async function saveNotice() {
+  const content = $('notice-content').value.trim();
+  if (!content) { toast('내용을 입력하세요','error'); return; }
+  const pinned = $('notice-pinned').checked;
+  const id = $('notice-edit-id').value;
+  const srv = firebase.firestore.FieldValue.serverTimestamp();
+  try {
+    if (id) {
+      await db.collection('notices').doc(id).update({content, pinned, updatedAt: srv});
+    } else {
+      await db.collection('notices').add({content, pinned, authorId: CU.uid, authorName: CU.name, createdAt: srv});
+    }
+    closeModal('m-notice');
+    toast('공지사항 저장됨','success');
+  } catch(e) { toast('저장 오류','error'); }
+}
+async function deleteNotice(id) {
+  if (!confirm('공지사항을 삭제하시겠습니까?')) return;
+  try {
+    await db.collection('notices').doc(id).delete();
+    toast('삭제됨','success');
+  } catch(e) { toast('삭제 오류','error'); }
+}
+
+/* ── 홈 성과 대시보드 ── */
+async function renderHomeDashboard() {
+  const el = $('home-dashboard-section');
+  if (!el || !CU) return;
+  const todayStr = tw_today();
+  const weekNum = _getWeekNum(todayStr);
+  const weekRange = _getWeekRange(todayStr);
+  const myGoalData = (twGoals[CU.uid]||{})[weekNum] || {};
+  // 이번 달 지각 현황
+  const ym = todayStr.slice(0,7); // "YYYY-MM"
+  let lateList = [];
+  try {
+    const snap = await db.collection('users').doc(CU.uid).collection('late_records')
+      .where('date','>=', ym + '-01').where('date','<=', ym + '-31').get();
+    lateList = snap.docs.map(d => d.data());
+  } catch(e) {}
+  const lateCnt = lateList.length;
+  const lateFee = lateList.reduce((s,r) => s + (r.fee||0), 0);
+
+  // 목표 데이터
+  const gCnt  = Number(myGoalData.goalCount)||0;
+  const aCnt  = Number(myGoalData.achCount)||0;
+  const gCnp  = Number(myGoalData.goalCanp)||0;
+  const aCnp  = Number(myGoalData.achCanp)||0;
+  const gAct  = Number(myGoalData.goalAction)||0;
+  const aAct  = Number(myGoalData.achAction)||0;
+  const noGoal = !gCnt && !gCnp && !gAct;
+
+  if (noGoal && !lateCnt) { el.style.display='none'; return; }
+  el.style.display = '';
+
+  const pct = v => Math.min(100, gCnt ? Math.round(v/gCnt*100) : 0);
+  const bar = (a,g,cls='') => {
+    const p = g ? Math.min(100, Math.round(a/g*100)) : 0;
+    const done = p >= 100;
+    return `<div class="dash-progress-bar"><div class="dash-progress-fill${done?' done':''}" style="width:${p}%"></div></div>`;
+  };
+
+  el.innerHTML = `<div style="font-size:12px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">📊 이번 주 성과 · ${weekRange}</div>
+  <div class="dashboard-grid">
+    ${!noGoal ? `<div class="dash-card">
+      <div class="dash-card-title">🎯 목표 달성 현황</div>
+      <div class="dash-row"><span class="dash-label">계약건수</span><span class="dash-val ${aCnt>=gCnt&&gCnt?'hit':''}">${aCnt}<span style="font-size:11px;color:var(--gray-400);font-weight:400;">/${gCnt}건</span></span></div>
+      ${bar(aCnt,gCnt)}
+      <div class="dash-row" style="margin-top:8px;"><span class="dash-label">CANP</span><span class="dash-val ${aCnp>=gCnp&&gCnp?'hit':''}">${aCnp}<span style="font-size:11px;color:var(--gray-400);font-weight:400;">/${gCnp}만</span></span></div>
+      ${bar(aCnp,gCnp)}
+      <div class="dash-row" style="margin-top:8px;"><span class="dash-label">액션</span><span class="dash-val ${aAct>=gAct&&gAct?'hit':''}">${aAct}<span style="font-size:11px;color:var(--gray-400);font-weight:400;">/${gAct}</span></span></div>
+      ${bar(aAct,gAct)}
+    </div>` : ''}
+    <div class="dash-card">
+      <div class="dash-card-title">⏰ 이번 달 지각 현황</div>
+      <div class="dash-row"><span class="dash-label">지각 횟수</span><span class="dash-val ${lateCnt?'miss':''}">${lateCnt}회</span></div>
+      <div class="dash-row"><span class="dash-label">지각비 합계</span><span class="dash-val ${lateFee?'miss':''}">${lateFee.toLocaleString()}원</span></div>
+      ${lateCnt ? `<div style="margin-top:10px;font-size:12px;color:var(--gray-500);">${lateList.slice(0,5).map(r=>`<div style="padding:3px 0;">${r.date} · ${r.type==='attendance'?'출근보고':r.type==='goal'?'목표취합':r.type==='activity'?'활동보고':r.type==='review'?'하루후기':r.type==='ta'?'TA인증':r.type==='satReport'?'토요사진':r.type==='taEarly'?'TA조기출근':r.type} · ${(r.fee||0).toLocaleString()}원</div>`).join('')}${lateList.length>5?`<div style="color:var(--gray-400);">외 ${lateList.length-5}건...</div>`:''}</div>` : '<div style="margin-top:10px;font-size:12px;color:var(--success);font-weight:600;">지각 없음 🎉</div>'}
+    </div>
+  </div>`;
+}
+
+/* ── 팀원 활동이력 조회 ── */
+let _historyUid = null;
+async function openMemberHistory(uid, name) {
+  _historyUid = uid;
+  $('member-history-title').textContent = name + ' 활동이력';
+  // 최근 3개월 옵션 생성
+  const sel = $('member-history-month');
+  sel.innerHTML = '';
+  const today = new Date();
+  for (let i = 0; i < 3; i++) {
+    const d = new Date(today.getFullYear(), today.getMonth() - i, 1);
+    const val = d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0');
+    const opt = document.createElement('option');
+    opt.value = val; opt.textContent = `${d.getFullYear()}년 ${d.getMonth()+1}월`;
+    if (i === 0) opt.selected = true;
+    sel.appendChild(opt);
+  }
+  openModal('m-member-history');
+  await renderMemberHistory();
+}
+async function renderMemberHistory() {
+  if (!_historyUid) return;
+  const el = $('member-history-body');
+  el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);">불러오는 중...</div>';
+  const ym = $('member-history-month').value;
+  const [yr, mo] = ym.split('-').map(Number);
+  const from = ym + '-01';
+  const lastDay = new Date(yr, mo, 0).getDate();
+  const to   = ym + '-' + String(lastDay).padStart(2,'0');
+  try {
+    const snap = await db.collection('users').doc(_historyUid).collection('tw_reports')
+      .where(firebase.firestore.FieldPath.documentId(), '>=', from)
+      .where(firebase.firestore.FieldPath.documentId(), '<=', to)
+      .orderBy(firebase.firestore.FieldPath.documentId(), 'desc').get();
+    const docs = snap.docs.map(d => ({date: d.id, ...d.data()}));
+    if (!docs.length) { el.innerHTML = '<div style="text-align:center;padding:30px;color:var(--gray-400);">해당 월 기록 없음</div>'; return; }
+    let out = '';
+    for (const doc of docs) {
+      const hasActivity = doc.activity && doc.activity.content;
+      const hasReview = doc.review && doc.review.content;
+      if (!hasActivity && !hasReview) continue;
+      const d = new Date(doc.date + 'T00:00:00');
+      const dayLabel = ['일','월','화','수','목','금','토'][d.getDay()];
+      out += `<div class="history-date-label">${doc.date} (${dayLabel})</div>`;
+      if (hasActivity) {
+        const ts = doc.activity.savedAt ? (doc.activity.savedAt.toDate ? doc.activity.savedAt.toDate() : new Date(doc.activity.savedAt.seconds*1000)) : null;
+        out += `<div class="history-entry">
+          <div class="history-entry-type">📝 활동보고${doc.activity.late?' ⏰':''}</div>
+          <div class="history-entry-content">${esc(doc.activity.content).replace(/\n/g,'<br>')}</div>
+          ${ts ? `<div class="history-entry-meta">${ts.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 작성</div>` : ''}
+        </div>`;
+      }
+      if (hasReview) {
+        const ts = doc.review.savedAt ? (doc.review.savedAt.toDate ? doc.review.savedAt.toDate() : new Date(doc.review.savedAt.seconds*1000)) : null;
+        out += `<div class="history-entry">
+          <div class="history-entry-type">💭 하루후기${doc.review.late?' ⏰':''}</div>
+          <div class="history-entry-content">${esc(doc.review.content).replace(/\n/g,'<br>')}</div>
+          ${ts ? `<div class="history-entry-meta">${ts.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'})} 작성</div>` : ''}
+        </div>`;
+      }
+    }
+    el.innerHTML = out || '<div style="text-align:center;padding:30px;color:var(--gray-400);">활동보고/하루후기 기록 없음</div>';
+  } catch(e) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--danger);">불러오기 오류</div>'; }
+}
+
 /* ── 홈 ── */
 function renderHome() {
-  $('home-greeting').innerHTML = `오늘이 곧 미래다,<br><span style="font-size:15px;font-weight:600;color:var(--gray-600);">어제보다 성장할 <strong style="color:var(--primary);">${esc(CU.name)}</strong>님</span>`;
+  renderHomeNotice();
+  renderHomeDashboard();
+  $('home-greeting').innerHTML = `오늘이 곧 미래다,<br><span style="font-size:15px;font-weight:600;color:rgba(255,255,255,.8);">어제보다 성장할 <strong style="color:#fde68a;">${esc(CU.name)}</strong>님</span>`;
   $('stat-customers').textContent = allCustomers.length; $('stat-todos').textContent = allTodos.filter(t=>!t.done).length; $('stat-prospects').textContent = allCustomers.filter(c=>c.isProspect).length;
   const today = new Date(), tm = today.getMonth()+1, td = today.getDate(); let ha = false;
   const cars=[];allCustomers.forEach(c=>{_getCarInsurances(c).forEach(ci=>{if(!ci.carDate)return;const diff=carDiff(ci.carDate);if(diff===null||diff<-7||diff>30)return;cars.push({...c,_ci:ci.insCo||'',_cd:ci.carDate,diff});});});cars.sort((a,b)=>a.diff-b.diff);
@@ -2889,12 +3181,10 @@ function renderCal(){
   $('cal-grid').innerHTML=h;
   $('cal-selected-label').textContent=`📅 ${cs} 의 할일`;
 }
-async function addTodo(){const t=$('todo-input').value.trim();if(!t)return;const time=$('todo-time').value||'';try{const r=await col('todos').add({text:t,done:false,date:cs,time,createdAt:firebase.firestore.FieldValue.serverTimestamp()});const newTodo={id:r.id,text:t,done:false,date:cs,time};allTodos.unshift(newTodo);$('todo-input').value='';$('todo-time').value='';// 구글 캘린더 동기화
+async function addTodo(){const t=$('todo-input').value.trim();if(!t)return;const order=Date.now();try{const r=await col('todos').add({text:t,done:false,date:cs,order,createdAt:firebase.firestore.FieldValue.serverTimestamp()});const newTodo={id:r.id,text:t,done:false,date:cs,order};allTodos.unshift(newTodo);$('todo-input').value='';// 구글 캘린더 동기화
 const gcalId=await syncTodoToGcal(newTodo);if(gcalId){await col('todos').doc(r.id).update({gcalEventId:gcalId});newTodo.gcalEventId=gcalId;await loadGcalEvents();}renderCal();renderTodos();renderHome();}catch(e){toast('실패','error');}}
 async function toggleTodo(id){const t=allTodos.find(x=>x.id===id);if(!t)return;t.done=!t.done;renderTodos();renderHome();await col('todos').doc(id).update({done:t.done});}
 async function delTodo(id){const todo=allTodos.find(t=>t.id===id);allTodos=allTodos.filter(t=>t.id!==id);renderTodos();renderHome();if(todo?.gcalEventId) await deleteGcalEvent(todo.gcalEventId);await col('todos').doc(id).delete();}
-// 날짜+시간 정렬키 (시간 없으면 같은 날 맨 앞)
-function _todoKey(t){return (t.date||'9999-99-99')+' '+(t.time||'00:00');}
 function renderTodos(){
   const f=$('todo-filter').value;
   let l, showDate=false;
@@ -2905,7 +3195,7 @@ function renderTodos(){
     l=allTodos.filter(t=>t.date===cs);
     if(f==='done') l=l.filter(t=>t.done);
   }
-  l.sort((a,b)=>_todoKey(a).localeCompare(_todoKey(b)));
+  l.sort((a,b)=>(a.order??0)-(b.order??0)||(a.createdAt?.seconds??0)-(b.createdAt?.seconds??0));
   // 📋 계약 일정 (선택된 날짜의 계약 or 진행중 필터 시 7일내 계약)
   let contractHtml = '';
   try {
@@ -2934,13 +3224,83 @@ function renderTodos(){
       </div>`;
     }
   } catch(e) {}
-  $('todo-list').innerHTML = contractHtml + (l.length?l.map(t=>{
-    const meta=showDate
-      ? `<div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">📅 ${t.date||''}${t.time?` 🕐 ${t.time}`:''}</div>`
-      : (t.time?`<div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">🕐 ${t.time}</div>`:'');
-    return `<div class="todo-item ${t.done?'done':''}"><div class="todo-check" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div><div style="flex:1">${meta}<div class="todo-text">${esc(t.text)}</div></div><button class="icon-btn" onclick="openTodoEdit('${t.id}')">✏️</button><button class="icon-btn" onclick="delTodo('${t.id}')">🗑</button></div>`;
+  $('todo-list').innerHTML = contractHtml + (l.length?l.map((t,i)=>{
+    const dateLabel = showDate ? `<span style="font-size:11px;color:var(--gray-400);margin-right:6px;">📅 ${t.date||''}</span>` : '';
+    return `<div class="todo-item ${t.done?'done':''}" id="todo-item-${t.id}" draggable="true"
+      ondragstart="_todoDragStart(event,'${t.id}')"
+      ondragover="event.preventDefault();event.currentTarget.classList.add('drag-over')"
+      ondragleave="event.currentTarget.classList.remove('drag-over')"
+      ondrop="_todoDrop(event,'${t.id}')"
+      ontouchstart="_todoTouchStart(event,'${t.id}')"
+      ontouchmove="_todoTouchMove(event)"
+      ontouchend="_todoTouchEnd(event,'${t.id}')">
+      <span class="todo-drag-handle" title="순서 변경">☰</span>
+      <div class="todo-check" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div>
+      <div style="flex:1">${dateLabel}<div class="todo-text">${esc(t.text)}</div></div>
+      <button class="icon-btn" onclick="openTodoEdit('${t.id}')">✏️</button>
+      <button class="icon-btn" onclick="delTodo('${t.id}')">🗑</button>
+    </div>`;
   }).join(''):empty('✅','할 일이 없습니다'));
 }
+
+/* ── 해야할일 드래그&드롭 순서변경 ── */
+let _dragSrcId = null, _touchSrcId = null, _touchClone = null;
+
+function _todoDragStart(e, id) {
+  _dragSrcId = id;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.classList.add('dragging');
+}
+function _todoDrop(e, targetId) {
+  e.preventDefault();
+  e.currentTarget.classList.remove('drag-over');
+  if (!_dragSrcId || _dragSrcId === targetId) { _dragSrcId=null; return; }
+  const f = $('todo-filter').value;
+  let list;
+  if(f==='pending') list=allTodos.filter(t=>!t.done);
+  else { list=allTodos.filter(t=>t.date===cs); if(f==='done') list=list.filter(t=>t.done); }
+  list.sort((a,b)=>(a.order??0)-(b.order??0)||(a.createdAt?.seconds??0)-(b.createdAt?.seconds??0));
+  const si=list.findIndex(t=>t.id===_dragSrcId), ti=list.findIndex(t=>t.id===targetId);
+  if(si<0||ti<0){_dragSrcId=null;return;}
+  const [moved]=list.splice(si,1); list.splice(ti,0,moved);
+  list.forEach((t,i)=>{const item=allTodos.find(x=>x.id===t.id);if(item)item.order=i*10+10;});
+  _dragSrcId=null; renderTodos(); saveTodoOrder(list);
+}
+function _todoTouchStart(e, id) {
+  _touchSrcId = id;
+  const el = e.currentTarget;
+  const rc = el.getBoundingClientRect();
+  _touchClone = el.cloneNode(true);
+  _touchClone.style.cssText = `position:fixed;left:${rc.left}px;top:${rc.top}px;width:${rc.width}px;opacity:0.7;pointer-events:none;z-index:9999;`;
+  document.body.appendChild(_touchClone);
+  el.classList.add('dragging');
+}
+function _todoTouchMove(e) {
+  if(!_touchClone) return; e.preventDefault();
+  const t=e.touches[0];
+  _touchClone.style.left=t.clientX-40+'px'; _touchClone.style.top=t.clientY-20+'px';
+  document.querySelectorAll('.todo-item').forEach(el=>{
+    const rc=el.getBoundingClientRect();
+    if(t.clientY>=rc.top&&t.clientY<=rc.bottom&&t.clientX>=rc.left&&t.clientX<=rc.right)
+      el.classList.add('drag-over');
+    else el.classList.remove('drag-over');
+  });
+}
+function _todoTouchEnd(e, srcId) {
+  if(_touchClone){_touchClone.remove();_touchClone=null;}
+  document.querySelectorAll('.todo-item.dragging').forEach(el=>el.classList.remove('dragging'));
+  const over=document.querySelector('.todo-item.drag-over');
+  if(over){over.classList.remove('drag-over');const tid=over.id.replace('todo-item-','');_dragSrcId=srcId;_todoDrop(e,tid);}
+  else _touchSrcId=null;
+}
+async function saveTodoOrder(list) {
+  try {
+    const batch = db.batch();
+    list.forEach((t,i)=>{ batch.update(col('todos').doc(t.id),{order:i*10+10}); });
+    await batch.commit();
+  } catch(e) { /* silent */ }
+}
+
 
 /* ── 고객관리 ── */
 function showMap(addr) { mapAddr=addr; $('m-map-addr').textContent='📍 '+addr; openModal('m-map'); }
@@ -5010,6 +5370,26 @@ function tw_today() {
     String(_d.getMonth()+1).padStart(2,'0') + '-' +
     String(_d.getDate()).padStart(2,'0');
 }
+/* ── 공휴일 목록 (고정+음력 환산 공휴일) ── */
+const KH_HOLIDAYS = new Set([
+  // 2025 고정
+  '2025-01-01','2025-03-01','2025-05-05','2025-06-06',
+  '2025-08-15','2025-10-03','2025-10-09','2025-12-25',
+  // 2025 음력 공휴일 (설날/추석/부처님오신날)
+  '2025-01-28','2025-01-29','2025-01-30', // 설날 연휴
+  '2025-05-05',                            // 부처님오신날 (어린이날과 겹침)
+  '2025-10-05','2025-10-06','2025-10-07','2025-10-08', // 추석 연휴+대체
+  // 2026 고정
+  '2026-01-01','2026-03-01','2026-05-05','2026-06-06',
+  '2026-08-15','2026-10-03','2026-10-09','2026-12-25',
+  // 2026 음력 공휴일
+  '2026-02-16','2026-02-17','2026-02-18','2026-02-19', // 설날 연휴+대체
+  '2026-05-24',                                         // 부처님오신날
+  '2026-09-23','2026-09-24','2026-09-25',              // 추석 연휴
+]);
+function tw_isHoliday(dateStr) {
+  return KH_HOLIDAYS.has(dateStr);
+}
 function tw_isWeekday(dateStr) {
   const d = new Date(dateStr); return d.getDay() !== 0 && d.getDay() !== 6;
 }
@@ -5184,6 +5564,10 @@ function _tw_memberListHtml(type) {
       } else if (done) {
         detail = STATUS_LBL[a.status] || a.status;
       }
+      // taCall 달성여부 표시
+      const _tc = r.taCall || {};
+      if (_tc.achieved === true) detail += ' · 📞✅';
+      else if (_tc.achieved === false) detail += (_tc.earlyLate ? ' · 📞❌⏰' : ' · 📞❌');
     } else if (type === 'goal') {
       const g = (twGoals[uid]||{})[weekNum] || {};
       done = g.goalCount !== undefined || g.achCount !== undefined;
@@ -5204,6 +5588,11 @@ function _tw_memberListHtml(type) {
       done = !!(ta.checked || ta.url);
       late = !!ta.late;
       if (done) detail = '인증 완료';
+    } else if (type === 'satReport') {
+      const sr = r.satReport || {};
+      done = !!sr.checked;
+      late = !!sr.late;
+      if (done) detail = '사진보고 완료';
     }
         const absent = !!(myT.absentUids && myT.absentUids[uid]);
     return {uid, name: u.name, done, late, detail, absent};
@@ -5221,7 +5610,7 @@ function _tw_memberListHtml(type) {
     <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">팀원 현황 ${doneCount}/${activeCount}명</div>
     ${items.map(it => `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--gray-50);">
       <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${it.absent ? 'var(--gray-200)' : it.done ? (it.late?'var(--warning)':'var(--success)') : 'var(--gray-300)'};" ></span>
-      <span style="font-size:13px;font-weight:600;min-width:50px;">${esc(it.name)}</span>
+      <span style="font-size:13px;font-weight:600;min-width:50px;cursor:pointer;color:var(--navy);" onclick="openMemberHistory('${it.uid}','${it.name}')">${esc(it.name)}</span>
       ${!it.absent && it.late ? '<span style="font-size:11px;color:var(--danger);white-space:nowrap;">⏰</span>' : ''}
       <span style="font-size:12px;color:${it.absent?'var(--gray-400)':it.done?(it.late?'var(--danger)':'var(--gray-500)'):'var(--gray-400)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
         ${it.absent ? '미출근' : it.done ? esc(it.detail) : '미완료'}
@@ -5235,10 +5624,50 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   const STATUS = [{k:'wake',e:'🌅',l:'기상'},{k:'depart',e:'🚗',l:'출발'},{k:'arrive',e:'🏢',l:'도착'},{k:'direct',e:'📍',l:'직출'},{k:'off',e:'🏖',l:'OFF'}];
   const memberList = _tw_memberListHtml('attend');
 
-  if (!isWD) {
+  const isSat = new Date(twDate).getDay() === 6;
+  const isHoliday = tw_isHoliday(twDate);
+
+  if (isHoliday) {
     return `<div class="tw-section">
-      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><span class="tw-status-chip pending">주말 제외</span></div>
-      ${memberList}
+      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><span class="tw-status-chip pending">공휴일 제외</span></div>
+    </div>`;
+  }
+
+  if (isSat) {
+    const sr = myR.satReport || {};
+    const hasDoneSr = !!sr.checked;
+    const chipSr = _chipStatus(hasDoneSr, sr.late, '미인증');
+    const memberSatList = _tw_memberListHtml('satReport');
+    let checkedTimeSr = '';
+    if (hasDoneSr && sr.checkedAt) {
+      try { const _d = sr.checkedAt.toDate ? sr.checkedAt.toDate() : new Date(sr.checkedAt);
+            checkedTimeSr = _d.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'}); } catch(e) {}
+    }
+    const satAutoNote = !hasDoneSr ? _autoLateNote(sr) : '';
+    return `<div class="tw-section">
+      <div class="tw-section-head"><div class="tw-section-title">📸 토요일 사진보고</div>${chipSr}</div>
+      ${satAutoNote}
+      <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">오전 10:00 마감 · 팀방에 사진 올린 뒤 아래 버튼을 누르세요</div>
+      ${hasDoneSr
+        ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center;">
+             <div style="font-size:18px;margin-bottom:4px;">✅</div>
+             <div style="font-weight:700;color:#166534;">사진보고 인증 완료</div>
+             ${checkedTimeSr ? `<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">완료 시각 ${checkedTimeSr}</div>` : ''}
+           </div>
+           <button onclick="cancelSatReport()" style="margin-top:10px;width:100%;padding:9px;background:none;border:1.5px solid #fca5a5;border-radius:9px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;">
+             ✕ 인증 취소
+           </button>`
+        : `<button class="btn-outline" style="width:100%;padding:14px;font-size:15px;border-color:#86efac;color:#166534;" onclick="checkSatReport()">
+                 📸 팀방에 사진 올린 후 체크
+               </button>`
+      }
+      ${memberSatList}
+    </div>`;
+  }
+
+  if (!isWD) { // 일요일
+    return `<div class="tw-section">
+      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><span class="tw-status-chip pending">일요일 제외</span></div>
     </div>`;
   }
 
@@ -5289,12 +5718,28 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
     : '';
 
   const attendAutoNote = !a.status ? _autoLateNote(a) : '';
+  // ── TA 통화 기준 (10명) ──
+  const taCallD = myR.taCall || {};
+  const taCallAch = taCallD.achieved;
+  const taCallHtml = `
+    <div style="margin-top:12px;border-top:1px solid var(--gray-100);padding-top:12px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:4px;">📞 TA 통화 기준 (10명)</div>
+      <div style="font-size:11px;color:var(--gray-500);margin-bottom:8px;">10명 미달성 시 오전 07:00 이전 출근 필요 (별도 지각 항목)</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+        <button onclick="saveTaCall(true)" style="padding:10px;border-radius:10px;border:1.5px solid ${taCallAch===true?'var(--primary)':'var(--gray-200)'};background:${taCallAch===true?'var(--primary)':'#fff'};color:${taCallAch===true?'#fff':'var(--gray-600)'};font-size:13px;font-weight:600;cursor:pointer;">✅ 10명 달성</button>
+        <button onclick="saveTaCall(false)" style="padding:10px;border-radius:10px;border:1.5px solid ${taCallAch===false?'var(--danger)':'var(--gray-200)'};background:${taCallAch===false?'var(--danger)':'#fff'};color:${taCallAch===false?'#fff':'var(--gray-600)'};font-size:13px;font-weight:600;cursor:pointer;">❌ 미달성 (7시 출근)</button>
+      </div>
+      ${taCallAch===true ? '<div style="font-size:12px;color:var(--success);margin-top:6px;">✅ 10명 달성 — 7시 출근 면제</div>' : ''}
+      ${taCallAch===false && taCallD.earlyLate ? '<div style="font-size:12px;color:var(--danger);margin-top:6px;">⏰ 7시 출근 미이행 — 지각 처리됨</div>' : ''}
+      ${taCallAch===false && !taCallD.earlyLate ? '<div style="font-size:12px;color:var(--warning);margin-top:6px;">⚠️ 미달성 — 오전 7:00 이전 도착 필요</div>' : ''}
+    </div>`;
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div>${chip}</div>
     ${attendAutoNote}
-    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (직출·OFF 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근은 지각 처리됩니다. (OFF만 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${btns}</div>
     ${cancelBtn}
+    ${taCallHtml}
     ${memberList}
   </div>`;
 }
@@ -5332,15 +5777,14 @@ async function selectAttend(status) {
   if (!prevStatus && (status === 'depart' || status === 'arrive')) {
     toast('먼저 기상을 체크해주세요', 'error'); return;
   }
-  // 지각 판정: OFF/직출은 면제, 기상·출발·도착은 08:00 기준
+  // 지각 판정: OFF만 면제, 직출 포함 모두 08:00 기준
   // depart/arrive는 기상 시각 기준으로 판정 (기상이 8시 전이면 지각 아님)
   let isLate = false;
   if (status === 'off') {
     isLate = false; // OFF는 지각 없음
   } else {
-    const exempt = status === 'direct';
     const hour8 = new Date(twDate); hour8.setHours(8,0,0,0);
-    if (!exempt && tw_isWeekday(twDate)) {
+    if (tw_isWeekday(twDate)) {
       if (status === 'arrive') {
         // 도착 시각(현재 시각) 기준 — 08:00 이후 도착이면 지각
         isLate = now > hour8;
@@ -5353,7 +5797,7 @@ async function selectAttend(status) {
         }
         isLate = refTime > hour8;
       } else {
-        // 기상(wake): 현재 시각 기준
+        // 기상(wake), 직출(direct): 현재 시각 기준
         isLate = now > hour8;
       }
     }
@@ -5463,7 +5907,7 @@ async function _tw_goalSection(canEdit, isLeader) {
   const myGoal = (twGoals[CU.uid] || {})[weekNum] || {};
 
   const monDL = _getWeekDeadline(twDate, 1, 12, 1);  // 목표: 월요일 12:00
-  const sunDL = _getWeekDeadline(twDate, 0, 18, 0);  // 달성: 일요일 18:00
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0);  // 달성: 일요일 20:00
   const goalDLLabel = now <= monDL ? '✅ 마감 전' : '⚠️ 마감 초과';
   const achDLLabel  = now <= sunDL ? '✅ 마감 전' : '⚠️ 마감 초과';
 
@@ -5657,7 +6101,7 @@ async function openGoalModal() {
     $('goal-ach-action').value    = g.achAction  != null ? g.achAction  : '';
   } catch(e) {}
   const monDL = _getWeekDeadline(twDate, 1, 12, 1);
-  const sunDL = _getWeekDeadline(twDate, 0, 18, 0);
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
   const now = new Date();
   const _wr = _getWeekRange(twDate);
   const _goalStatus = now > monDL ? '⚠️ 마감 초과' : '✅ 마감 전';
@@ -5671,18 +6115,18 @@ async function openGoalModal() {
 }
 
 async function saveGoal() {
-  const goalCount  = Number($('goal-target-count').value)  || 0;
-  const goalCanp   = Number($('goal-target-canp').value)   || 0;
-  const goalCis    = Number($('goal-target-cis').value)    || 0;
-  const goalAction = Number($('goal-target-action').value) || 0;
-  const achCount   = Number($('goal-ach-count').value)     || 0;
-  const achCanp    = Number($('goal-ach-canp').value)      || 0;
-  const achCis     = Number($('goal-ach-cis').value)       || 0;
-  const achAction  = Number($('goal-ach-action').value)    || 0;
+  const goalCount  = $('goal-target-count').value.trim()  || '.';
+  const goalCanp   = $('goal-target-canp').value.trim()   || '.';
+  const goalCis    = $('goal-target-cis').value.trim()    || '.';
+  const goalAction = $('goal-target-action').value.trim() || '.';
+  const achCount   = $('goal-ach-count').value.trim()     || '.';
+  const achCanp    = $('goal-ach-canp').value.trim()      || '.';
+  const achCis     = $('goal-ach-cis').value.trim()       || '.';
+  const achAction  = $('goal-ach-action').value.trim()    || '.';
   const weekNum = _getWeekNum(twDate);
   const now = new Date();
   const monDL = _getWeekDeadline(twDate, 1, 12, 1); // 목표 마감: 월요일 12:00
-  const sunDL = _getWeekDeadline(twDate, 0, 18, 0); // 달성 마감: 일요일 18:00
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
 
   // 서버에서 최신 데이터 읽기 (캐시 stale 방지)
   let existingGoal = {};
@@ -5692,8 +6136,8 @@ async function saveGoal() {
   } catch(e) { existingGoal = (twGoals[CU.uid]||{})[weekNum] || {}; }
 
   // 목표 필드 입력 여부
-  const hasGoalInput = goalCount || goalCanp || goalCis || goalAction;
-  const hasAchInput  = achCount  || achCanp  || achCis  || achAction;
+  const hasGoalInput = [goalCount, goalCanp, goalCis, goalAction].some(v => v !== '.');
+  const hasAchInput  = [achCount, achCanp, achCis, achAction].some(v => v !== '.');
 
   // 최초 저장 시각 기준으로 지각 판단 (이후 수정 시 지각 재판단 없음)
   const isFirstGoalSave = hasGoalInput && !existingGoal.firstGoalSavedAt;
@@ -5728,6 +6172,48 @@ function _fmtSavedAt(ts) {
     return d.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
   } catch(e) { return '-'; }
 }
+/* ── 팀원 활동보고/하루후기 카드 뷰 ── */
+function _tw_teamCardsHtml(type) {
+  const myT = myTeam();
+  if (!myT) return '';
+  // 같은 팀 전체 uid (팀장 포함)
+  const allUids = [...new Set([...(myT.memberIds||[]), myT.leaderId].filter(Boolean))];
+  const cards = allUids.map(uid => {
+    const u = allUsers.find(x => x.uid === uid);
+    if (!u) return null;
+    const r = twReports[uid] || {};
+    const d = type === 'activity' ? (r.activity||{}) : (r.review||{});
+    return { uid, name: u.name, content: d.content||'', savedAt: d.firstSavedAt||d.savedAt||null, late: !!d.late, isSelf: uid===CU.uid };
+  }).filter(Boolean);
+
+  const written    = cards.filter(c => c.content).sort((a,b) => {
+    // 본인 먼저, 그 다음 등록시각 순
+    if (a.isSelf !== b.isSelf) return a.isSelf ? -1 : 1;
+    return 0;
+  });
+  const notWritten = cards.filter(c => !c.content);
+
+  if (!written.length && !notWritten.length) return '';
+
+  const cardColor = type === 'activity' ? {bg:'#f0f9ff',border:'#bae6fd',self:'#eff6ff',selfBorder:'#93c5fd'}
+                                        : {bg:'#f5f3ff',border:'#ddd6fe',self:'#fdf2f8',selfBorder:'#f0abfc'};
+  return `<div style="margin-top:16px;border-top:1.5px solid var(--gray-100);padding-top:14px;">
+    <div style="font-size:12px;font-weight:800;color:var(--gray-500);margin-bottom:10px;">
+      ${type==='activity'?'📝 팀원 활동보고':'🌙 팀원 하루후기'} · ${written.length}/${cards.length}명 작성
+    </div>
+    ${written.map(c => `
+    <div style="background:${c.isSelf?cardColor.self:cardColor.bg};border:1.5px solid ${c.isSelf?cardColor.selfBorder:cardColor.border};border-radius:12px;padding:12px 14px;margin-bottom:8px;">
+      <div style="display:flex;align-items:center;gap:6px;margin-bottom:7px;">
+        <span style="font-size:13px;font-weight:800;color:var(--gray-800);">${esc(c.name)}${c.isSelf?' <span style=\"font-size:11px;color:var(--primary);font-weight:600;\">(나)</span>':''}</span>
+        ${c.late ? '<span style=\"font-size:10px;background:#fee2e2;color:var(--danger);padding:1px 6px;border-radius:5px;font-weight:700;\">⏰지각</span>' : ''}
+        <span style="margin-left:auto;font-size:11px;color:var(--gray-400);">${_fmtSavedAt(c.savedAt)}</span>
+      </div>
+      <div style="font-size:13px;color:var(--gray-700);white-space:pre-wrap;line-height:1.65;">${esc(c.content)}</div>
+    </div>`).join('')}
+    ${notWritten.length ? `<div style="font-size:12px;color:var(--gray-400);padding:6px 0;">미작성: ${notWritten.map(c=>esc(c.name)).join(', ')}</div>` : ''}
+  </div>`;
+}
+
 function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
   const a = myR.activity || {};
   const hasDone = !!a.content;
@@ -5737,6 +6223,7 @@ function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">📝 활동보고</div></div>
       ${memberList || '<div style="color:var(--gray-400);font-size:13px;">팀원 없음</div>'}
+      ${_tw_teamCardsHtml('activity')}
     </div>`;
   }
   const actAutoNote = !hasDone ? _autoLateNote(a) : '';
@@ -5753,6 +6240,7 @@ function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
       ${hasDone ? '수정하기' : '활동보고 작성'}
     </button>
     ${memberList}
+    ${_tw_teamCardsHtml('activity')}
   </div>`;
 }
 
@@ -5797,6 +6285,7 @@ function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">🌙 하루후기</div></div>
       ${memberList || '<div style="color:var(--gray-400);font-size:13px;">팀원 없음</div>'}
+      ${_tw_teamCardsHtml('review')}
     </div>`;
   }
   const revAutoNote = !hasDone ? _autoLateNote(r) : '';
@@ -5810,6 +6299,7 @@ function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
       ${hasDone ? '수정하기' : '하루후기 작성'}
     </button>
     ${memberList}
+    ${_tw_teamCardsHtml('review')}
   </div>`;
 }
 
@@ -5930,6 +6420,64 @@ async function cancelTa() {
     toast('TA인증 취소됨');
   } catch(e) { toast('오류', 'error'); }
 }
+
+async function checkSatReport() {
+  const now = new Date();
+  const dl10 = new Date(twDate); dl10.setHours(10, 0, 0, 0);
+  const isLate = now > dl10;
+  try {
+    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set(
+      {satReport: {checked: true, late: isLate, checkedAt: firebase.firestore.FieldValue.serverTimestamp()}}, {merge: true}
+    );
+    if (!twReports[CU.uid]) twReports[CU.uid] = {};
+    twReports[CU.uid].satReport = {checked: true, late: isLate};
+    if (isLate) await recordLate(CU.uid, twDate, 'satReport');
+    renderTeamwork(true);
+    toast(isLate ? '인증 완료 (사진보고 지각)' : '사진보고 완료 ✅', isLate ? 'error' : 'success');
+  } catch(e) { toast('오류', 'error'); }
+}
+
+async function saveTaCall(achieved) {
+  const now = new Date();
+  const dl7 = new Date(twDate); dl7.setHours(7, 0, 0, 0);
+  const myR = twReports[CU.uid] || {};
+  const att = myR.attend || {};
+  let earlyLate = false;
+  if (!achieved && now > dl7) {
+    const arrRaw = att.allTimes?.arrive || att.allTimes?.direct;
+    if (arrRaw) {
+      const arrTime = arrRaw.toDate ? arrRaw.toDate() : new Date(arrRaw.seconds * 1000);
+      earlyLate = arrTime >= dl7; // 7시 이후 도착이면 지각
+    } else {
+      earlyLate = true; // 도착 기록 없는데 7시 지남
+    }
+  }
+  try {
+    const srv = firebase.firestore.FieldValue.serverTimestamp();
+    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+      .set({taCall: {achieved, savedAt: srv, earlyLate}}, {merge: true});
+    if (!twReports[CU.uid]) twReports[CU.uid] = {};
+    twReports[CU.uid].taCall = {achieved, earlyLate};
+    if (!achieved && earlyLate) await recordLate(CU.uid, twDate, 'taEarly');
+    renderTeamwork(true);
+    const msg = achieved ? '10명 달성 ✅' : (earlyLate ? '미달성 (7시 출근 지각 처리됨)' : '미달성 (7시 출근 필요)');
+    toast(msg, earlyLate ? 'error' : 'success');
+  } catch(e) { toast('오류', 'error'); }
+}
+
+
+async function cancelSatReport() {
+  if (!confirm('토요일 사진보고 인증을 취소하시겠습니까?')) return;
+  try {
+    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set(
+      {satReport: {checked: false, checkedAt: null, late: false}}, {merge: true}
+    );
+    if (twReports[CU.uid]) twReports[CU.uid].satReport = {};
+    renderTeamwork(true);
+    toast('사진보고 인증 취소됨');
+  } catch(e) { toast('오류', 'error'); }
+}
+
 
 function _tw_teamStatus() {
   const myT = myTeam();
@@ -6155,6 +6703,57 @@ async function _autoRecordLates() {
       } catch(e) {}
     }
   }
+
+  // 6. 토요일 사진보고 (오전 10:00 마감)
+  if (_twDaySelf === 6) {
+    const dl10 = new Date(twDate); dl10.setHours(10, 0, 0, 0);
+    if (now > dl10) {
+      const sr = myR.satReport || {};
+      if (!sr.checked && !sr.late && !sr.autoLatedAt) {
+        try {
+          await recordLate(CU.uid, twDate, 'satReport');
+          await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+            .update({'satReport.late':true,'satReport.autoLatedAt':srv()})
+            .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+              .set({satReport:{late:true,autoLatedAt:srv()}},{merge:true}));
+          if (!twReports[CU.uid]) twReports[CU.uid] = {};
+          if (!twReports[CU.uid].satReport) twReports[CU.uid].satReport = {};
+          twReports[CU.uid].satReport.late = true;
+          twReports[CU.uid].satReport.autoLatedAt = now;
+        } catch(e) {}
+      }
+    }
+  }
+
+  // 7. TA 통화 미달성 시 7시 출근 지각 (평일)
+  if (isWD) {
+    const taCallAuto = myR.taCall || {};
+    if (taCallAuto.achieved === false) {
+      const dl7 = new Date(twDate); dl7.setHours(7, 0, 0, 0);
+      if (now > dl7 && !taCallAuto.earlyLate && !taCallAuto.autoLatedAt) {
+        const _att = myR.attend || {};
+        const _arrRaw = _att.allTimes?.arrive || _att.allTimes?.direct;
+        let _arrivedBefore7 = false;
+        if (_arrRaw) {
+          const _arrT = _arrRaw.toDate ? _arrRaw.toDate() : new Date(_arrRaw.seconds*1000);
+          _arrivedBefore7 = _arrT < dl7;
+        }
+        if (!_arrivedBefore7) {
+          try {
+            await recordLate(CU.uid, twDate, 'taEarly');
+            await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+              .update({'taCall.earlyLate':true,'taCall.autoLatedAt':srv()})
+              .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+                .set({taCall:{...taCallAuto,earlyLate:true,autoLatedAt:srv()}},{merge:true}));
+            if (!twReports[CU.uid]) twReports[CU.uid] = {};
+            if (!twReports[CU.uid].taCall) twReports[CU.uid].taCall = {};
+            twReports[CU.uid].taCall.earlyLate = true;
+            twReports[CU.uid].taCall.autoLatedAt = now;
+          } catch(e) {}
+        }
+      }
+    }
+  }
 }
 
 /* ── 관리자·팀장: 미로그인 팀원도 자동 지각처리 ── */
@@ -6283,6 +6882,55 @@ async function _autoRecordLatesForTeam() {
           if (!twReports[uid].ta) twReports[uid].ta = {};
           twReports[uid].ta.late = true; twReports[uid].ta.autoLatedAt = now;
         } catch(e) {}
+      }
+    }
+
+    // 6. 토요일 사진보고 (오전 10:00 마감)
+    if (_twDayTeam === 6) {
+      const dl10 = new Date(twDate); dl10.setHours(10, 0, 0, 0);
+      if (now > dl10) {
+        const sr = r.satReport || {};
+        if (!sr.checked && !sr.late && !sr.autoLatedAt) {
+          try {
+            await recordLate(uid, twDate, 'satReport');
+            await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+              .update({'satReport.late':true,'satReport.autoLatedAt':srv()})
+              .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+                .set({satReport:{late:true,autoLatedAt:srv()}},{merge:true}));
+            if (!twReports[uid]) twReports[uid] = {};  
+            if (!twReports[uid].satReport) twReports[uid].satReport = {};
+            twReports[uid].satReport.late = true; twReports[uid].satReport.autoLatedAt = now;
+          } catch(e) {}
+        }
+      }
+    }
+
+    // 7. TA 통화 미달성 시 7시 출근 지각 (평일)
+    if (isWD) {
+      const taCallT = r.taCall || {};
+      if (taCallT.achieved === false) {
+        const dl7t = new Date(twDate); dl7t.setHours(7, 0, 0, 0);
+        if (now > dl7t && !taCallT.earlyLate && !taCallT.autoLatedAt) {
+          const _attT = r.attend || {};
+          const _arrRawT = _attT.allTimes?.arrive || _attT.allTimes?.direct;
+          let _arrivedBefore7T = false;
+          if (_arrRawT) {
+            const _arrTT = _arrRawT.toDate ? _arrRawT.toDate() : new Date(_arrRawT.seconds*1000);
+            _arrivedBefore7T = _arrTT < dl7t;
+          }
+          if (!_arrivedBefore7T) {
+            try {
+              await recordLate(uid, twDate, 'taEarly');
+              await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+                .update({'taCall.earlyLate':true,'taCall.autoLatedAt':srv()})
+                .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+                  .set({taCall:{...taCallT,earlyLate:true,autoLatedAt:srv()}},{merge:true}));
+              if (!twReports[uid]) twReports[uid] = {};
+              if (!twReports[uid].taCall) twReports[uid].taCall = {};
+              twReports[uid].taCall.earlyLate = true; twReports[uid].taCall.autoLatedAt = now;
+            } catch(e) {}
+          }
+        }
       }
     }
   }
