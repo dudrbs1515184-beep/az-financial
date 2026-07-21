@@ -25,7 +25,7 @@
       --gray-300:#cbd5e1; --gray-400:#94a3b8; --gray-500:#64748b;
       --gray-600:#475569; --gray-700:#334155; --gray-800:#1e293b; --gray-900:#0f172a;
       --danger:#ef4444; --success:#10b981; --warning:#f59e0b;
-      --nav-h:64px; --header-h:58px; --sidebar-w:230px;
+      --nav-h:56px; --header-h:58px; --sidebar-w:230px;
       --shadow-xs:0 1px 3px rgba(0,0,0,.06),0 1px 2px rgba(0,0,0,.04);
       --shadow-sm:0 4px 16px rgba(0,0,0,.08),0 1px 3px rgba(0,0,0,.05);
       --shadow-md:0 10px 32px rgba(0,0,0,.1),0 2px 6px rgba(0,0,0,.06);
@@ -82,12 +82,12 @@
     .nav-btn{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;border:none;background:transparent;font-size:14px;font-weight:500;color:var(--nav-text);cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;width:100%}
     .nav-btn svg{width:20px;height:20px;flex-shrink:0} .nav-btn:hover{background:rgba(255,255,255,.1);color:var(--nav-text-active)} .nav-btn.active{background:rgba(255,255,255,.18);color:var(--nav-text-active);font-weight:700}
 
-    .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:linear-gradient(to top,var(--navy-dark),var(--navy));border-top:none;display:flex;z-index:200;overflow-x:auto;box-shadow:0 -3px 16px rgba(0,0,0,.28)}
+    .bottom-nav{position:fixed;top:var(--header-h);left:0;right:0;height:var(--nav-h);background:linear-gradient(to bottom,var(--navy),var(--navy-light));border-top:none;display:flex;z-index:150;overflow-x:auto;box-shadow:0 4px 12px rgba(0,0,0,.22)}
     @media(min-width:768px){.bottom-nav{display:none}}
     .bnav-btn{flex:1;min-width:52px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--nav-text);font-family:inherit;padding:6px 2px;transition:color .15s}
-    .bnav-btn svg{width:20px;height:20px} .bnav-btn span{font-size:9px;font-weight:500;white-space:nowrap} .bnav-btn.active{color:#93c5fd}
+    .bnav-btn svg{width:20px;height:20px} .bnav-btn span{font-size:13px;font-weight:600;white-space:nowrap} .bnav-btn.active{color:#93c5fd}
 
-    .main{padding-top:calc(var(--header-h) + 20px);padding-bottom:calc(var(--nav-h) + 20px);padding-left:16px;padding-right:16px;min-height:100vh;background:#f4f6fb;}
+    .main{padding-top:calc(var(--header-h) + var(--nav-h) + 20px);padding-bottom:20px;padding-left:16px;padding-right:16px;min-height:100vh;background:#f4f6fb;}
     @media(min-width:768px){.main{padding-left:calc(var(--sidebar-w) + 24px);padding-right:24px;padding-bottom:32px;}}
 
     .section{display:none} .section.active{display:block;animation:secFadeIn .25s ease;}
@@ -389,11 +389,11 @@
     .stat-card:nth-child(2) .stat-num{color:var(--success);}
     .stat-card:nth-child(3) .stat-num{color:var(--warning);}
 
-    /* ── 바텀 네비 개선 ── */
-    .bnav-btn{font-family:inherit;min-height:60px;}
+    /* ── 상단 탭 네비 ── */
+    .bnav-btn{font-family:inherit;min-height:var(--nav-h);position:relative;}
     .bnav-btn.active{color:#93c5fd;}
-    .bnav-btn span{font-size:9.5px;font-weight:600;}
-    /* bottom-nav shadow: see main rule */
+    .bnav-btn.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:3px;background:#93c5fd;border-radius:2px 2px 0 0;}
+    .bnav-btn span{font-size:13px;font-weight:700;}
 
     /* ── 토스트 개선 ── */
     .toast{border-radius:14px;font-size:13px;padding:12px 22px;box-shadow:0 6px 20px rgba(0,0,0,.12);}
@@ -2944,62 +2944,134 @@ async function deleteNotice(id) {
   } catch(e) { toast('삭제 오류','error'); }
 }
 
-/* ── 홈 성과 대시보드 ── */
+/* ── 홈 성과 대시보드 (이번 달 전체 주차 누적) ── */
 async function renderHomeDashboard() {
   const el = $('home-dashboard-section');
   if (!el || !CU) return;
   const todayStr = tw_today();
-  const weekNum = _getWeekNum(todayStr);
-  const weekRange = _getWeekRange(todayStr);
-  const myGoalData = (twGoals[CU.uid]||{})[weekNum] || {};
-  // 이번 달 지각 현황
-  const ym = todayStr.slice(0,7); // "YYYY-MM"
+  const [yr, mo] = todayStr.slice(0,7).split('-').map(Number);
+  const ym = `${yr}-${String(mo).padStart(2,'0')}`;
+
+  // 1. 이번 달에 속하는 모든 weekNum 수집
+  const lastDay = new Date(yr, mo, 0).getDate();
+  const weekNumsSet = new Set();
+  const weekMonMap = {}; // weekNum → 해당 주 월요일 날짜
+  for (let d = 1; d <= lastDay; d++) {
+    const ds = `${yr}-${String(mo).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+    const wn = _getWeekNum(ds);
+    if (!weekNumsSet.has(wn)) {
+      weekNumsSet.add(wn);
+      // 해당 주 월요일 구하기
+      const dt = new Date(ds + 'T00:00:00');
+      const day = dt.getDay() || 7;
+      const mon = new Date(dt); mon.setDate(dt.getDate() - (day - 1));
+      weekMonMap[wn] = mon.toISOString().slice(0,10);
+    }
+  }
+  const weekNums = [...weekNumsSet].sort((a,b) => a-b);
+
+  // 2. 각 주차 데이터 Firestore에서 로드
+  const weekData = {};
+  await Promise.all(weekNums.map(async wn => {
+    // 이미 캐시에 있으면 사용
+    if (twGoals[CU.uid]?.[wn]) { weekData[wn] = twGoals[CU.uid][wn]; return; }
+    try {
+      const doc = await db.collection('users').doc(CU.uid)
+        .collection('tw_goals').doc(String(wn)).get();
+      if (doc.exists) {
+        if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
+        twGoals[CU.uid][wn] = doc.data();
+        weekData[wn] = doc.data();
+      }
+    } catch(e) {}
+  }));
+
+  // 3. 이번 달 지각 현황
   let lateList = [];
   try {
     const snap = await db.collection('users').doc(CU.uid).collection('late_records')
-      .where('date','>=', ym + '-01').where('date','<=', ym + '-31').get();
+      .where('date','>=', ym + '-01').where('date','<=', ym + '-' + String(lastDay).padStart(2,'0')).get();
     lateList = snap.docs.map(d => d.data());
   } catch(e) {}
   const lateCnt = lateList.length;
   const lateFee = lateList.reduce((s,r) => s + (r.fee||0), 0);
 
-  // 목표 데이터
-  const gCnt  = Number(myGoalData.goalCount)||0;
-  const aCnt  = Number(myGoalData.achCount)||0;
-  const gCnp  = Number(myGoalData.goalCanp)||0;
-  const aCnp  = Number(myGoalData.achCanp)||0;
-  const gAct  = Number(myGoalData.goalAction)||0;
-  const aAct  = Number(myGoalData.achAction)||0;
-  const noGoal = !gCnt && !gCnp && !gAct;
-
-  if (noGoal && !lateCnt) { el.style.display='none'; return; }
+  // 4. 데이터가 하나도 없으면 숨김
+  const hasAnyData = weekNums.some(wn => weekData[wn]);
+  if (!hasAnyData && !lateCnt) { el.style.display='none'; return; }
   el.style.display = '';
 
-  const pct = v => Math.min(100, gCnt ? Math.round(v/gCnt*100) : 0);
-  const bar = (a,g,cls='') => {
-    const p = g ? Math.min(100, Math.round(a/g*100)) : 0;
-    const done = p >= 100;
-    return `<div class="dash-progress-bar"><div class="dash-progress-fill${done?' done':''}" style="width:${p}%"></div></div>`;
-  };
+  // 5. 주차별 표 생성
+  let totalAchCnt = 0, totalAchCanp = 0, totalAchAct = 0;
+  let totalGoalCnt = 0, totalGoalCanp = 0, totalGoalAct = 0;
+  const todayWeekNum = _getWeekNum(todayStr);
 
-  el.innerHTML = `<div style="font-size:12px;font-weight:800;color:var(--navy);text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px;">📊 이번 주 성과 · ${weekRange}</div>
-  <div class="dashboard-grid">
-    ${!noGoal ? `<div class="dash-card">
-      <div class="dash-card-title">🎯 목표 달성 현황</div>
-      <div class="dash-row"><span class="dash-label">계약건수</span><span class="dash-val ${aCnt>=gCnt&&gCnt?'hit':''}">${aCnt}<span style="font-size:11px;color:var(--gray-400);font-weight:400;">/${gCnt}건</span></span></div>
-      ${bar(aCnt,gCnt)}
-      <div class="dash-row" style="margin-top:8px;"><span class="dash-label">CANP</span><span class="dash-val ${aCnp>=gCnp&&gCnp?'hit':''}">${aCnp}<span style="font-size:11px;color:var(--gray-400);font-weight:400;">/${gCnp}만</span></span></div>
-      ${bar(aCnp,gCnp)}
-      <div class="dash-row" style="margin-top:8px;"><span class="dash-label">액션</span><span class="dash-val ${aAct>=gAct&&gAct?'hit':''}">${aAct}<span style="font-size:11px;color:var(--gray-400);font-weight:400;">/${gAct}</span></span></div>
-      ${bar(aAct,gAct)}
-    </div>` : ''}
-    <div class="dash-card">
-      <div class="dash-card-title">⏰ 이번 달 지각 현황</div>
-      <div class="dash-row"><span class="dash-label">지각 횟수</span><span class="dash-val ${lateCnt?'miss':''}">${lateCnt}회</span></div>
-      <div class="dash-row"><span class="dash-label">지각비 합계</span><span class="dash-val ${lateFee?'miss':''}">${lateFee.toLocaleString()}원</span></div>
-      ${lateCnt ? `<div style="margin-top:10px;font-size:12px;color:var(--gray-500);">${lateList.slice(0,5).map(r=>`<div style="padding:3px 0;">${r.date} · ${r.type==='attendance'?'출근보고':r.type==='goal'?'목표취합':r.type==='activity'?'활동보고':r.type==='review'?'하루후기':r.type==='ta'?'TA인증':r.type==='satReport'?'토요사진':r.type==='taEarly'?'TA조기출근':r.type} · ${(r.fee||0).toLocaleString()}원</div>`).join('')}${lateList.length>5?`<div style="color:var(--gray-400);">외 ${lateList.length-5}건...</div>`:''}</div>` : '<div style="margin-top:10px;font-size:12px;color:var(--success);font-weight:600;">지각 없음 🎉</div>'}
+  const rows = weekNums.map((wn, idx) => {
+    const g = weekData[wn] || {};
+    const achCnt  = Number(g.achCount)||0;
+    const achCanp = Number(g.achCanp)||0;
+    const achAct  = Number(g.achAction)||0;
+    const goalCnt  = Number(g.goalCount)||0;
+    const goalCanp = Number(g.goalCanp)||0;
+    const goalAct  = Number(g.goalAction)||0;
+    totalAchCnt  += achCnt;
+    totalAchCanp += achCanp;
+    totalAchAct  += achAct;
+    totalGoalCnt  += goalCnt;
+    totalGoalCanp += goalCanp;
+    totalGoalAct  += goalAct;
+
+    const range = _getWeekRange(weekMonMap[wn]);
+    const isCurrent = wn === todayWeekNum;
+    const hasGoal = goalCnt || goalCanp || goalAct;
+    const rowBg = isCurrent ? 'background:linear-gradient(90deg,#eef4ff,#f5f9ff);font-weight:700;' : '';
+    const achColor = (a,g) => a > 0 && g > 0 && a >= g ? 'color:var(--success);font-weight:700;' : a > 0 ? 'color:var(--navy);font-weight:700;' : 'color:var(--gray-300);';
+
+    return `<tr style="${rowBg}">
+      <td style="padding:8px 10px;font-size:12px;color:${isCurrent?'var(--navy)':'var(--gray-600)'};white-space:nowrap;">
+        ${isCurrent ? '● ' : ''}${idx+1}주<br><span style="font-size:10px;color:var(--gray-400);font-weight:400;">${range}</span>
+      </td>
+      <td style="padding:8px 6px;text-align:center;font-size:14px;${achColor(achCnt,goalCnt)}">${achCnt}<span style="font-size:10px;color:var(--gray-400);font-weight:400;">${hasGoal&&goalCnt?'/'+goalCnt:''}</span></td>
+      <td style="padding:8px 6px;text-align:center;font-size:14px;${achColor(achCanp,goalCanp)}">${achCanp}<span style="font-size:10px;color:var(--gray-400);font-weight:400;">${hasGoal&&goalCanp?'/'+goalCanp:''}</span></td>
+      <td style="padding:8px 6px;text-align:center;font-size:14px;${achColor(achAct,goalAct)}">${achAct}<span style="font-size:10px;color:var(--gray-400);font-weight:400;">${hasGoal&&goalAct?'/'+goalAct:''}</span></td>
+    </tr>`;
+  }).join('');
+
+  el.innerHTML = `
+  <div class="dash-card" style="padding:0;overflow:hidden;">
+    <div style="padding:14px 16px 10px;background:linear-gradient(135deg,var(--navy) 0%,#1e40af 100%);color:white;display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:13px;font-weight:800;letter-spacing:.5px;">📊 ${yr}년 ${mo}월 달성 현황</span>
+      <span style="font-size:11px;opacity:.75;">${weekNums.length}주 누적</span>
     </div>
+    <table style="width:100%;border-collapse:collapse;">
+      <thead>
+        <tr style="background:var(--gray-50);border-bottom:2px solid var(--gray-100);">
+          <th style="padding:7px 10px;text-align:left;font-size:11px;font-weight:700;color:var(--gray-500);">주차</th>
+          <th style="padding:7px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--gray-500);">건수</th>
+          <th style="padding:7px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--gray-500);">CANP</th>
+          <th style="padding:7px 6px;text-align:center;font-size:11px;font-weight:700;color:var(--gray-500);">액션</th>
+        </tr>
+      </thead>
+      <tbody style="border-bottom:2px solid var(--gray-200);">
+        ${rows}
+      </tbody>
+      <tfoot>
+        <tr style="background:#f0f4ff;">
+          <td style="padding:9px 10px;font-size:12px;font-weight:800;color:var(--navy);">월 누계</td>
+          <td style="padding:9px 6px;text-align:center;font-size:15px;font-weight:900;color:var(--primary);">${totalAchCnt}</td>
+          <td style="padding:9px 6px;text-align:center;font-size:15px;font-weight:900;color:var(--primary);">${totalAchCanp}</td>
+          <td style="padding:9px 6px;text-align:center;font-size:15px;font-weight:900;color:var(--primary);">${totalAchAct}</td>
+        </tr>
+      </tfoot>
+    </table>
+  </div>
+  <div class="dash-card" style="margin-top:10px;">
+    <div class="dash-card-title">⏰ 이번 달 지각 현황</div>
+    <div class="dash-row"><span class="dash-label">지각 횟수</span><span class="dash-val ${lateCnt?'miss':''}">${lateCnt}회</span></div>
+    <div class="dash-row"><span class="dash-label">지각비 합계</span><span class="dash-val ${lateFee?'miss':''}">${lateFee.toLocaleString()}원</span></div>
+    ${lateCnt ? `<div style="margin-top:10px;font-size:12px;color:var(--gray-500);">${lateList.slice(0,5).map(r=>`<div style="padding:3px 0;">${r.date} · ${r.type==='attendance'?'출근보고':r.type==='goal'?'목표취합':r.type==='activity'?'활동보고':r.type==='review'?'하루후기':r.type==='ta'?'TA인증':r.type==='satReport'?'토요사진':r.type==='taEarly'?'TA조기출근':r.type} · ${(r.fee||0).toLocaleString()}원</div>`).join('')}${lateList.length>5?`<div style="color:var(--gray-400);">외 ${lateList.length-5}건...</div>`:''}</div>` : '<div style="margin-top:10px;font-size:12px;color:var(--success);font-weight:600;">지각 없음 🎉</div>'}
   </div>`;
+
 }
 
 /* ── 팀원 활동이력 조회 ── */
