@@ -16,6 +16,7 @@
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-storage-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-functions-compat.js"></script>
   <script src="https://accounts.google.com/gsi/client" async defer></script>
   <style>
     :root {
@@ -82,12 +83,12 @@
     .nav-btn{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;border:none;background:transparent;font-size:14px;font-weight:500;color:var(--nav-text);cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;width:100%}
     .nav-btn svg{width:20px;height:20px;flex-shrink:0} .nav-btn:hover{background:rgba(255,255,255,.1);color:var(--nav-text-active)} .nav-btn.active{background:rgba(255,255,255,.18);color:var(--nav-text-active);font-weight:700}
 
-    .bottom-nav{position:fixed;top:var(--header-h);left:0;right:0;height:var(--nav-h);background:linear-gradient(to bottom,var(--navy),var(--navy-light));border-top:none;display:flex;z-index:150;overflow-x:auto;box-shadow:0 4px 12px rgba(0,0,0,.22)}
+    .bottom-nav{position:fixed;bottom:0;left:0;right:0;height:var(--nav-h);background:linear-gradient(to top,var(--navy-dark),var(--navy));border-top:none;display:flex;z-index:200;overflow-x:auto;box-shadow:0 -3px 16px rgba(0,0,0,.28)}
     @media(min-width:768px){.bottom-nav{display:none}}
     .bnav-btn{flex:1;min-width:52px;border:none;background:none;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;cursor:pointer;color:var(--nav-text);font-family:inherit;padding:6px 2px;transition:color .15s}
     .bnav-btn svg{width:20px;height:20px} .bnav-btn span{font-size:13px;font-weight:600;white-space:nowrap} .bnav-btn.active{color:#93c5fd}
 
-    .main{padding-top:calc(var(--header-h) + var(--nav-h) + 20px);padding-bottom:20px;padding-left:16px;padding-right:16px;min-height:100vh;background:#f4f6fb;}
+    .main{padding-top:calc(var(--header-h) + 20px);padding-bottom:calc(var(--nav-h) + 20px);padding-left:16px;padding-right:16px;min-height:100vh;background:#f4f6fb;}
     @media(min-width:768px){.main{padding-left:calc(var(--sidebar-w) + 24px);padding-right:24px;padding-bottom:32px;}}
 
     .section{display:none} .section.active{display:block;animation:secFadeIn .25s ease;}
@@ -389,10 +390,9 @@
     .stat-card:nth-child(2) .stat-num{color:var(--success);}
     .stat-card:nth-child(3) .stat-num{color:var(--warning);}
 
-    /* ── 상단 탭 네비 ── */
-    .bnav-btn{font-family:inherit;min-height:var(--nav-h);position:relative;}
+    /* ── 하단 탭 네비 ── */
+    .bnav-btn{font-family:inherit;min-height:var(--nav-h);}
     .bnav-btn.active{color:#93c5fd;}
-    .bnav-btn.active::after{content:'';position:absolute;bottom:0;left:20%;right:20%;height:3px;background:#93c5fd;border-radius:2px 2px 0 0;}
     .bnav-btn span{font-size:13px;font-weight:700;}
 
     /* ── 토스트 개선 ── */
@@ -461,6 +461,7 @@
     <button class="btn-primary" id="l-btn" onclick="doLogin()">로그인</button>
     <p class="auth-error" id="l-err"></p>
     <div class="auth-link">계정이 없으신가요? <a onclick="showSignup()">회원가입</a></div>
+    <div class="auth-link" style="margin-top:8px;">비밀번호를 잊으셨나요? <a onclick="openModal('m-pwd-reset')">비밀번호 찾기</a></div>
     <div style="text-align:center; margin-top:16px; font-size:13px; color:var(--gray-500); font-weight:600;">
       문의사항 : 김영균 ( 010-6694-2104 )
     </div>
@@ -469,13 +470,23 @@
 <div id="screen-signup" class="auth-screen">
   <div class="auth-card">
     <div class="auth-logo"><div class="auth-emblem">📝</div><h1>회원가입</h1><p>승인 후 이용 가능합니다</p></div>
-    <div class="field"><label>이름</label><input type="text" id="s-name" placeholder="홍길동"></div>
-    <div class="field"><label>사번</label><input type="text" id="s-id" placeholder="사번 입력"></div>
-    <div class="field"><label>비밀번호</label><input type="password" id="s-pw" placeholder="6자 이상"></div>
-    <div class="field"><label>비밀번호 확인</label><input type="password" id="s-pw2" placeholder="비밀번호 재입력"></div>
-    <button class="btn-primary" id="s-btn" onclick="doSignup()">회원가입 신청</button>
-    <p class="auth-error" id="s-err"></p>
-    <div class="auth-link"><a onclick="showLogin()">← 뒤로가기</a></div>
+    <div id="signup-step1">
+      <div class="field"><label>이름</label><input type="text" id="s-name" placeholder="홍길동"></div>
+      <div class="field"><label>사번</label><input type="text" id="s-id" placeholder="사번 입력"></div>
+      <div class="field"><label>비밀번호</label><input type="password" id="s-pw" placeholder="6자 이상"></div>
+      <div class="field"><label>비밀번호 확인</label><input type="password" id="s-pw2" placeholder="비밀번호 재입력"></div>
+      <div class="field"><label>전화번호</label><input type="tel" id="s-phone" placeholder="010-0000-0000" oninput="fmtPhoneInput(this)" maxlength="13"></div>
+      <button class="btn-primary" id="s-btn" onclick="doSignupSendSMS()">인증번호 받기</button>
+      <p class="auth-error" id="s-err"></p>
+      <div class="auth-link"><a onclick="showLogin()">← 뒤로가기</a></div>
+    </div>
+    <div id="signup-step2" style="display:none;">
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:12px;">📱 <strong id="s-phone-display"></strong>으로<br>인증번호를 발송했습니다.</p>
+      <div class="field"><label>인증번호</label><input type="text" id="s-sms-code" placeholder="6자리 숫자" maxlength="6" inputmode="numeric"></div>
+      <button class="btn-primary" id="s-verify-btn" onclick="doSignupVerify()">가입 완료</button>
+      <p class="auth-error" id="s-err2"></p>
+      <div class="auth-link"><a onclick="signupBackToStep1()">← 다시 입력</a></div>
+    </div>
   </div>
 </div>
 <div id="screen-pending">
@@ -717,7 +728,15 @@
 
     <!-- 승인 관리 -->
     <section id="sec-admin" class="section">
-      <div class="sec-head"><h2 class="sec-title">승인 관리</h2></div><div id="admin-list"></div>
+      <div class="sec-head"><h2 class="sec-title">승인 관리</h2></div>
+      <div id="admin-list"></div>
+      <div style="margin-top:28px;">
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:14px;padding-bottom:12px;border-bottom:2px solid var(--gray-200);">
+          <span style="font-size:17px;font-weight:800;color:var(--gray-900);">🔑 비밀번호 초기화 요청</span>
+          <span id="pwd-reset-badge" style="display:none;background:var(--danger);color:white;border-radius:20px;font-size:11px;font-weight:700;padding:2px 8px;"></span>
+        </div>
+        <div id="pwd-reset-list"></div>
+      </div>
     </section>
 
     <!-- 연락처 -->
@@ -784,6 +803,51 @@
 </div>
 
 <!-- 공지사항 작성/수정 모달 -->
+<div class="overlay" id="m-pwd-reset">
+  <div class="modal">
+    <div class="modal-head">
+      <span class="modal-title">🔑 비밀번호 찾기</span>
+      <button class="modal-close" onclick="closePwdResetModal()">✕</button>
+    </div>
+    <!-- Step 1: 사번 + 전화번호 입력 -->
+    <div id="pwr-step1">
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;line-height:1.7;">
+        가입 시 등록한 사번과 전화번호를 입력하면<br>해당 번호로 인증번호를 발송합니다.
+      </p>
+      <div class="field"><label>사번</label><input type="text" id="pwd-reset-id" placeholder="사번 입력"></div>
+      <div class="field"><label>전화번호</label><input type="tel" id="pwd-reset-phone" placeholder="010-0000-0000" oninput="fmtPhoneInput(this)" maxlength="13"></div>
+      <p class="auth-error" id="pwd-reset-err"></p>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closePwdResetModal()">취소</button>
+        <button class="btn-primary" id="pwr-send-btn" style="width:auto;padding:10px 24px;" onclick="pwrSendSMS()">인증번호 발송</button>
+      </div>
+    </div>
+    <!-- Step 2: 인증번호 확인 -->
+    <div id="pwr-step2" style="display:none;">
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;line-height:1.7;">
+        📱 <strong id="pwr-phone-display"></strong>으로<br>인증번호를 발송했습니다.
+      </p>
+      <div class="field"><label>인증번호</label><input type="text" id="pwr-sms-code" placeholder="6자리 숫자" maxlength="6" inputmode="numeric"></div>
+      <p class="auth-error" id="pwr-err2"></p>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="pwrBackToStep1()">← 다시 입력</button>
+        <button class="btn-primary" id="pwr-verify-btn" style="width:auto;padding:10px 24px;" onclick="pwrVerifyCode()">확인</button>
+      </div>
+    </div>
+    <!-- Step 3: 새 비밀번호 -->
+    <div id="pwr-step3" style="display:none;">
+      <p style="font-size:13px;color:var(--gray-600);margin-bottom:16px;">인증 완료! 새 비밀번호를 입력해주세요.</p>
+      <div class="field"><label>새 비밀번호</label><input type="password" id="pwr-new-pw" placeholder="6자 이상"></div>
+      <div class="field"><label>비밀번호 확인</label><input type="password" id="pwr-new-pw2" placeholder="새 비밀번호 재입력"></div>
+      <p class="auth-error" id="pwr-err3"></p>
+      <div class="modal-actions">
+        <button class="btn-ghost" onclick="closePwdResetModal()">취소</button>
+        <button class="btn-primary" id="pwr-save-btn" style="width:auto;padding:10px 24px;" onclick="pwrSaveNewPassword()">비밀번호 변경</button>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div class="overlay" id="m-notice">
   <div class="modal">
     <div class="modal-head">
@@ -1219,6 +1283,53 @@
       <div class="field"><label>새 비밀번호 확인</label><input type="password" id="profile-new-pw2" placeholder="새 비밀번호 다시 입력"></div>
       <button class="btn-primary" onclick="saveProfilePassword()">비밀번호 변경</button>
     </div>
+    <div style="border-top:1px solid var(--gray-100);padding-top:16px;margin-top:16px;">
+      <div style="font-size:13px;font-weight:700;color:var(--gray-700);margin-bottom:4px;">📱 전화번호 관리</div>
+      <div style="font-size:12px;color:var(--gray-400);margin-bottom:12px;">비밀번호 찾기 시 등록된 번호로 인증번호가 발송됩니다.</div>
+      <div style="font-size:13px;color:var(--gray-600);margin-bottom:10px;">현재: <strong id="profile-current-phone">미등록</strong></div>
+      <div id="profile-phone-step1">
+        <div class="field"><label>새 전화번호</label><input type="tel" id="profile-phone-new" placeholder="010-0000-0000" oninput="fmtPhoneInput(this)" maxlength="13"></div>
+        <button class="btn-primary" id="profile-phone-send-btn" onclick="profilePhoneSendSMS()" style="margin-bottom:0;">인증번호 받기</button>
+      </div>
+      <div id="profile-phone-step2" style="display:none;">
+        <div class="field"><label>인증번호</label><input type="text" id="profile-phone-code" placeholder="6자리 숫자" maxlength="6" inputmode="numeric"></div>
+        <div style="display:flex;gap:8px;">
+          <button class="btn-ghost" onclick="profilePhoneBackToStep1()">취소</button>
+          <button class="btn-primary" id="profile-phone-verify-btn" onclick="profilePhoneVerify()">인증 완료</button>
+        </div>
+      </div>
+      <p class="auth-error" id="profile-phone-err" style="margin-top:8px;"></p>
+    </div>
+  </div>
+</div>
+<!-- 관리자 회원정보 수정 모달 -->
+<div class="overlay" id="m-admin-edit-user">
+  <div class="modal">
+    <div class="modal-head"><div class="modal-title">✏️ 회원정보 수정</div><button class="modal-close" onclick="closeModal('m-admin-edit-user')">✕</button></div>
+    <input type="hidden" id="admin-edit-uid">
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">사번: <strong id="admin-edit-empid"></strong></div>
+    <div class="field"><label>이름</label><input type="text" id="admin-edit-name" placeholder="이름"></div>
+    <div class="field"><label>전화번호</label><input type="tel" id="admin-edit-phone" placeholder="010-0000-0000" oninput="fmtPhoneInput(this)" maxlength="13"></div>
+    <div class="field"><label>역할</label>
+      <select id="admin-edit-role" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;background:white;">
+        <option value="user">일반 FC</option>
+        <option value="asm">ASM</option>
+        <option value="sm">SM</option>
+        <option value="admin">관리자</option>
+      </select>
+    </div>
+    <div class="field"><label>계정 상태</label>
+      <select id="admin-edit-status" style="width:100%;padding:10px 12px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;background:white;">
+        <option value="approved">승인됨</option>
+        <option value="pending">대기 중</option>
+        <option value="rejected">거절됨</option>
+      </select>
+    </div>
+    <p class="auth-error" id="admin-edit-err"></p>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('m-admin-edit-user')">취소</button>
+      <button class="btn-primary" id="admin-edit-save-btn" style="width:auto;padding:10px 28px;" onclick="saveAdminUserEdit()">저장</button>
+    </div>
   </div>
 </div>
 <!-- 매니저 연락처 추가/수정 모달 -->
@@ -1396,6 +1507,8 @@ const firebaseConfig = {
   measurementId: "G-43D9GZK3QW"
 };
 firebase.initializeApp(firebaseConfig);
+const fns = firebase.functions();
+fns.useEmulator && false; // 프로덕션 사용
 const auth = firebase.auth(); const db = firebase.firestore(); const storage = firebase.storage();
 const ADMIN_ID = '23070090';
 
@@ -1688,6 +1801,7 @@ function renderGongsi() {
 
 /* ── Firebase 인증 ── */
 auth.onAuthStateChanged(async (fbUser) => {
+  if (window._pwdResetFlow) return; // SMS 비밀번호 재설정 중 스킵
   if (!fbUser) { CU = null; showScreen('login'); return; }
   try {
     const snap = await db.collection('users').doc(fbUser.uid).get();
@@ -1715,25 +1829,90 @@ async function doLogin() {
   try { await auth.signInWithEmailAndPassword(`${id}@az.local`, pw); }
   catch(e) { showErr('l-err', '❌ 사번이나 비밀번호가 틀렸거나 승인되지 않았습니다.'); btn.disabled = false; btn.textContent = '로그인'; }
 }
-async function doSignup() {
-  const name = $('s-name').value.trim(), id = $('s-id').value.trim(), pw = $('s-pw').value, pw2 = $('s-pw2').value;
-  if (!name||!id||!pw) { showErr('s-err','입력 오류'); return; } if (pw !== pw2) { showErr('s-err','비밀번호 불일치'); return; }
-  const btn = $('s-btn'); btn.disabled = true;
-  try {
-    const cred = await auth.createUserWithEmailAndPassword(`${id}@az.local`, pw);
-    await db.collection('users').doc(cred.user.uid).set({ name, employeeId: id, status: id===ADMIN_ID?'approved':'pending', role: id===ADMIN_ID?'admin':'user', createdAt: firebase.firestore.FieldValue.serverTimestamp() });
-    toast('신청 완료', 'success'); showScreen('login');
-  } catch(e) { showErr('s-err', '❌ 실패: 이미 가입된 사번이거나 오류입니다.'); btn.disabled = false; }
+// ── 회원가입 전화번호 인증 ──
+let _signupVerifId = null;
+function signupBackToStep1() {
+  $('signup-step2').style.display = 'none';
+  $('signup-step1').style.display = 'block';
+  $('s-sms-code').value = '';
+  $('s-err2').style.display = 'none';
+  _signupVerifId = null;
 }
+async function doSignupSendSMS() {
+  const name = $('s-name').value.trim(), id = $('s-id').value.trim();
+  const pw = $('s-pw').value, pw2 = $('s-pw2').value;
+  const phone = $('s-phone').value.trim();
+  if (!name||!id||!pw) { showErr('s-err','이름, 사번, 비밀번호를 입력해주세요.'); return; }
+  if (pw !== pw2) { showErr('s-err','비밀번호가 일치하지 않습니다.'); return; }
+  if (!phone || phone.replace(/-/g,'').length < 10) { showErr('s-err','전화번호를 입력해주세요.'); return; }
+  // 사번 중복 확인
+  const existSnap = await db.collection('users').where('employeeId','==',id).get();
+  if (!existSnap.empty) { showErr('s-err','이미 가입된 사번입니다.'); return; }
+  const btn = $('s-btn'); btn.disabled = true; btn.textContent = '발송 중...';
+  try {
+    _initRcVerifier('signup-recaptcha');
+    const fmtPhone = _fmtPhoneKR(phone);
+    const confirmResult = await auth.signInWithPhoneNumber(fmtPhone, window._rcVerifier);
+    _signupVerifId = confirmResult.verificationId;
+    $('s-phone-display').textContent = phone;
+    $('signup-step1').style.display = 'none';
+    $('signup-step2').style.display = 'block';
+  } catch(e) {
+    showErr('s-err', '❌ SMS 발송 실패: ' + e.message);
+    btn.disabled = false; btn.textContent = '인증번호 받기';
+    window._rcVerifier = null;
+  }
+}
+async function doSignupVerify() {
+  const code = $('s-sms-code').value.trim();
+  if (!code || code.length < 6) { showErr('s-err2','6자리 인증번호를 입력해주세요.'); return; }
+  const btn = $('s-verify-btn'); btn.disabled = true; btn.textContent = '처리 중...';
+  const name = $('s-name').value.trim(), id = $('s-id').value.trim();
+  const pw = $('s-pw').value, phone = $('s-phone').value.trim();
+  try {
+    // 1) 이메일+비밀번호로 계정 생성
+    const cred = await auth.createUserWithEmailAndPassword(`${id}@az.local`, pw);
+    // 2) 전화번호 인증 credential 생성 후 연결
+    try {
+      const phoneCred = firebase.auth.PhoneAuthProvider.credential(_signupVerifId, code);
+      await cred.user.linkWithCredential(phoneCred);
+    } catch(linkErr) {
+      console.warn('전화번호 연결 실패(가입은 완료):', linkErr.message);
+    }
+    // 3) Firestore 저장
+    await db.collection('users').doc(cred.user.uid).set({
+      name, employeeId: id, phone,
+      status: id===ADMIN_ID?'approved':'pending',
+      role: id===ADMIN_ID?'admin':'user',
+      createdAt: firebase.firestore.FieldValue.serverTimestamp()
+    });
+    await auth.signOut();
+    toast('회원가입 신청 완료! 승인 후 이용 가능합니다.', 'success');
+    signupBackToStep1(); showScreen('login');
+  } catch(e) {
+    let msg = e.message;
+    if (e.code === 'auth/invalid-verification-code') msg = '인증번호가 올바르지 않습니다.';
+    else if (e.code === 'auth/email-already-in-use') msg = '이미 가입된 사번입니다.';
+    showErr('s-err2', '❌ ' + msg);
+    btn.disabled = false; btn.textContent = '가입 완료';
+  }
+}
+async function doSignup() { doSignupSendSMS(); } // 하위호환
 async function doLogout() { if(confirm('로그아웃?')) await auth.signOut(); }
 
 function openProfileModal() {
   $('profile-current-id').textContent = CU.employeeId || '-';
   $('profile-current-name').textContent = CU.name;
+  $('profile-current-phone').textContent = CU.phone || '미등록';
   $('profile-name').value = '';
   $('profile-cur-pw').value = '';
   $('profile-new-pw').value = '';
   $('profile-new-pw2').value = '';
+  $('profile-phone-new').value = '';
+  $('profile-phone-code').value = '';
+  $('profile-phone-err').style.display = 'none';
+  $('profile-phone-step1').style.display = 'block';
+  $('profile-phone-step2').style.display = 'none';
   openModal('m-profile');
 }
 
@@ -5180,7 +5359,286 @@ function backupHtml(){
 
 /* ── 관리자 ── */
 async function loadPendingCount(){const s=await db.collection('users').where('status','==','pending').get();$('pending-badge').style.display=s.size>0?'inline':'none';$('pending-badge').textContent=s.size;}
-async function renderAdmin(){const e=$('admin-list');e.innerHTML='';const s=await db.collection('users').where('status','==','pending').get();if(s.empty)e.innerHTML=empty('✅','대기 없음');else e.innerHTML=s.docs.map(d=>{const u=d.data();return `<div class="admin-card"><div style="flex:1"><div class="emp-name">${esc(u.name)}</div><div class="emp-id">${esc(u.employeeId)}</div></div><button class="btn-reject" onclick="rejectUser('${d.id}')">거절</button><button class="btn-approve" onclick="approveUser('${d.id}')">승인</button></div>`;}).join('');}
+/* ── 비밀번호 찾기 (SMS 인증) ── */
+let _pwrVerifId = null, _pwrConfirmResult = null, _pwrEmpId = null;
+function closePwdResetModal() {
+  closeModal('m-pwd-reset');
+  _pwrVerifId = null; _pwrConfirmResult = null; _pwrEmpId = null;
+  if($('pwd-reset-id')) $('pwd-reset-id').value = '';
+  if($('pwd-reset-phone')) $('pwd-reset-phone').value = '';
+  if($('pwd-reset-err')) $('pwd-reset-err').style.display = 'none';
+  if($('pwr-sms-code')) $('pwr-sms-code').value = '';
+  if($('pwr-new-pw')) $('pwr-new-pw').value = '';
+  if($('pwr-new-pw2')) $('pwr-new-pw2').value = '';
+  if($('pwr-step1')) $('pwr-step1').style.display = 'block';
+  if($('pwr-step2')) $('pwr-step2').style.display = 'none';
+  if($('pwr-step3')) $('pwr-step3').style.display = 'none';
+  window._rcVerifier = null;
+}
+function pwrBackToStep1() {
+  $('pwr-step2').style.display = 'none';
+  $('pwr-step1').style.display = 'block';
+  $('pwr-sms-code').value = '';
+  _pwrVerifId = null; _pwrConfirmResult = null;
+  window._rcVerifier = null;
+}
+async function pwrSendSMS() {
+  const empId = $('pwd-reset-id').value.trim();
+  const phone = $('pwd-reset-phone').value.trim();
+  const errEl = $('pwd-reset-err');
+  errEl.style.display = 'none';
+  if (!empId) { errEl.textContent = '사번을 입력해주세요.'; errEl.style.display = 'block'; return; }
+  if (!phone || phone.replace(/-/g,'').length < 10) { errEl.textContent = '전화번호를 입력해주세요.'; errEl.style.display = 'block'; return; }
+  _pwrEmpId = empId;
+  const btn = $('pwr-send-btn'); btn.disabled = true; btn.textContent = '발송 중...';
+  try {
+    _initRcVerifier('pwr-recaptcha');
+    const fmtPhone = _fmtPhoneKR(phone);
+    _pwrConfirmResult = await auth.signInWithPhoneNumber(fmtPhone, window._rcVerifier);
+    _pwrVerifId = _pwrConfirmResult.verificationId;
+    const masked = phone.replace(/(\d{3})-?(\d{4})-?(\d{4})/, (m,a,b,c) => `${a}-****-${c}`);
+    $('pwr-phone-display').textContent = masked;
+    $('pwr-step1').style.display = 'none';
+    $('pwr-step2').style.display = 'block';
+  } catch(e) {
+    errEl.textContent = '❌ SMS 발송 실패: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '인증번호 발송';
+    window._rcVerifier = null;
+  }
+}
+async function pwrVerifyCode() {
+  const code = $('pwr-sms-code').value.trim();
+  const errEl = $('pwr-err2');
+  errEl.style.display = 'none';
+  if (!code || code.length < 6) { errEl.textContent = '6자리 인증번호를 입력해주세요.'; errEl.style.display = 'block'; return; }
+  // 코드 저장 후 step3으로 이동 (실제 sign-in은 step3에서)
+  window._pwrCode = code;
+  $('pwr-step2').style.display = 'none';
+  $('pwr-step3').style.display = 'block';
+}
+async function pwrSaveNewPassword() {
+  const newPw = $('pwr-new-pw').value;
+  const newPw2 = $('pwr-new-pw2').value;
+  const errEl = $('pwr-err3');
+  errEl.style.display = 'none';
+  if (!newPw || newPw.length < 6) { errEl.textContent = '비밀번호는 6자 이상이어야 합니다.'; errEl.style.display = 'block'; return; }
+  if (newPw !== newPw2) { errEl.textContent = '비밀번호가 일치하지 않습니다.'; errEl.style.display = 'block'; return; }
+  const btn = $('pwr-save-btn'); btn.disabled = true; btn.textContent = '변경 중...';
+  try {
+    window._pwdResetFlow = true;
+    // SMS 인증으로 로그인
+    const phoneCred = firebase.auth.PhoneAuthProvider.credential(_pwrVerifId, window._pwrCode);
+    const signInResult = await auth.signInWithCredential(phoneCred);
+    const user = signInResult.user;
+    // 이메일(비밀번호) 계정이 연결돼 있으면 직접 변경 (신규 가입자)
+    const hasEmail = user.providerData.some(p => p.providerId === 'password');
+    if (hasEmail) {
+      await user.updatePassword(newPw);
+    } else {
+      // 기존 회원: Cloud Function으로 서버에서 비밀번호 변경
+      const fn = fns.httpsCallable('resetPasswordByPhone');
+      const result = await fn({ employeeId: _pwrEmpId, newPassword: newPw });
+      if (!result.data.ok) throw new Error('서버 오류');
+    }
+    await auth.signOut();
+    window._pwdResetFlow = false;
+    closePwdResetModal();
+    toast('✅ 비밀번호가 변경되었습니다. 새 비밀번호로 로그인하세요.', 'success');
+  } catch(e) {
+    window._pwdResetFlow = false;
+    let msg = e.message;
+    if (e.code === 'auth/invalid-verification-code') msg = '인증번호가 올바르지 않습니다. 처음부터 다시 시도해주세요.';
+    else if (e.code === 'auth/code-expired') msg = '인증번호가 만료됐습니다. 처음부터 다시 시도해주세요.';
+    else if (e.code === 'permission-denied') msg = '등록된 전화번호와 일치하지 않습니다.';
+    errEl.textContent = '❌ ' + msg;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '비밀번호 변경';
+  }
+}
+async function submitPwdReset() { pwrSendSMS(); }
+
+async function renderPwdResetRequests() {
+  const el = $('pwd-reset-list');
+  const badge = $('pwd-reset-badge');
+  if (!el) return;
+  el.innerHTML = '<div style="text-align:center;padding:16px;color:var(--gray-400);">불러오는 중...</div>';
+  try {
+    const snap = await db.collection('pwd_reset_requests')
+      .orderBy('requestedAt', 'desc').limit(30).get();
+    if (snap.empty) {
+      el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--gray-400);font-size:13px;">📭 접수된 요청 없음</div>';
+      badge.style.display = 'none'; return;
+    }
+    const pending = snap.docs.filter(d => d.data().status === 'pending');
+    if (pending.length > 0) {
+      badge.textContent = pending.length + '건 대기';
+      badge.style.display = 'inline';
+    } else {
+      badge.style.display = 'none';
+    }
+    el.innerHTML = snap.docs.map(d => {
+      const r = d.data();
+      const ts = r.requestedAt ? (r.requestedAt.toDate ? r.requestedAt.toDate() : new Date(r.requestedAt.seconds*1000)) : null;
+      const timeStr = ts ? ts.toLocaleString('ko-KR', {month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit'}) : '';
+      const isPending = r.status === 'pending';
+      return `<div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:white;border:1.5px solid ${isPending?'#bfdbfe':'var(--gray-100)'};border-radius:12px;margin-bottom:8px;box-shadow:var(--shadow-xs);">
+        <div style="flex:1;">
+          <div style="font-size:15px;font-weight:700;color:var(--gray-900);">${esc(r.name)} <span style="font-size:12px;color:var(--gray-500);font-weight:500;">(사번: ${esc(r.employeeId)})</span></div>
+          ${r.phone ? `<div style="font-size:12px;color:var(--primary);font-weight:600;margin-top:2px;">📱 ${esc(r.phone)}</div>` : ''}
+          <div style="font-size:12px;color:var(--gray-400);margin-top:3px;">요청일시: ${timeStr}</div>
+        </div>
+        ${isPending
+          ? `<div style="display:flex;flex-direction:column;gap:6px;align-items:flex-end;">
+               <div style="font-size:11px;color:var(--primary);font-weight:700;background:var(--primary-bg);padding:3px 10px;border-radius:20px;">대기 중</div>
+               <div style="font-size:11px;color:var(--gray-500);line-height:1.5;">Firebase Console →<br>Authentication →<br><b>${esc(r.employeeId)}@az.local</b><br>비밀번호 직접 변경 후 ↓</div>
+               <button class="btn-approve" style="font-size:12px;" onclick="completePwdReset('${d.id}','${esc(r.name)}','${esc(r.employeeId)}')">처리 완료</button>
+             </div>`
+          : `<div style="font-size:11px;color:var(--success);font-weight:700;background:#d1fae5;padding:3px 10px;border-radius:20px;">처리 완료</div>`
+        }
+      </div>`;
+    }).join('');
+  } catch(e) {
+    el.innerHTML = '<div style="color:var(--danger);font-size:13px;padding:12px;">오류: ' + e.message + '</div>';
+  }
+}
+
+async function completePwdReset(docId, name, empId) {
+  if (!confirm(`${name}(${empId}) 처리가 완료되었나요?\n\n✅ 처리 방법:\nFirebase Console → Authentication → Users\n→ ${empId}@az.local 검색 → ⋮ 메뉴 → 비밀번호 재설정\n→ 임시 비번 설정 후 카카오톡으로 전달`)) return;
+  await db.collection('pwd_reset_requests').doc(docId).update({
+    status: 'completed',
+    completedAt: firebase.firestore.FieldValue.serverTimestamp(),
+    completedBy: CU ? CU.name : '관리자'
+  });
+  renderPwdResetRequests();
+}
+
+async function adminResetPassword(uid, name, empId) {
+  if (!confirm(`[${name} / 사번: ${empId}]\n비밀번호를 사번과 동일하게 초기화하시겠습니까?\n\n⚠️ 주의: 이 기능은 해당 사용자를 잠시 로그아웃 시킵니다.`)) return;
+  toast('비밀번호 초기화 기능은 Firebase Admin SDK가 필요합니다.\n팀관리 → 수정 버튼으로 전화번호를 확인 후\n사용자 본인이 비밀번호 찾기를 이용하도록 안내해주세요.', 'error');
+}
+
+// ── SMS/Phone Auth 헬퍼 ──
+function _initRcVerifier(containerId) {
+  if (window._rcVerifier) {
+    try { window._rcVerifier.clear(); } catch(e) {}
+    window._rcVerifier = null;
+  }
+  const el = document.getElementById(containerId || 'recaptcha-container');
+  if (el) el.innerHTML = '';
+  window._rcVerifier = new firebase.auth.RecaptchaVerifier(containerId || 'recaptcha-container', {
+    size: 'invisible',
+    callback: () => {}
+  });
+}
+function _fmtPhoneKR(phone) {
+  // 010-1234-5678 → +821012345678
+  const digits = phone.replace(/\D/g, '');
+  if (digits.startsWith('0')) return '+82' + digits.slice(1);
+  if (digits.startsWith('82')) return '+' + digits;
+  return '+82' + digits;
+}
+// ── 프로필 전화번호 인증 ──
+let _profilePhoneVerifId = null;
+function profilePhoneBackToStep1() {
+  $('profile-phone-step2').style.display = 'none';
+  $('profile-phone-step1').style.display = 'block';
+  $('profile-phone-code').value = '';
+  $('profile-phone-err').style.display = 'none';
+  _profilePhoneVerifId = null;
+  window._rcVerifier = null;
+}
+async function profilePhoneSendSMS() {
+  const phone = $('profile-phone-new').value.trim();
+  const errEl = $('profile-phone-err');
+  errEl.style.display = 'none';
+  if (!phone || phone.replace(/-/g,'').length < 10) { errEl.textContent = '전화번호를 입력해주세요.'; errEl.style.display = 'block'; return; }
+  const btn = $('profile-phone-send-btn'); btn.disabled = true; btn.textContent = '발송 중...';
+  try {
+    _initRcVerifier('profile-recaptcha');
+    const fmtPhone = _fmtPhoneKR(phone);
+    const result = await auth.signInWithPhoneNumber(fmtPhone, window._rcVerifier);
+    _profilePhoneVerifId = result.verificationId;
+    window._profilePhoneConfirm = result;
+    $('profile-phone-step1').style.display = 'none';
+    $('profile-phone-step2').style.display = 'block';
+  } catch(e) {
+    errEl.textContent = '❌ SMS 발송 실패: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '인증번호 받기';
+    window._rcVerifier = null;
+  }
+}
+async function profilePhoneVerify() {
+  const code = $('profile-phone-code').value.trim();
+  const errEl = $('profile-phone-err');
+  errEl.style.display = 'none';
+  if (!code || code.length < 6) { errEl.textContent = '6자리 인증번호를 입력해주세요.'; errEl.style.display = 'block'; return; }
+  const btn = $('profile-phone-verify-btn'); btn.disabled = true; btn.textContent = '처리 중...';
+  try {
+    const phoneCred = firebase.auth.PhoneAuthProvider.credential(_profilePhoneVerifId, code);
+    const user = auth.currentUser;
+    // 기존 전화번호 연결 해제 후 새로 연결
+    const providers = user.providerData.map(p => p.providerId);
+    if (providers.includes('phone')) {
+      try { await user.unlink('phone'); } catch(e) {}
+    }
+    await user.linkWithCredential(phoneCred);
+    const newPhone = $('profile-phone-new').value.trim();
+    await db.collection('users').doc(user.uid).update({ phone: newPhone });
+    CU.phone = newPhone;
+    $('profile-current-phone').textContent = newPhone;
+    profilePhoneBackToStep1();
+    toast('✅ 전화번호가 등록되었습니다.', 'success');
+  } catch(e) {
+    let msg = e.message;
+    if (e.code === 'auth/invalid-verification-code') msg = '인증번호가 올바르지 않습니다.';
+    if (e.code === 'auth/provider-already-linked') msg = '이미 연결된 번호입니다.';
+    errEl.textContent = '❌ ' + msg;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '인증 완료';
+  }
+}
+// ── 관리자 회원정보 수정 ──
+function openAdminEditUser(uid) {
+  const u = allUsers.find(x => x.uid === uid);
+  if (!u) { toast('회원 정보를 찾을 수 없습니다.', 'error'); return; }
+  $('admin-edit-uid').value = uid;
+  $('admin-edit-empid').textContent = u.employeeId || '-';
+  $('admin-edit-name').value = u.name || '';
+  $('admin-edit-phone').value = u.phone || '';
+  $('admin-edit-role').value = u.role || 'user';
+  $('admin-edit-status').value = u.status || 'approved';
+  $('admin-edit-err').style.display = 'none';
+  $('admin-edit-save-btn').disabled = false;
+  $('admin-edit-save-btn').textContent = '저장';
+  openModal('m-admin-edit-user');
+}
+async function saveAdminUserEdit() {
+  const uid = $('admin-edit-uid').value;
+  const name = $('admin-edit-name').value.trim();
+  const phone = $('admin-edit-phone').value.trim();
+  const role = $('admin-edit-role').value;
+  const status = $('admin-edit-status').value;
+  const errEl = $('admin-edit-err');
+  errEl.style.display = 'none';
+  if (!name) { errEl.textContent = '이름을 입력해주세요.'; errEl.style.display = 'block'; return; }
+  const btn = $('admin-edit-save-btn'); btn.disabled = true; btn.textContent = '저장 중...';
+  try {
+    await db.collection('users').doc(uid).update({ name, phone: phone || '', role, status });
+    // allUsers 캐시 업데이트
+    const idx = allUsers.findIndex(u => u.uid === uid);
+    if (idx !== -1) { allUsers[idx] = { ...allUsers[idx], name, phone: phone || '', role, status }; }
+    closeModal('m-admin-edit-user');
+    renderTeamAdmin();
+    toast('✅ 회원 정보가 수정되었습니다.', 'success');
+  } catch(e) {
+    errEl.textContent = '저장 실패: ' + e.message;
+    errEl.style.display = 'block';
+    btn.disabled = false; btn.textContent = '저장';
+  }
+}
+async function renderAdmin(){renderPwdResetRequests();const e=$('admin-list');e.innerHTML='';const s=await db.collection('users').where('status','==','pending').get();if(s.empty)e.innerHTML=empty('✅','대기 없음');else e.innerHTML=s.docs.map(d=>{const u=d.data();return `<div class="admin-card"><div style="flex:1"><div class="emp-name">${esc(u.name)}</div><div class="emp-id">${esc(u.employeeId)}</div></div><button class="btn-reject" onclick="rejectUser('${d.id}')">거절</button><button class="btn-approve" onclick="approveUser('${d.id}')">승인</button></div>`;}).join('');}
 async function approveUser(id){await db.collection('users').doc(id).update({status:'approved'});renderAdmin();loadPendingCount();}
 async function rejectUser(id){await db.collection('users').doc(id).update({status:'rejected'});renderAdmin();loadPendingCount();}
 
@@ -5285,7 +5743,11 @@ function renderTeamAdmin() {
         <span style="font-size:11px;color:var(--gray-400);margin-left:5px;">${esc(u.employeeId||'')} · ${teamLabel}</span>
       </div>
       <span style="font-size:11px;color:var(--gray-400);">${u.lastLoginAt ? (() => { const d = u.lastLoginAt.toDate ? u.lastLoginAt.toDate() : new Date(u.lastLoginAt.seconds*1000); return d.toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'})+' '+d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); })() : '기록없음'}</span>
-      ${isAdmin ? `<button style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;" onclick="deleteUserAccount('${u.uid}','${eattr(u.name)}')">삭제</button>` : ''}
+      ${isAdmin ? `
+        <button style="background:#f0fdf4;color:#16a34a;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;" onclick="openAdminEditUser('${u.uid}')">✏️ 수정</button>
+        <button style="background:#eff6ff;color:#2563eb;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;" onclick="adminResetPassword('${u.uid}','${eattr(u.name)}','${esc(u.employeeId||'')}')">🔑 비번초기화</button>
+        <button style="background:#fee2e2;color:#dc2626;border:none;border-radius:7px;padding:4px 10px;font-size:12px;cursor:pointer;font-weight:600;" onclick="deleteUserAccount('${u.uid}','${eattr(u.name)}')">삭제</button>
+      ` : ''}
     </div>`;
   }).join('');
 
@@ -8035,5 +8497,9 @@ function fmtPhoneInput(el) {
     </div>
   </div>
 </div>
+<div id="recaptcha-container" style="display:none;"></div>
+<div id="signup-recaptcha" style="display:none;"></div>
+<div id="pwr-recaptcha" style="display:none;"></div>
+<div id="profile-recaptcha" style="display:none;"></div>
 </body>
 </html>
