@@ -634,8 +634,8 @@
         <button class="btn-outline" id="note-add-btn" style="display:none;" onclick="openNoteAdd()">+ 등록</button>
       </div>
       <div class="tabs">
-        <button class="tab active" id="notebook-tab-tip" onclick="switchNoteTab('tip',this)">💡 영업 꿀팁</button>
-        <button class="tab" id="notebook-tab-memo" onclick="switchNoteTab('memo',this)">📝 메모장</button>
+        <button class="tab active" id="notebook-tab-memo" onclick="switchNoteTab('memo',this)">📝 메모장</button>
+        <button class="tab" id="notebook-tab-tip" onclick="switchNoteTab('tip',this)">💡 영업 꿀팁</button>
         <button class="tab" id="notebook-tab-photo" onclick="switchNoteTab('photo',this)">📷 사진첩</button>
       </div>
       <div class="search-wrap" style="margin-top:8px;">
@@ -923,7 +923,9 @@
     <div class="modal-actions"><button class="btn-primary" onclick="saveSharedInsurance()">저장</button></div>
   </div>
 </div>
-<div class="overlay" id="m-notebook"><div class="modal"><div class="modal-head"><div class="modal-title" id="m-note-title">메모</div><button class="modal-close" onclick="closeModal('m-notebook')">✕</button></div><input type="hidden" id="note-eid"><div class="field"><label>제목 *</label><input type="text" id="note-subject"></div><div class="field"><label>내용</label><textarea id="note-content"></textarea></div><div class="field" id="note-photo-field" style="display:none;"><label>사진 업로드</label><input type="file" id="note-photo-file" accept="image/*" style="padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;width:100%;font-size:13px;"><div id="note-photo-preview" style="margin-top:8px;"></div><div id="note-photo-progress" style="display:none;margin-top:8px;"><div style="background:var(--gray-100);border-radius:4px;height:6px;"><div id="note-photo-progress-bar" style="background:var(--primary);height:6px;border-radius:4px;width:0%;transition:width .3s;"></div></div><div id="note-photo-progress-text" style="font-size:11px;color:var(--gray-500);margin-top:4px;">업로드 중...</div></div></div><div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-notebook')">취소</button><button class="btn-primary" onclick="saveSharedNote()">저장</button></div></div></div>
+<div class="overlay" id="m-notebook"><div class="modal"><div class="modal-head"><div class="modal-title" id="m-note-title">메모</div><button class="modal-close" onclick="closeModal('m-notebook')">✕</button></div><input type="hidden" id="note-eid"><div class="field"><label>제목 *</label><input type="text" id="note-subject"></div><div class="field"><label>내용</label><textarea id="note-content"></textarea></div><div class="field" id="note-photo-field" style="display:none;"><label>사진 업로드</label><input type="file" id="note-photo-file" accept="image/*" style="padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;width:100%;font-size:13px;"><div id="note-photo-preview" style="margin-top:8px;"></div><div id="note-photo-progress" style="display:none;margin-top:8px;"><div style="background:var(--gray-100);border-radius:4px;height:6px;"><div id="note-photo-progress-bar" style="background:var(--primary);height:6px;border-radius:4px;width:0%;transition:width .3s;"></div></div><div id="note-photo-progress-text" style="font-size:11px;color:var(--gray-500);margin-top:4px;">업로드 중...</div></div></div><div class="field" id="note-file-field" style="display:none;"><label>📎 파일 첨부 <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(PDF, 이미지, 문서 등)</span></label><input type="file" id="note-attach-file" accept="*/*" style="padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;width:100%;font-size:13px;box-sizing:border-box;" onchange="previewNoteFile(this)"><div id="note-file-preview" style="margin-top:6px;font-size:12px;color:var(--gray-500);"></div><div id="note-file-progress" style="display:none;margin-top:8px;"><div style="background:var(--gray-100);border-radius:4px;height:6px;"><div id="note-file-progress-bar" style="background:var(--primary);height:6px;border-radius:4px;width:0%;transition:width .3s;"></div></div><div id="note-file-progress-text" style="font-size:11px;color:var(--gray-500);margin-top:4px;">업로드 중...</div></div></div><div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-notebook')">취소</button><button class="btn-primary" onclick="saveSharedNote()">저장</button></div></div></div>
+<!-- 문자 발송 모달 -->
+<div class="overlay" id="m-sms"><div class="modal"><div class="modal-head"><div class="modal-title">📱 문자 발송</div><button class="modal-close" onclick="closeModal('m-sms')">✕</button></div><div class="field"><label>수신번호</label><input type="text" id="sms-phone" readonly style="background:#f8fafc;font-size:15px;font-weight:700;color:var(--primary);"></div><div class="field"><label>내용 <span style="font-size:11px;color:var(--gray-400);font-weight:400;">(수정 가능)</span></label><textarea id="sms-content" rows="6" style="resize:vertical;font-size:14px;line-height:1.6;"></textarea></div><div style="font-size:11px;color:var(--gray-400);margin:-8px 0 12px;padding:0 2px;">※ 발송 버튼을 누르면 휴대폰 문자 앱이 열립니다.</div><div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-sms')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="doSendSMS()">📱 발송</button></div></div></div>
 <div class="overlay" id="m-map"><div class="modal"><div class="modal-head"><div class="modal-title">지도 연결</div><button class="modal-close" onclick="closeModal('m-map')">✕</button></div><p id="m-map-addr" style="margin-bottom:10px;"></p><button class="btn-outline" style="display:block;width:100%;margin-bottom:8px;" onclick="launchMap('kakao')">카카오맵</button><button class="btn-outline" style="display:block;width:100%;margin-bottom:8px;" onclick="launchMap('tmap')">T맵</button><button class="btn-outline" style="display:block;width:100%;" onclick="launchMap('naver')">네이버지도</button></div></div>
 <div class="overlay" id="m-prospect"><div class="modal"><div class="modal-head"><div class="modal-title" id="m-p-title">사업대상자</div><button class="modal-close" onclick="closeModal('m-prospect')">✕</button></div><input type="hidden" id="p-eid"><div class="field"><label>이름 *</label><input type="text" id="p-name"></div><div class="field"><label>번호</label><input type="tel" id="p-phone"></div><div class="field"><label>관계</label><input type="text" id="p-rel"></div><div class="field"><label>우선순위</label><select id="p-pri"><option value="high">높음</option><option value="med" selected>보통</option><option value="low">낮음</option></select></div><div class="field"><label>상품</label><input type="text" id="p-product"></div><div class="field"><label>메모</label><textarea id="p-memo"></textarea></div><div class="modal-actions"><button class="btn-primary" onclick="saveProspect()">저장</button></div></div></div>
 <div class="overlay" id="m-gsconfig">
@@ -1360,6 +1362,16 @@ const ADMIN_ID = '23070090';
 
 /* ── 전역 변수 ── */
 let CU = null, mapAddr = '', gsUrl = '', insFilter = 'all';
+/* ── 한글 초성 검색 유틸 ── */
+const _CHO_LIST=['ㄱ','ㄲ','ㄴ','ㄷ','ㄸ','ㄹ','ㅁ','ㅂ','ㅃ','ㅅ','ㅆ','ㅇ','ㅈ','ㅉ','ㅊ','ㅋ','ㅌ','ㅍ','ㅎ'];
+const _CHO_SET=new Set(_CHO_LIST);
+function getChosung(str){return(str||'').split('').map(c=>{const code=c.charCodeAt(0)-0xAC00;return(code>=0&&code<11172)?_CHO_LIST[Math.floor(code/588)]:c;}).join('');}
+function matchChosung(text,query){if(!text||!query)return false;const isAllCho=[...query].every(c=>_CHO_SET.has(c));if(isAllCho)return getChosung(text).includes(query);return text.toLowerCase().includes(query.toLowerCase());}
+/* ── SMS 문자 발송 ── */
+function openSMS(phone,msg){if(!phone){toast('전화번호가 없습니다','error');return;}$('sms-phone').value=phone;$('sms-content').value=msg;openModal('m-sms');}
+function doSendSMS(){const phone=($('sms-phone').value||'').replace(/[^0-9]/g,'');const msg=$('sms-content').value||'';if(!phone){toast('번호가 없습니다','error');return;}const link=document.createElement('a');link.href='sms:'+phone+(msg?'?body='+encodeURIComponent(msg):'');link.click();closeModal('m-sms');}
+/* ── 메모장 파일 미리보기 ── */
+function previewNoteFile(input){const f=input.files[0];if(!f)return;const prev=$('note-file-preview');if(prev)prev.textContent='📎 '+f.name+' ('+Math.round(f.size/1024)+'KB)';}
 let allTodos = [], allCustomers = [], allProspects = [], allSharedInsurance = [], allSharedNotes = [];
 let allSharedJeonsan = [], allSharedGongsi = [], allSharedMonitoring = [], allSharedClaim = [], allSharedInsContact = [];
 let allSharedManagerContact = [];
@@ -2317,19 +2329,22 @@ function renderInsurance(q='') {
     ...INS_CONTACT_DB.map(c=>({...c, _fromDb:true})),
     ...customList.map(c=>({...c, _fromDb:false}))
   ];
-  list.sort((a,b)=>{ const ac=a.type==='coop'?1:0, bc=b.type==='coop'?1:0; if(ac!==bc)return ac-bc; return (a.name||'').localeCompare(b.name||'','ko-KR'); });
+  const _insTypeOrder={life:0,general:1,coop:2};
+  list.sort((a,b)=>{ const ao=_insTypeOrder[a.type]??1, bo=_insTypeOrder[b.type]??1; if(ao!==bo)return ao-bo; return (a.name||'').localeCompare(b.name||'','ko-KR'); });
   if(insFilter!=='all') list = list.filter(c=>c.type===insFilter);
-  if(q){ const lq=q.toLowerCase(); list=list.filter(c=>c.name?.toLowerCase().includes(lq)); }
+  if(q){ list=list.filter(c=>matchChosung(c.name||'',q)); }
   const el=$('insurance-list');
   if(!list.length){ el.innerHTML=empty('📋','등록된 보험사가 없습니다'); return; }
   const telV=(t)=>t?`<a href="tel:${t.replace(/[^0-9]/g,'')}" class="ins-val tel">${esc(t)}</a>`:`<span class="ins-val none">-</span>`;
   const faxV=(f)=>f?`<span class="ins-val">${esc(f)}</span>`:`<span class="ins-val fax-txt">고객센터로 전화</span>`;
   // 전산 URL 플랫 목록
   const jeonsanFlat = [...(JEONSAN_DB.general||[]), ...(JEONSAN_DB.life||[])];
+  const _insNameBg={life:'background:#fef3c7;color:#92400e;',general:'background:#fee2e2;color:#991b1b;',coop:'background:#dcfce7;color:#166534;'};
   el.innerHTML = list.map(c=>{
     const ov=allSharedInsContact.find(x=>x.name===c.name&&x.type===c.type);
     const ct=ov||c;
     const mon=findMonEntry(c.name,c.type);
+    const _nameBg=_insNameBg[c.type]||'';
     const csTel=ct.tel||'', incall=ct.incall||'', fax=ct.fax||'';
     const monBtn=mon?.url?`<a href="${mon.url}" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:3px 10px;border-radius:20px;background:#e3f2fd;color:#1565c0;font-size:10px;font-weight:700;text-decoration:none;">모니터링 열기</a>`:'' ;
     // 전산 URL (shared_ins_contact jeonsanUrl 오버라이드 → JEONSAN_DB → allSharedJeonsan)
@@ -2343,7 +2358,7 @@ function renderInsurance(q='') {
     return `<div class="ins-mon-card">
       <div class="ins-card-head">
         <div style="display:flex;align-items:center;justify-content:space-between;gap:4px;">
-          <div class="ins-card-name">${esc(c.name)}</div>
+          <div class="ins-card-name" style="${_nameBg}border-radius:6px;padding:2px 10px;display:inline-block;">${esc(c.name)}</div>
           ${jUrl?`<div style="display:flex;gap:4px;flex-shrink:0;">
             <a href="${jUrl}" target="_blank" rel="noopener noreferrer" class="browser-icon-btn btn-chrome" title="Chrome으로 전산 열기"></a>
             <a href="microsoft-edge:${jUrl}" class="browser-icon-btn btn-edge" title="Edge로 전산 열기">e</a>
@@ -2868,7 +2883,7 @@ function renderHome() {
       </div>`;
     }).join('');
   } else { $('home-silbi-section').style.display='none'; }
-  if(cars.length){$('home-car-section').style.display='';ha=true;$('home-car-list').innerHTML=cars.map(c=>`<div class="alert-card ${c.diff<0||c.diff<=14?'urgent':'soon'}" onclick="showCDetail('${c.id}')"><div><div class="alert-name">${esc(c.name)}</div><div class="alert-sub">📅 ${esc(c._cd)}${c._ci?' · '+esc(c._ci):''}</div></div><span class="alert-badge ${c.diff<0||c.diff<=14?'badge-danger':'badge-warn'}">${c.diff<=0?'만기':c.diff+'일'}</span></div>`).join('');}else{$('home-car-section').style.display='none';}
+  if(cars.length){$('home-car-section').style.display='';ha=true;$('home-car-list').innerHTML=cars.map(c=>{const _carMsg=`안녕하세요 ${c.name} 고객님 😊\n자동차보험 만기일(${c._cd})이 다가오고 있습니다.\n갱신 관련 상담은 언제든지 연락 주세요!`;return`<div class="alert-card ${c.diff<0||c.diff<=14?'urgent':'soon'}" onclick="showCDetail('${c.id}')"><div style="flex:1;"><div class="alert-name">${esc(c.name)}</div><div class="alert-sub">📅 ${esc(c._cd)}${c._ci?' · '+esc(c._ci):''}</div></div><span class="alert-badge ${c.diff<0||c.diff<=14?'badge-danger':'badge-warn'}" style="flex-shrink:0;">${c.diff<=0?'만기':c.diff+'일'}</span>${c.phone?`<button onclick="event.stopPropagation();openSMS('${esc(c.phone)}',${JSON.stringify(_carMsg)})" style="flex-shrink:0;background:#dbeafe;color:#1d4ed8;border:none;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;">📱</button>`:''}</div>`;}).join('');}else{$('home-car-section').style.display='none';}
   // 생일 D-7 이내만 표시, 날짜별 그룹화
   const bdays = allCustomers.map(c => {
     if (!c.rrn || c.rrn.length < 6) return null;
@@ -2884,18 +2899,24 @@ function renderHome() {
     bdays.forEach(c => {
       const key = c.mm + '/' + c.dd;
       if (!bdByDate[key]) bdByDate[key] = {diff: c.diff, mm: c.mm, dd: c.dd, people: []};
-      bdByDate[key].people.push({name: c.name, id: c.id});
+      bdByDate[key].people.push({name: c.name, id: c.id, phone: c.phone||''});
     });
     $('home-bday-list').innerHTML = Object.values(bdByDate).map(g => {
       const isToday = g.diff === 0;
       const badge = isToday ? '🎉 오늘' : `D-${g.diff}`;
-      const names = g.people.map(p => `<span style="cursor:pointer;font-weight:700;color:${isToday?'#166534':'var(--gray-800)'};" onclick="showCDetail('${p.id}')">${esc(p.name)}</span>`).join('<span style="color:var(--gray-400);margin:0 3px;">·</span>');
+      const nameItems = g.people.map(p => {
+        const smsMsg = `안녕하세요 ${p.name} 고객님 😊\n생일을 진심으로 축하드립니다! 🎂\n항상 건강하고 행복하신 하루 되세요!`;
+        return `<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;">
+          <span style="cursor:pointer;font-weight:700;color:${isToday?'#166534':'var(--gray-800)'};" onclick="showCDetail('${p.id}')">${esc(p.name)}</span>
+          ${p.phone?`<button onclick="openSMS('${esc(p.phone)}',${JSON.stringify(smsMsg)})" style="background:#dcfce7;color:#166534;border:none;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap;">📱 문자</button>`:''}
+        </div>`;
+      }).join('');
       return `<div class="alert-card ${isToday?'urgent':''}" style="flex-direction:column;align-items:flex-start;gap:6px;">
         <div style="display:flex;justify-content:space-between;width:100%;align-items:center;">
           <span style="font-size:13px;font-weight:600;color:var(--gray-500);">🎂 ${g.mm}월 ${g.dd}일</span>
           <span class="alert-badge badge-bday">${badge}</span>
         </div>
-        <div style="font-size:14px;line-height:1.6;">${names}</div>
+        <div style="font-size:14px;line-height:1.6;">${nameItems}</div>
       </div>`;
     }).join('');
   } else { $('home-bday-section').style.display = 'none'; }
@@ -2939,7 +2960,7 @@ function renderCal(){
     const ds=`${cy}-${String(cm+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
     const isT=ds===todayStr, isS=ds===cs;
     const cls=['cal-day',isT?'today':'',isS&&!isT?'selected':'',(fDay+d-1)%7===0?'sun':'',(fDay+d-1)%7===6?'sat':''].join(' ');
-    const dayTodos=(tdByDate[ds]||[]).slice().sort((a,b)=>(a.time||'00:00').localeCompare(b.time||'00:00'));
+    const dayTodos=(tdByDate[ds]||[]).slice().sort((a,b)=>{if(a.sortOrder!==undefined&&b.sortOrder!==undefined)return a.sortOrder-b.sortOrder;return(a.time||'00:00').localeCompare(b.time||'00:00');});
     const todoHtml=dayTodos.slice(0,2).map(t=>`<div class="cal-todo-text${t.done?' cal-todo-done':''}" title="${t.time?t.time+' ':''} ${eattr(t.text)}">${t.time?`${t.time} `:''}${esc(t.text)}</div>`).join('')
       +(dayTodos.length>2?`<div class="cal-todo-text" style="opacity:0.6;">+${dayTodos.length-2}건</div>`:'');
     const gcalDot=gcalSet.has(ds)?'<div class="cal-dot" style="background:#34a853;margin-top:1px;"></div>':'';
@@ -3283,7 +3304,7 @@ function goProspectsInCustomers() {
 function renderCustomers(q=''){
   let l=[...allCustomers];
   if(customerProspectFilter === 'prospect') l = l.filter(c => c.isProspect);
-  if(q){const lq=q.toLowerCase();l=l.filter(c=>c.name?.includes(lq)||c.phone?.includes(lq));}
+  if(q){l=l.filter(c=>matchChosung(c.name||'',q)||c.phone?.includes(q));}
 
   // 정렬: 1순위 사업대상자 → 2순위 가나다순
   l.sort((a,b)=>{
@@ -3298,11 +3319,11 @@ function renderCustomers(q=''){
   if(custBdays.length){
     $('cust-bday-section').style.display='';
     const bdByDate={};
-    custBdays.forEach(c=>{const diff=bdayDiff(c.rrn);const mm=parseInt(c.rrn.substring(2,4),10);const dd=parseInt(c.rrn.substring(4,6),10);const key=mm+'/'+dd;if(!bdByDate[key])bdByDate[key]={diff,mm,dd,people:[]};bdByDate[key].people.push({name:c.name,id:c.id});});
+    custBdays.forEach(c=>{const diff=bdayDiff(c.rrn);const mm=parseInt(c.rrn.substring(2,4),10);const dd=parseInt(c.rrn.substring(4,6),10);const key=mm+'/'+dd;if(!bdByDate[key])bdByDate[key]={diff,mm,dd,people:[]};bdByDate[key].people.push({name:c.name,id:c.id,phone:c.phone||''});});
     $('cust-bday-list').innerHTML=Object.values(bdByDate).map(g=>{
       const isToday=g.diff===0;const badge=isToday?'🎉 오늘':`D-${g.diff}`;
-      const names=g.people.map(p=>`<span style="cursor:pointer;font-weight:700;color:${isToday?'#166534':'var(--gray-800)'};" onclick="showCDetail('${p.id}')">${esc(p.name)}</span>`).join('<span style="color:var(--gray-400);margin:0 3px;">·</span>');
-      return `<div class="alert-card ${isToday?'urgent':''}" style="flex-direction:column;align-items:flex-start;gap:6px;"><div style="display:flex;justify-content:space-between;width:100%;align-items:center;"><span style="font-size:13px;font-weight:600;color:var(--gray-500);">🎂 ${g.mm}월 ${g.dd}일</span><span class="alert-badge badge-bday">${badge}</span></div><div style="font-size:14px;line-height:1.6;">${names}</div></div>`;
+      const nameItems=g.people.map(p=>{const smsMsg=`안녕하세요 ${p.name} 고객님 😊\n생일을 진심으로 축하드립니다! 🎂\n항상 건강하고 행복하신 하루 되세요!`;return`<div style="display:flex;align-items:center;gap:6px;margin-bottom:2px;"><span style="cursor:pointer;font-weight:700;color:${isToday?'#166534':'var(--gray-800)'};" onclick="showCDetail('${p.id}')">${esc(p.name)}</span>${p.phone?`<button onclick="openSMS('${esc(p.phone)}',${JSON.stringify(smsMsg)})" style="background:#dcfce7;color:#166534;border:none;border-radius:8px;padding:2px 8px;font-size:11px;font-weight:700;cursor:pointer;">📱 문자</button>`:''}</div>`;}).join('');
+      return `<div class="alert-card ${isToday?'urgent':''}" style="flex-direction:column;align-items:flex-start;gap:6px;"><div style="display:flex;justify-content:space-between;width:100%;align-items:center;"><span style="font-size:13px;font-weight:600;color:var(--gray-500);">🎂 ${g.mm}월 ${g.dd}일</span><span class="alert-badge badge-bday">${badge}</span></div><div style="font-size:14px;line-height:1.6;">${nameItems}</div></div>`;
     }).join('');
   } else { $('cust-bday-section').style.display='none'; }
 
@@ -3310,7 +3331,7 @@ function renderCustomers(q=''){
   const custCars=[];allCustomers.forEach(c=>{_getCarInsurances(c).forEach(ci=>{if(!ci.carDate)return;const diff=carDiff(ci.carDate);if(diff===null||diff<-7||diff>30)return;custCars.push({...c,_ci:ci.insCo||'',_cd:ci.carDate,diff});});});custCars.sort((a,b)=>a.diff-b.diff);
   if(custCars.length){
     $('cust-car-section').style.display='';
-    $('cust-car-list').innerHTML=custCars.map(c=>`<div class="alert-card ${c.diff<=14?'urgent':'soon'}" onclick="showCDetail('${c.id}')"><div><div class="alert-name">${esc(c.name)}</div><div class="alert-sub">📅 ${esc(c._cd)}${c._ci?' · '+esc(c._ci):''}</div></div><span class="alert-badge ${c.diff<=14?'badge-danger':'badge-warn'}">${c.diff<=0?'만기':c.diff+'일'}</span></div>`).join('');
+    $('cust-car-list').innerHTML=custCars.map(c=>{const _carMsg=`안녕하세요 ${c.name} 고객님 😊\n자동차보험 만기일(${c._cd})이 다가오고 있습니다.\n갱신 관련 상담은 언제든지 연락 주세요!`;return`<div class="alert-card ${c.diff<=14?'urgent':'soon'}" onclick="showCDetail('${c.id}')"><div style="flex:1;"><div class="alert-name">${esc(c.name)}</div><div class="alert-sub">📅 ${esc(c._cd)}${c._ci?' · '+esc(c._ci):''}</div></div><span class="alert-badge ${c.diff<=14?'badge-danger':'badge-warn'}" style="flex-shrink:0;">${c.diff<=0?'만기':c.diff+'일'}</span>${c.phone?`<button onclick="event.stopPropagation();openSMS('${esc(c.phone)}',${JSON.stringify(_carMsg)})" style="flex-shrink:0;background:#dbeafe;color:#1d4ed8;border:none;border-radius:8px;padding:4px 8px;font-size:11px;font-weight:700;cursor:pointer;">📱</button>`:''}</div>`;}).join('');
   } else { $('cust-car-section').style.display='none'; }
 
   $('customer-list').innerHTML=l.length?l.map(c=>{
@@ -3494,7 +3515,7 @@ async function delProspect(id,e){e&&e.stopPropagation();if(!confirm('삭제?'))r
 function renderProspects(q=''){let l=[...allProspects];if(q){const lq=q.toLowerCase();l=l.filter(p=>p.name?.includes(lq));}const em={high:'🔴',med:'🟡',low:'🟢'};$('prospect-list').innerHTML=l.length?l.map(p=>`<div class="item-card"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><div class="card-name">${em[p.pri]||em.med} ${esc(p.name)}</div><div><button class="icon-btn" onclick="openPEdit('${p.id}')">✏️</button><button class="icon-btn" onclick="delProspect('${p.id}',event)">🗑</button></div></div><div class="card-meta">${p.phone?`<a href="tel:${p.phone.replace(/\D/g,'')}" class="meta-item" style="color:var(--primary);font-weight:600;text-decoration:none;" onclick="event.stopPropagation()">📞 ${esc(p.phone)}</a>`:''}${p.rel?`<div class="meta-item">👤 ${esc(p.rel)}</div>`:''}${p.product?`<div class="meta-item">📋 ${esc(p.product)}</div>`:''}</div>${p.memo?`<div style="font-size:12px;color:var(--gray-500);margin-top:8px;">${esc(p.memo)}</div>`:''}</div>`).join(''):empty('🎯','없습니다');}
 
 /* ── 메모장 ── */
-let currentNoteTab = 'tip'; // tip | memo | photo
+let currentNoteTab = 'memo'; // memo | tip | photo
 function switchNoteTab(tab, btn) {
   currentNoteTab = tab;
   document.querySelectorAll('#sec-notebook .tabs .tab').forEach(t => t.classList.remove('active'));
@@ -3503,10 +3524,10 @@ function switchNoteTab(tab, btn) {
   const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
   const isSM = isTeamLeader(CU.uid);
   const noteAddBtn = $('note-add-btn');
-  if (tab === 'tip') {
-    if (noteAddBtn) noteAddBtn.style.display = 'block'; // 모든 사람 등록 가능
-  } else if (tab === 'memo') {
-    if (noteAddBtn) noteAddBtn.style.display = (isAdmin || isSM) ? 'block' : 'none';
+  if (tab === 'memo') {
+    if (noteAddBtn) noteAddBtn.style.display = 'block'; // 메모장: 모든 사람 등록 가능
+  } else if (tab === 'tip') {
+    if (noteAddBtn) noteAddBtn.style.display = 'block'; // 영업꿀팁: 모든 사람 등록 가능
   } else if (tab === 'photo') {
     if (noteAddBtn) noteAddBtn.style.display = (isAdmin || isSM) ? 'block' : 'none';
   }
@@ -3557,17 +3578,23 @@ function renderSharedNotes() {
         ${canEdit ? `<div style="display:flex;gap:4px;"><button class="icon-btn" onclick="openNoteEdit('${n.id}')">✏️</button><button class="icon-btn" onclick="delSharedNote('${n.id}')">🗑</button></div>` : ''}
       </div>
       <div style="font-size:14px;white-space:pre-wrap;background:#f8fafc;padding:12px;border-radius:8px;">${esc(n.content||'')}</div>
+      ${n.attachUrl?`<div style="margin-top:8px;"><a href="${esc(n.attachUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;text-decoration:none;">📎 ${esc(n.attachName||'첨부파일')} <span style="opacity:.6;font-size:10px;">다운로드</span></a></div>`:''}
     </div>`;
   }).join('');
 }
 function openNoteAdd() {
   $('note-eid').value=''; $('note-subject').value=''; $('note-content').value='';
-  // 사진첩 탭일 때 photoUrl 필드 표시
+  // 탭별 필드 표시
   const photoField = $('note-photo-field');
   if (photoField) photoField.style.display = currentNoteTab === 'photo' ? '' : 'none';
   if ($('note-photo-file')) $('note-photo-file').value = '';
   const prev0 = $('note-photo-preview'); if(prev0) prev0.innerHTML='';
   window._noteCurrentPhotoUrl = null;
+  const fileField = $('note-file-field');
+  if (fileField) fileField.style.display = currentNoteTab === 'memo' ? '' : 'none';
+  if ($('note-attach-file')) $('note-attach-file').value = '';
+  const filePrev = $('note-file-preview'); if(filePrev) filePrev.textContent='';
+  window._noteCurrentAttachUrl = null; window._noteCurrentAttachName = null;
   $('m-note-title').textContent = currentNoteTab === 'photo' ? '사진 등록' : currentNoteTab === 'memo' ? '메모 등록' : '영업 꿀팁 등록';
   openModal('m-notebook');
 }
@@ -3579,6 +3606,12 @@ function openNoteEdit(id) {
   window._noteCurrentPhotoUrl = n.photoUrl||null;
   const prevEl = $('note-photo-preview'); if(prevEl && n.photoUrl) prevEl.innerHTML = `<img src="${esc(n.photoUrl)}" style="max-width:100%;max-height:120px;border-radius:8px;margin-top:4px;">`; else if(prevEl) prevEl.innerHTML='';
   if($('note-photo-file')) $('note-photo-file').value='';
+  const fileField = $('note-file-field');
+  if (fileField) fileField.style.display = n.noteTab === 'memo' ? '' : 'none';
+  window._noteCurrentAttachUrl = n.attachUrl||null; window._noteCurrentAttachName = n.attachName||null;
+  const filePrev = $('note-file-preview');
+  if(filePrev) filePrev.textContent = n.attachUrl ? `📎 ${n.attachName||'첨부파일'} (기존)` : '';
+  if($('note-attach-file')) $('note-attach-file').value='';
   $('m-note-title').textContent = n.noteTab==='photo' ? '사진 수정' : n.noteTab==='memo' ? '메모 수정' : '영업 꿀팁 수정';
   openModal('m-notebook');
 }
@@ -3604,11 +3637,33 @@ async function saveSharedNote() {
       if(prog) prog.style.display='none';
     } catch(e) { toast('사진 업로드 실패: '+e.message,'error'); return; }
   }
+  // 파일 첨부 업로드 (메모장 탭)
+  let attachUrl = window._noteCurrentAttachUrl || '';
+  let attachName = window._noteCurrentAttachName || '';
+  const attachFile = $('note-attach-file') ? $('note-attach-file').files[0] : null;
+  if (attachFile) {
+    try {
+      const prog2=$('note-file-progress'), bar2=$('note-file-progress-bar'), txt2=$('note-file-progress-text');
+      if(prog2) prog2.style.display='';
+      const safeName = attachFile.name.replace(/[^a-zA-Z0-9가-힣._-]/g,'_');
+      const sRef = storage.ref('shared_notes/files/' + Date.now() + '_' + safeName);
+      const task = sRef.put(attachFile);
+      attachUrl = await new Promise((res,rej)=>{
+        task.on('state_changed',
+          snap=>{const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);if(bar2)bar2.style.width=pct+'%';if(txt2)txt2.textContent='업로드 중... '+pct+'%';},
+          rej,
+          async()=>{res(await sRef.getDownloadURL());}
+        );
+      });
+      attachName = attachFile.name;
+      if(prog2) prog2.style.display='none';
+    } catch(e) { toast('파일 업로드 실패: '+e.message,'error'); return; }
+  }
   try {
     if (eid) {
-      await db.collection('shared_notes').doc(eid).update({subject:s,content:c,photoUrl,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
+      await db.collection('shared_notes').doc(eid).update({subject:s,content:c,photoUrl,attachUrl,attachName,updatedAt:firebase.firestore.FieldValue.serverTimestamp()});
     } else {
-      await db.collection('shared_notes').add({subject:s,content:c,photoUrl,noteTab:currentNoteTab,authorUid:CU.uid,authorName:CU.name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
+      await db.collection('shared_notes').add({subject:s,content:c,photoUrl,attachUrl,attachName,noteTab:currentNoteTab,authorUid:CU.uid,authorName:CU.name,createdAt:firebase.firestore.FieldValue.serverTimestamp()});
     }
     closeModal('m-notebook');
   } catch(e) { toast('오류','error'); }
