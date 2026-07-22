@@ -85,6 +85,15 @@
 
     .sidebar{position:fixed;top:var(--header-h);left:0;bottom:0;width:var(--sidebar-w);background:#FFFFFF;border-right:1.5px solid #EEF2FF;box-shadow:2px 0 12px rgba(37,99,235,.05);padding:16px 10px;display:none;flex-direction:column;gap:2px;z-index:100;overflow-y:auto;}
     @media(min-width:768px){.sidebar{display:flex} .brand-text-pc{display:inline;}}
+    @media(max-width:600px) {
+      /* 모바일에서 호버 상태 비활성화 - 성능 개선 */
+      .nav-btn:hover, .jeonsan-card:hover, .browser-icon-btn:hover, 
+      .company-link-btn:hover, .ins-mon-card:hover, .btn-primary:hover,
+      .btn-outline:hover, .btn-ghost:hover {
+        transform: none !important;
+        transition: none !important;
+      }
+    }
     .nav-btn{display:flex;align-items:center;gap:12px;padding:10px 14px;border-radius:9px;border:none;background:transparent;font-size:13px;font-weight:500;color:#64748B;cursor:pointer;font-family:inherit;transition:all .15s;text-align:left;width:100%;letter-spacing:.2px;}
     .nav-btn svg{width:18px;height:18px;flex-shrink:0;opacity:.8;} .nav-btn:hover{background:rgba(37,99,235,.06);color:#334155;} .nav-btn:hover svg{opacity:1;} .nav-btn.active{background:rgba(37,99,235,.1);color:#2563EB;font-weight:700;border-left:3px solid #2563EB;padding-left:11px;} .nav-btn.active svg{opacity:1;}
 
@@ -96,8 +105,8 @@
     .main{padding-top:calc(var(--header-h) + 20px);padding-bottom:calc(var(--nav-h) + 20px);padding-left:16px;padding-right:16px;min-height:100vh;background:#EEF2F7;}
     @media(min-width:768px){.main{padding-left:calc(var(--sidebar-w) + 24px);padding-right:24px;padding-bottom:32px;}}
 
-    .section{display:none} .section.active{display:block;animation:secFadeIn .25s ease;}
-    @keyframes secFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+    .section{display:none;will-change:opacity,transform} .section.active{display:block;animation:secFadeIn .25s ease;will-change:unset;}
+    @keyframes secFadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
     .sec-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid #EEF2FF;}
     .sec-head-accent{background:linear-gradient(90deg,#2563EB 0%,#FFFFFF 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
     .sec-title{font-size:18px;font-weight:700;color:#0F172A;letter-spacing:-.3px;}
@@ -556,9 +565,10 @@
       50%{transform:translateY(-4px);}
     }
 
-    /* ── 카드 입장 애니메이션 (스태거) ── */
+    /* ── 카드 입장 애니메이션 (스태거 + 모바일 최적화) ── */
     .az-list-anim > * {
       animation: fadeSlideUp .35s cubic-bezier(.22,.68,0,1.2) both;
+      will-change: opacity, transform;
     }
     .az-list-anim > *:nth-child(1){animation-delay:0ms;}
     .az-list-anim > *:nth-child(2){animation-delay:45ms;}
@@ -570,6 +580,11 @@
     .az-list-anim > *:nth-child(8){animation-delay:240ms;}
     .az-list-anim > *:nth-child(9){animation-delay:255ms;}
     .az-list-anim > *:nth-child(n+10){animation-delay:265ms;}
+    /* 애니메이션 완료 후 will-change 제거 */
+    .az-list-anim > *:nth-child(n+10) { animation-delay: 265ms; }
+    @media (max-width: 600px) {
+      .az-list-anim > * { will-change: auto; animation-duration: .28s; }
+    }
 
     /* ── 섹션 전환 개선 ── */
     @keyframes secFadeIn{
@@ -8976,62 +8991,123 @@ function _animList(containerId) {
   el.classList.add('az-list-anim');
 }
 
-// ── 헤더 스크롤 그림자 ──
+// ── 헤더 스크롤 그림자 (throttled) ──
 (function() {
   const header = document.querySelector('.app-header');
   if (!header) return;
   const main = document.querySelector('.main');
   if (!main) return;
-  main.addEventListener('scroll', () => {
-    header.classList.toggle('scrolled', main.scrollTop > 4);
-  }, { passive: true });
-  window.addEventListener('scroll', () => {
-    header.classList.toggle('scrolled', window.scrollY > 4);
+  
+  let ticking = false;
+  
+  const updateHeader = () => {
+    const scrolled = main.scrollTop > 4 || window.scrollY > 4;
+    header.classList.toggle('scrolled', scrolled);
+    ticking = false;
+  };
+  
+  const onScroll = () => {
+    if (!ticking) {
+      requestAnimationFrame(updateHeader);
+      ticking = true;
+    }
+  };
+  
+  main.addEventListener('scroll', onScroll, { passive: true });
+  window.addEventListener('scroll', onScroll, { passive: true });
+})();
+
+// ── 버튼 리플 효과 (최적화: transform 기반) ──
+(function() {
+  let rippleStyle = null;
+  
+  // 스타일 한번만 만들기
+  function ensureRippleStyle() {
+    if (rippleStyle) return;
+    const style = document.createElement('style');
+    style.textContent = `
+      .az-ripple-circle {
+        position: absolute;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.6);
+        pointer-events: none;
+        will-change: transform, opacity;
+        animation: rippleAnim 600ms ease-out;
+      }
+      @keyframes rippleAnim {
+        0% { transform: scale(0); opacity: 1; }
+        100% { transform: scale(1); opacity: 0; }
+      }
+    `;
+    document.head.appendChild(style);
+    rippleStyle = true;
+  }
+  
+  ensureRippleStyle();
+  
+  document.addEventListener('click', function(e) {
+    const btn = e.target.closest('.btn-primary,.btn-outline,.btn-ghost,.action-chip,.bnav-btn,.nav-btn');
+    if (!btn) return;
+    
+    const rect = btn.getBoundingClientRect();
+    const size = Math.max(rect.width, rect.height) * 1.8;
+    const x = e.clientX - rect.left - size / 2;
+    const y = e.clientY - rect.top - size / 2;
+    
+    const ripple = document.createElement('span');
+    ripple.className = 'az-ripple-circle';
+    ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
+    
+    // 미리 스타일 설정 (성능 최적화)
+    if (btn.style.position === 'static' || !btn.style.position) btn.style.position = 'relative';
+    if (!btn.style.overflow) btn.style.overflow = 'hidden';
+    
+    btn.appendChild(ripple);
+    
+    // 600ms 후 제거
+    setTimeout(() => { ripple.remove(); }, 600);
   }, { passive: true });
 })();
 
-// ── 버튼 리플 효과 ──
-document.addEventListener('click', function(e) {
-  const btn = e.target.closest('.btn-primary,.btn-outline,.btn-ghost,.action-chip,.bnav-btn,.nav-btn');
-  if (!btn) return;
-  const rect = btn.getBoundingClientRect();
-  const size = Math.max(rect.width, rect.height) * 1.8;
-  const x = e.clientX - rect.left - size / 2;
-  const y = e.clientY - rect.top - size / 2;
-  const ripple = document.createElement('span');
-  ripple.className = 'az-ripple-circle';
-  ripple.style.cssText = `width:${size}px;height:${size}px;left:${x}px;top:${y}px;`;
-  // 버튼이 overflow:hidden 이어야 함
-  const prevPos = btn.style.position;
-  if (!btn.style.position || btn.style.position === 'static') btn.style.position = 'relative';
-  btn.style.overflow = 'hidden';
-  btn.appendChild(ripple);
-  setTimeout(() => { ripple.remove(); if(!prevPos) btn.style.position=''; }, 600);
-}, { passive: true });
-
-// ── 렌더 후 자동 스태거 적용 (MutationObserver) ──
+// ── 렌더 후 자동 스태거 적용 (MutationObserver + 디바운싱) ──
 (function() {
   const listIds = [
     'customer-list','todo-list','alert-list','prospect-list',
     'notice-list','insurance-list','shared-notes-list',
     'admin-stats-body','team-admin-list'
   ];
+  
+  const debounceMap = new Map();
+  
   const observer = new MutationObserver(mutations => {
     mutations.forEach(m => {
       const el = m.target;
-      if (el.children.length > 0) {
+      if (el.children.length === 0) return;
+      
+      // 이미 대기 중인 요소면 스킵
+      if (debounceMap.has(el)) return;
+      
+      debounceMap.set(el, true);
+      
+      // 16ms 뒤에 애니메이션 적용 (1 프레임)
+      requestAnimationFrame(() => {
         el.classList.remove('az-list-anim');
-        void el.offsetWidth;
-        el.classList.add('az-list-anim');
-      }
+        // reflow 대신 requestAnimationFrame 사용
+        requestAnimationFrame(() => {
+          el.classList.add('az-list-anim');
+          debounceMap.delete(el);
+        });
+      });
     });
   });
+  
   function attachObservers() {
     listIds.forEach(id => {
       const el = $(id);
       if (el) observer.observe(el, { childList: true });
     });
   }
+  
   // DOM 준비 후 연결
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', attachObservers);
@@ -9046,25 +9122,40 @@ function _countUpAll() {
   document.querySelectorAll('[data-countup]').forEach(el => {
     const target = parseInt(el.dataset.countup, 10);
     if (isNaN(target)) return;
+    
+    // will-change 추가 (GPU 가속)
+    el.style.willChange = 'contents';
+    
     const start = performance.now();
     const dur = 700;
-    (function step(ts) {
+    let animId = null;
+    
+    const step = (ts) => {
       const p = Math.min((ts - start) / dur, 1);
       const ease = 1 - Math.pow(1 - p, 3);
       el.textContent = Math.round(ease * target);
-      if (p < 1) requestAnimationFrame(step);
-    })(start);
+      
+      if (p < 1) {
+        animId = requestAnimationFrame(step);
+      } else {
+        // 애니메이션 끝나면 will-change 제거
+        el.style.willChange = 'auto';
+      }
+    };
+    
+    animId = requestAnimationFrame(step);
   });
 }
 
-// ── 섹션 전환 시 스크롤 상단 이동 ──
+// ── 섹션 전환 시 스크롤 상단 이동 (최적화) ──
 const _origGoSection = goSection;
 window.goSection = function(n, b) {
   _origGoSection(n, b);
-  setTimeout(() => {
+  // requestAnimationFrame으로 동기화 (브라우저 리플로우 후 스크롤)
+  requestAnimationFrame(() => {
     const main = document.querySelector('.main');
     if (main) main.scrollTop = 0;
-  }, 50);
+  });
 };
 
 // ── 다크/라이트 전환 시 부드럽게 ──
