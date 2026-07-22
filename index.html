@@ -448,9 +448,8 @@
     <button class="nav-btn" onclick="goSection('promo',this)">프로모션 계산기</button>
     <button class="nav-btn" onclick="goSection('insurance',this)">전체 보험사</button>
     <button class="nav-btn" onclick="goSection('manager',this)">연락처</button>
-    <button class="nav-btn" onclick="goSection('mindmap-customer',this)">고객 마인드맵</button>
-    <button class="nav-btn" onclick="goSection('mindmap-lineage',this)">계보 마인드맵</button>
-    <button class="nav-btn" onclick="goSection('notebook',this)">공용 메모장</button>
+    <button class="nav-btn" onclick="goSection('mindmap',this)">마인드맵</button>
+    <button class="nav-btn" onclick="goSection('notebook',this)">메모장</button>
     <button class="nav-btn" id="admin-nav-btn" onclick="goSection('admin',this)" style="display:none;">승인 관리 <span class="pending-badge-chip" id="pending-badge"></span></button>
     <button class="nav-btn" id="team-admin-nav-btn" onclick="goSection('team-admin',this)" style="display:none;">팀 관리</button>
     <button class="nav-btn" onclick="openGcalModal()" style="margin-top:auto;color:var(--gray-500);font-size:13px;">📅 구글 캘린더 <span id="gcal-nav-dot" style="display:none;width:7px;height:7px;background:#10b981;border-radius:50%;display:inline-block;margin-left:4px;"></span></button>
@@ -464,9 +463,8 @@
     <button class="bnav-btn" onclick="goSection('promo',this)"><span>프로모션</span></button>
     <button class="bnav-btn" onclick="goSection('insurance',this)"><span>전체보험사</span></button>
     <button class="bnav-btn" onclick="goSection('manager',this)"><span>연락처</span></button>
-    <button class="bnav-btn" onclick="goSection('mindmap-customer',this)"><span>고객맵</span></button>
-    <button class="bnav-btn" onclick="goSection('mindmap-lineage',this)"><span>계보맵</span></button>
-    <button class="bnav-btn" onclick="goSection('notebook',this)"><span>메모</span></button>
+    <button class="bnav-btn" onclick="goSection('mindmap',this)"><span>마인드맵</span></button>
+    <button class="bnav-btn" onclick="goSection('notebook',this)"><span>메모장</span></button>
     <button class="bnav-btn" id="admin-bnav-btn" onclick="goSection('admin',this)" style="display:none;"><span>승인</span></button>
     <button class="bnav-btn" id="team-admin-bnav-btn" onclick="goSection('team-admin',this)" style="display:none;"><span>팀관리</span></button>
   </nav>
@@ -476,6 +474,22 @@
     <section id="sec-home" class="section active">
       <div style="margin-bottom:18px;padding:18px 20px;background:linear-gradient(135deg,var(--primary-bg) 0%,white 100%);border-radius:var(--radius-lg);border:1.5px solid var(--primary-light);">
         <h2 id="home-greeting" class="home-motto">안녕하세요 👋</h2>
+      </div>
+      <!-- 지점 공지사항 -->
+      <div id="home-branch-notice-section" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:14px;font-weight:700;color:var(--gray-700);">📢 지점 공지사항</div>
+          <button id="branch-notice-add-btn" onclick="openBranchNoticeAdd()" style="display:none;font-size:12px;padding:4px 10px;border:1.5px solid var(--primary);border-radius:7px;background:white;color:var(--primary);font-weight:600;cursor:pointer;">+ 등록</button>
+        </div>
+        <div id="branch-notice-list"><div style="font-size:13px;color:var(--gray-400);padding:10px 0;">공지사항 없음</div></div>
+      </div>
+      <!-- 팀별 공지사항 -->
+      <div id="home-team-notice-section" style="margin-bottom:14px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+          <div style="font-size:14px;font-weight:700;color:var(--gray-700);">📣 팀별 공지사항</div>
+          <button id="team-notice-add-btn" onclick="openTeamNoticeAdd()" style="display:none;font-size:12px;padding:4px 10px;border:1.5px solid var(--primary);border-radius:7px;background:white;color:var(--primary);font-weight:600;cursor:pointer;">+ 등록</button>
+        </div>
+        <div id="team-notice-list"><div style="font-size:13px;color:var(--gray-400);padding:10px 0;">팀 공지사항 없음</div></div>
       </div>
       <div class="stat-grid">
         <div class="stat-card" onclick="goSection('customers')"><div class="stat-num" id="stat-customers">0</div><div class="stat-label">👥 총 고객</div></div>
@@ -496,10 +510,21 @@
     <section id="sec-todo" class="section">
       <div class="sec-head"><h2 class="sec-title">해야할일</h2><select class="todo-filter" id="todo-filter" onchange="renderTodos()"><option value="all">전체</option><option value="pending">진행중</option><option value="done">완료</option></select></div>
       <div class="cal-wrap">
-        <div class="cal-header"><button class="cal-nav" onclick="calMove(-1)">&#8249;</button><span class="cal-title" id="cal-title"></span><button class="cal-nav" onclick="calMove(1)">&#8250;</button></div>
+        <div class="cal-header">
+          <button class="cal-nav" onclick="calMove(-1)">&#8249;</button>
+          <span class="cal-title" id="cal-title" onclick="openCalYearMonth()" style="cursor:pointer;" title="클릭하여 년월 선택"></span>
+          <button class="cal-nav" onclick="calMove(1)">&#8250;</button>
+        </div>
+        <div id="cal-ym-picker" style="display:none;padding:10px;background:var(--gray-50);border-radius:10px;margin-bottom:8px;display:none;">
+          <div style="display:flex;gap:8px;align-items:center;justify-content:center;">
+            <select id="cal-year-sel" onchange="applyCalYearMonth()" style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:14px;font-weight:600;"></select>
+            <select id="cal-month-sel" onchange="applyCalYearMonth()" style="border:1.5px solid var(--gray-200);border-radius:8px;padding:6px 10px;font-size:14px;font-weight:600;"></select>
+            <button onclick="closeCalYearMonth()" style="padding:6px 12px;background:var(--primary);color:white;border:none;border-radius:8px;font-size:13px;font-weight:600;cursor:pointer;">확인</button>
+          </div>
+        </div>
         <div class="cal-grid" id="cal-grid"></div><div class="cal-selected-date" id="cal-selected-label"></div>
       </div>
-      <div class="todo-add-row"><input type="text" id="todo-input" placeholder="할 일 입력..." onkeydown="if(event.key==='Enter')addTodo()"><input type="time" id="todo-time" style="width:96px;border:1.5px solid var(--gray-200);border-radius:10px;padding:8px 6px;font-size:13px;color:var(--gray-700);flex-shrink:0;"><button class="todo-add-btn" onclick="addTodo()">+ 추가</button></div>
+      <div class="todo-add-row"><input type="text" id="todo-input" placeholder="할 일 입력..." onkeydown="if(event.key==='Enter')addTodo()"><button class="todo-add-btn" onclick="addTodo()">+ 추가</button></div>
       <div id="todo-list"></div>
     </section>
 
@@ -602,10 +627,10 @@
       <div id="claim-list"></div>
     </section>
 
-    <!-- 공용 메모장 -->
+    <!-- 메모장 -->
     <section id="sec-notebook" class="section">
       <div class="sec-head">
-        <h2 class="sec-title">공용 메모장</h2>
+        <h2 class="sec-title">메모장</h2>
         <button class="btn-outline" id="note-add-btn" style="display:none;" onclick="openNoteAdd()">+ 등록</button>
       </div>
       <div class="tabs">
@@ -620,42 +645,42 @@
       <div id="notebook-list"></div>
     </section>
 
-    <!-- 고객 마인드맵 -->
-    <section id="sec-mindmap-customer" class="section">
+    <!-- 마인드맵 (고객 + 계보 통합) -->
+    <section id="sec-mindmap" class="section">
       <div class="sec-head">
-        <h2 class="sec-title">고객 마인드맵</h2>
+        <h2 class="sec-title">마인드맵</h2>
         <div style="display:flex;gap:8px;align-items:center;">
           <select id="mm-admin-select" class="mm-admin-sel" style="display:none;" onchange="onMmAdminChange(this.value)"></select>
-          <button class="btn-outline" onclick="openMmAdd('customer')">+ 추가</button>
+          <button class="btn-outline" id="mm-add-btn" onclick="openMmAdd(currentMmTab)">+ 추가</button>
         </div>
       </div>
-      <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 드래그로 이동 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 스크롤/핀치로 확대</p>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-        <button onclick="mmZoomOut('customer')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">−</button>
-        <span id="mm-zoom-label-customer" style="min-width:42px;text-align:center;font-size:13px;font-weight:700;color:var(--gray-600);">100%</span>
-        <button onclick="mmZoomIn('customer')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">+</button>
-        <button onclick="mmZoomReset('customer')" style="padding:6px 12px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:12px;font-weight:600;cursor:pointer;color:var(--gray-600);">초기화</button>
+      <!-- 내부 탭 전환 -->
+      <div class="tabs" style="margin-bottom:10px;">
+        <button class="tab active" id="mm-tab-customer" onclick="switchMmTab('customer',this)">👥 고객 마인드맵</button>
+        <button class="tab" id="mm-tab-lineage" onclick="switchMmTab('lineage',this)">🌳 계보 마인드맵</button>
       </div>
-      <div class="mm-wrap"><svg id="mm-customer-svg" class="mm-svg"></svg></div>
-    </section>
-
-    <!-- 계보 마인드맵 -->
-    <section id="sec-mindmap-lineage" class="section">
-      <div class="sec-head">
-        <h2 class="sec-title">계보 마인드맵</h2>
-        <div style="display:flex;gap:8px;align-items:center;">
-          <select id="mm-admin-select2" class="mm-admin-sel" style="display:none;" onchange="onMmAdminChange(this.value)"></select>
-          <button class="btn-outline" onclick="openMmAdd('lineage')">+ 추가</button>
+      <!-- 고객 마인드맵 영역 -->
+      <div id="mm-area-customer">
+        <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 드래그로 이동 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 스크롤/핀치로 확대</p>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <button onclick="mmZoomOut('customer')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">−</button>
+          <span id="mm-zoom-label-customer" style="min-width:42px;text-align:center;font-size:13px;font-weight:700;color:var(--gray-600);">100%</span>
+          <button onclick="mmZoomIn('customer')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">+</button>
+          <button onclick="mmZoomReset('customer')" style="padding:6px 12px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:12px;font-weight:600;cursor:pointer;color:var(--gray-600);">초기화</button>
         </div>
+        <div class="mm-wrap"><svg id="mm-customer-svg" class="mm-svg"></svg></div>
       </div>
-      <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 드래그로 이동 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 스크롤/핀치로 확대 &nbsp;|&nbsp; <span style="background:#fffbeb;border:1px solid #fbbf24;border-radius:4px;padding:1px 6px;color:#78350f;">🟡 상위계보</span>&nbsp;<span style="background:#f0fdf4;border:1px solid #4ade80;border-radius:4px;padding:1px 6px;color:#14532d;">🟢 하위계보</span></p>
-      <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
-        <button onclick="mmZoomOut('lineage')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">−</button>
-        <span id="mm-zoom-label-lineage" style="min-width:42px;text-align:center;font-size:13px;font-weight:700;color:var(--gray-600);">100%</span>
-        <button onclick="mmZoomIn('lineage')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">+</button>
-        <button onclick="mmZoomReset('lineage')" style="padding:6px 12px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:12px;font-weight:600;cursor:pointer;color:var(--gray-600);">초기화</button>
+      <!-- 계보 마인드맵 영역 -->
+      <div id="mm-area-lineage" style="display:none;">
+        <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 드래그로 이동 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 스크롤/핀치로 확대 &nbsp;|&nbsp; <span style="background:#fffbeb;border:1px solid #fbbf24;border-radius:4px;padding:1px 6px;color:#78350f;">🟡 상위계보</span>&nbsp;<span style="background:#f0fdf4;border:1px solid #4ade80;border-radius:4px;padding:1px 6px;color:#14532d;">🟢 하위계보</span></p>
+        <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
+          <button onclick="mmZoomOut('lineage')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">−</button>
+          <span id="mm-zoom-label-lineage" style="min-width:42px;text-align:center;font-size:13px;font-weight:700;color:var(--gray-600);">100%</span>
+          <button onclick="mmZoomIn('lineage')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">+</button>
+          <button onclick="mmZoomReset('lineage')" style="padding:6px 12px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:12px;font-weight:600;cursor:pointer;color:var(--gray-600);">초기화</button>
+        </div>
+        <div class="mm-wrap"><svg id="mm-lineage-svg" class="mm-svg"></svg></div>
       </div>
-      <div class="mm-wrap"><svg id="mm-lineage-svg" class="mm-svg"></svg></div>
     </section>
 
     <!-- 승인 관리 -->
@@ -1288,6 +1313,34 @@
   </div>
 </div>
 
+<!-- 지점 공지사항 모달 -->
+<div class="overlay" id="m-branch-notice">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head"><div class="modal-title">📢 지점 공지사항</div><button class="modal-close" onclick="closeModal('m-branch-notice')">✕</button></div>
+    <input type="hidden" id="bn-eid">
+    <div class="field"><label>제목 *</label><input type="text" id="bn-title" placeholder="공지사항 제목"></div>
+    <div class="field"><label>내용 *</label><textarea id="bn-content" rows="5" placeholder="공지사항 내용을 입력하세요"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('m-branch-notice')">취소</button>
+      <button class="btn-primary" onclick="saveBranchNotice()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 팀별 공지사항 모달 -->
+<div class="overlay" id="m-team-notice">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head"><div class="modal-title">📣 팀별 공지사항</div><button class="modal-close" onclick="closeModal('m-team-notice')">✕</button></div>
+    <input type="hidden" id="tn-eid">
+    <div class="field"><label>제목 *</label><input type="text" id="tn-title" placeholder="공지사항 제목"></div>
+    <div class="field"><label>내용 *</label><textarea id="tn-content" rows="5" placeholder="공지사항 내용을 입력하세요"></textarea></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="closeModal('m-team-notice')">취소</button>
+      <button class="btn-primary" onclick="saveTeamNotice()">저장</button>
+    </div>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -1600,7 +1653,13 @@ auth.onAuthStateChanged(async (fbUser) => {
     CU = { uid: fbUser.uid, ...snap.data() };
     if (CU.status === 'pending') { $('pending-name-msg').textContent = CU.name + '님,'; showScreen('pending'); return; }
     if (CU.status === 'rejected') { await auth.signOut(); showErr('l-err', '❌ 승인이 거절되었습니다.'); return; }
-    await initApp(); showScreen('app');
+    try { await initApp(); } catch(e) { console.error('initApp error:', e); }
+    showScreen('app');
+    // iOS Safari 안전망: 100ms 후 활성 섹션 강제 표시
+    setTimeout(()=>{
+      document.querySelectorAll('.section.active').forEach(s=>{s.style.opacity='1';s.style.display='block';});
+      if(!document.querySelector('.section.active')){const h=$('sec-home');if(h){h.classList.add('active');h.style.opacity='1';h.style.display='block';}}
+    }, 100);
     // 마지막 활성 탭 복원
     try {
       const lastSec = localStorage.getItem('az_last_section');
@@ -1679,9 +1738,9 @@ async function saveProfilePassword() {
 
 /* ── 데이터 로드 ── */
 const col = (n) => db.collection('users').doc(CU.uid).collection(n);
-async function loadTodos() { try { const s=await col('todos').orderBy('createdAt','desc').get(); allTodos=s.docs.map(d=>({id:d.id,...d.data()})); } catch(e){allTodos=[];} }
-async function loadCustomers() { try { const s=await col('customers').orderBy('createdAt','desc').get(); allCustomers=s.docs.map(d=>({id:d.id,...d.data()})); } catch(e){allCustomers=[];} }
-async function loadProspects() { try { const s=await col('prospects').orderBy('createdAt','desc').get(); allProspects=s.docs.map(d=>({id:d.id,...d.data()})); } catch(e){allProspects=[];} }
+async function loadTodos() { try { const _t=new Promise(r=>setTimeout(()=>r(null),8000)); const s=await Promise.race([col('todos').orderBy('createdAt','desc').get(),_t]); allTodos=s?s.docs.map(d=>({id:d.id,...d.data()})):[];} catch(e){allTodos=[];} }
+async function loadCustomers() { try { const _t=new Promise(r=>setTimeout(()=>r(null),8000)); const s=await Promise.race([col('customers').orderBy('createdAt','desc').get(),_t]); allCustomers=s?s.docs.map(d=>({id:d.id,...d.data()})):[];} catch(e){allCustomers=[];} }
+async function loadProspects() { try { const _t=new Promise(r=>setTimeout(()=>r(null),8000)); const s=await Promise.race([col('prospects').orderBy('createdAt','desc').get(),_t]); allProspects=s?s.docs.map(d=>({id:d.id,...d.data()})):[];} catch(e){allProspects=[];} }
 
 /* ── 프로모션 계산기 ── */
 async function loadPromo() {
@@ -2027,6 +2086,7 @@ async function initApp() {
   }
   db.collection('shared_insurance').onSnapshot(s => { allSharedInsurance=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-insurance').classList.contains('active')) renderInsurance(); });
   db.collection('shared_notes').onSnapshot(s => { allSharedNotes=s.docs.map(d=>({id:d.id,...d.data()})); if($('sec-notebook').classList.contains('active')) renderSharedNotes(); });
+  _initNoticeListeners();
   _loadSicheck();
   _initSecPinch('promo','promo-zoom-inner');
   _initSecPinch('ins','ins-zoom-inner');
@@ -2889,7 +2949,7 @@ function renderCal(){
   $('cal-grid').innerHTML=h;
   $('cal-selected-label').textContent=`📅 ${cs} 의 할일`;
 }
-async function addTodo(){const t=$('todo-input').value.trim();if(!t)return;const time=$('todo-time').value||'';try{const r=await col('todos').add({text:t,done:false,date:cs,time,createdAt:firebase.firestore.FieldValue.serverTimestamp()});const newTodo={id:r.id,text:t,done:false,date:cs,time};allTodos.unshift(newTodo);$('todo-input').value='';$('todo-time').value='';// 구글 캘린더 동기화
+async function addTodo(){const t=$('todo-input').value.trim();if(!t)return;try{const r=await col('todos').add({text:t,done:false,date:cs,sortOrder:Date.now(),createdAt:firebase.firestore.FieldValue.serverTimestamp()});const newTodo={id:r.id,text:t,done:false,date:cs,sortOrder:Date.now()};allTodos.unshift(newTodo);$('todo-input').value='';// 구글 캘린더 동기화
 const gcalId=await syncTodoToGcal(newTodo);if(gcalId){await col('todos').doc(r.id).update({gcalEventId:gcalId});newTodo.gcalEventId=gcalId;await loadGcalEvents();}renderCal();renderTodos();renderHome();}catch(e){toast('실패','error');}}
 async function toggleTodo(id){const t=allTodos.find(x=>x.id===id);if(!t)return;t.done=!t.done;renderTodos();renderHome();await col('todos').doc(id).update({done:t.done});}
 async function delTodo(id){const todo=allTodos.find(t=>t.id===id);allTodos=allTodos.filter(t=>t.id!==id);renderTodos();renderHome();if(todo?.gcalEventId) await deleteGcalEvent(todo.gcalEventId);await col('todos').doc(id).delete();}
@@ -2905,7 +2965,11 @@ function renderTodos(){
     l=allTodos.filter(t=>t.date===cs);
     if(f==='done') l=l.filter(t=>t.done);
   }
-  l.sort((a,b)=>_todoKey(a).localeCompare(_todoKey(b)));
+  // 드래그 순서 우선, 없으면 기존 정렬
+  l.sort((a,b)=>{
+    if(a.sortOrder!==undefined&&b.sortOrder!==undefined) return a.sortOrder-b.sortOrder;
+    return _todoKey(a).localeCompare(_todoKey(b));
+  });
   // 📋 계약 일정 (선택된 날짜의 계약 or 진행중 필터 시 7일내 계약)
   let contractHtml = '';
   try {
@@ -2934,12 +2998,17 @@ function renderTodos(){
       </div>`;
     }
   } catch(e) {}
-  $('todo-list').innerHTML = contractHtml + (l.length?l.map(t=>{
-    const meta=showDate
-      ? `<div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">📅 ${t.date||''}${t.time?` 🕐 ${t.time}`:''}</div>`
-      : (t.time?`<div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">🕐 ${t.time}</div>`:'');
-    return `<div class="todo-item ${t.done?'done':''}"><div class="todo-check" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div><div style="flex:1">${meta}<div class="todo-text">${esc(t.text)}</div></div><button class="icon-btn" onclick="openTodoEdit('${t.id}')">✏️</button><button class="icon-btn" onclick="delTodo('${t.id}')">🗑</button></div>`;
-  }).join(''):empty('✅','할 일이 없습니다'));
+  const todosHtml = l.length ? l.map(t=>{
+    const meta = showDate ? `<div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">📅 ${t.date||''}</div>` : '';
+    return `<div class="todo-item ${t.done?'done':''}" draggable="true" data-id="${t.id}" data-order="${t.sortOrder||0}" ondragstart="todoDragStart(event)" ondragover="todoDragOver(event)" ondrop="todoDrop(event)" ondragend="todoDragEnd(event)">
+      <div style="cursor:grab;color:var(--gray-300);font-size:16px;padding:0 4px 0 0;touch-action:none;" title="드래그로 순서 변경">⠿</div>
+      <div class="todo-check" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div>
+      <div style="flex:1">${meta}<div class="todo-text">${esc(t.text)}</div></div>
+      <button class="icon-btn" onclick="openTodoEdit('${t.id}')">✏️</button>
+      <button class="icon-btn" onclick="delTodo('${t.id}')">🗑</button>
+    </div>`;
+  }).join('') : empty('✅','할 일이 없습니다');
+  $('todo-list').innerHTML = contractHtml + todosHtml;
 }
 
 /* ── 고객관리 ── */
@@ -4754,31 +4823,34 @@ async function rejectUser(id){await db.collection('users').doc(id).update({statu
 
 /* ── 화면 전환 ── */
 function goSection(n,b){
-  document.querySelectorAll('.section').forEach(s=>s.classList.remove('active'));
-  $('sec-'+n).classList.add('active');
+  document.querySelectorAll('.section').forEach(s=>{s.classList.remove('active');s.style.opacity='';s.style.display='';});
+  const _sec=$('sec-'+n); if(!_sec)return;
+  _sec.classList.add('active'); _sec.style.opacity='1'; _sec.style.display='block';
   try { localStorage.setItem('az_last_section', n); } catch(e) {}
   document.querySelectorAll('.nav-btn,.bnav-btn').forEach(btn=>btn.classList.remove('active'));
   if(b) b.classList.add('active');
   else document.querySelectorAll(`[onclick*="goSection('${n}'"]`).forEach(x=>x.classList.add('active'));
-  if(n==='home') renderHome();
-  if(n==='admin') renderAdmin();
-  if(n==='insurance') renderInsurance();
-  if(n==='notebook') renderSharedNotes();
-  if(n==='jeonsan') renderJeonsan();
-  if(n==='gongsi') renderGongsi();
-  if(n==='claim') renderClaim();
-  if(n==='promo') { loadPromo().then(renderPromoWithTabs); }
-  if(n==='manager') renderManagerContact();
-  if(n==='mindmap-customer') renderMindmap('customer');
-  if(n==='mindmap-lineage') renderMindmap('lineage');
-  if(n==='teamwork') enterTeamwork();
-  if(n==='team-admin') { loadAllUsers().then(renderTeamAdmin); }
+  if(n==='home') try{renderHome();}catch(e){}
+  if(n==='admin') try{renderAdmin();}catch(e){}
+  if(n==='insurance') try{renderInsurance();}catch(e){}
+  if(n==='notebook') try{renderSharedNotes();}catch(e){}
+  if(n==='jeonsan') try{renderJeonsan();}catch(e){}
+  if(n==='gongsi') try{renderGongsi();}catch(e){}
+  if(n==='claim') try{renderClaim();}catch(e){}
+  if(n==='promo') { try{loadPromo().then(renderPromoWithTabs);}catch(e){} }
+  if(n==='manager') try{renderManagerContact();}catch(e){}
+  if(n==='mindmap') try{renderMindmap(currentMmTab||'customer');}catch(e){}
+  if(n==='teamwork') try{enterTeamwork();}catch(e){}
+  if(n==='team-admin') { try{loadAllUsers().then(renderTeamAdmin);}catch(e){} }
+  if(n==='customers') try{renderCustomers();}catch(e){}
+  if(n==='todo') try{renderCal();renderTodos();}catch(e){}
+  if(n==='prospects') try{renderProspects();}catch(e){}
 }
 
 function openModal(id){$(id).classList.add('open');} function closeModal(id){$(id).classList.remove('open');}
-function showScreen(n){$('screen-loading').style.display='none';$('screen-login').style.display=n==='login'?'flex':'none';$('screen-signup').style.display=n==='signup'?'flex':'none';$('screen-pending').style.display=n==='pending'?'block':'none';$('screen-app').style.display=n==='app'?'block':'none';if(n==='login'){$('l-btn').disabled=false;$('l-btn').textContent='로그인';}}
+function showScreen(n){$('screen-loading').style.display='none';$('screen-login').style.display=n==='login'?'flex':'none';$('screen-signup').style.display=n==='signup'?'flex':'none';$('screen-pending').style.display=n==='pending'?'block':'none';$('screen-app').style.display=n==='app'?'block':'none';if(n==='login'){$('l-btn').disabled=false;$('l-btn').textContent='로그인';}if(n==='app'){document.querySelectorAll('.section.active').forEach(s=>{s.style.opacity='1';s.style.display='block';}); }}
 function showLogin(){showScreen('login');} function showSignup(){showScreen('signup');}
-function renderAll(){try{renderCal();renderTodos();renderCustomers();renderProspects();}catch(e){} _restoreGcalToken();}
+function renderAll(){try{renderCal();}catch(e){}try{renderTodos();}catch(e){}try{renderCustomers();}catch(e){}try{renderProspects();}catch(e){}try{_restoreGcalToken();}catch(e){}}
 function $(id){return document.getElementById(id);} function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');} function eattr(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');} function empty(ic,ms){return`<div class="empty"><div class="empty-icon">${ic}</div><div class="empty-text">${ms}</div></div>`;} function showErr(id,msg){$(id).textContent=msg;$(id).style.display='block';} function hideErr(id){$(id).style.display='none';} let tt; function toast(m,t=''){const e=$('toast');e.textContent=m;e.className='toast show '+t;clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2500);}
 document.addEventListener('click',e=>{if(e.target.classList.contains('overlay'))closeModal(e.target.id);});
 document.addEventListener('DOMContentLoaded',()=>{
@@ -5499,12 +5571,15 @@ async function _tw_goalSection(canEdit, isLeader) {
   }
 
   const goalAutoNote = !hasDone ? _autoLateNote(myGoal) : '';
+  const _fmtGoalTs = (ts) => { if(!ts) return ''; try { const d=ts.toDate?ts.toDate():new Date(ts.seconds*1000); return d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); } catch(e){return '';} };
+  const goalAtStr = _fmtGoalTs(myGoal.goalAt);
+  const achAtStr  = _fmtGoalTs(myGoal.achAt);
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">🎯 목표취합</div>${chip}</div>
     ${goalAutoNote}
     <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">${weekRange}</div>
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:2px;">📋 목표 마감: 월요일 12:00 · ${goalDLLabel}</div>
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">📊 달성 마감: 일요일 18:00 · ${achDLLabel}</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:2px;">📋 목표 마감: 월요일 12:00 · ${goalDLLabel}${goalAtStr ? ` · <span style="color:#166534;font-weight:600;">완료 ${goalAtStr}</span>` : ''}</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">📊 달성 마감: 일요일 18:00 · ${achDLLabel}${achAtStr ? ` · <span style="color:#166534;font-weight:600;">완료 ${achAtStr}</span>` : ''}</div>
     ${myRows}
     <button class="btn-outline" style="width:100%;padding:11px;" onclick="openGoalModal()">
       ${hasDone ? '수정하기' : '목표·달성 입력하기'}
@@ -5693,13 +5768,20 @@ async function saveGoal() {
   const achLate  = !prevAchLateOk  && hasAchInput  && (now > sunDL);
   const isLate = goalLate || achLate;
 
+  const FS = firebase.firestore.FieldValue.serverTimestamp();
+  const existingTs = existingGoal;
+  const updateData = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction,
+       late: isLate, goalLate, achLate, updatedAt: FS};
+  // 목표 최초 입력 시각 저장
+  if (hasGoalInput && !existingTs.goalAt) updateData.goalAt = FS;
+  // 달성 최초 입력 시각 저장
+  if (hasAchInput && !existingTs.achAt) updateData.achAt = FS;
   try {
     await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).set(
-      {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction,
-       late: isLate, goalLate, achLate, updatedAt: firebase.firestore.FieldValue.serverTimestamp()}, {merge:true}
+      updateData, {merge:true}
     );
     if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
-    twGoals[CU.uid][weekNum] = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate, goalLate, achLate};
+    twGoals[CU.uid][weekNum] = {...existingGoal, ...{goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate, goalLate, achLate}};
     if (isLate) await recordLate(CU.uid, twDate, 'goal');
     closeModal('m-goals');
     renderTeamwork(true);
@@ -5850,7 +5932,9 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
     </div>`;
   }
   const ta = myR.ta || {};
-  const hasDone = !!(ta.checked || ta.url); // 기존 url 데이터도 호환
+  // taType: 'high'(10통 이상), 'low'(10통 이하), 구형 호환(checked)
+  const taType = ta.taType || (ta.checked ? 'high' : null);
+  const hasDone = !!(taType);
   const chip = _chipStatus(hasDone, ta.late, '미완료');
   let checkedTime = '';
   if (hasDone && (ta.checkedAt || ta.savedAt)) {
@@ -5861,43 +5945,57 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
     } catch(e) {}
   }
   const taAutoNote = !hasDone ? _autoLateNote(ta) : '';
+  const taTypeLabel = taType === 'high' ? '10통 이상 인증완료' : taType === 'low' ? '10통 이하 인증완료' : '팀방 사진 인증 완료';
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📸 TA인증</div>${chip}</div>
     ${taAutoNote}
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">다음날 06:00 마감 (늦으면 전날 지각) · 팀방에 사진 올린 뒤 아래 버튼을 누르세요</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">팀방에 사진 올린 뒤 아래 버튼을 누르세요 · 10통 이하/미체크 시 다음날 07:00 기준 지각</div>
     ${hasDone
       ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center;">
            <div style="font-size:18px;margin-bottom:4px;">✅</div>
-           <div style="font-weight:700;color:#166534;">팀방 사진 인증 완료</div>
+           <div style="font-weight:700;color:#166534;">${taTypeLabel}</div>
            ${checkedTime ? `<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">완료 시각 ${checkedTime}${isAdmin ? '<button onclick="adminEditTime(\'ta\',\'checkedAt\')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>' : ''}</div>` : ''}
          </div>
          <button onclick="cancelTa()" style="margin-top:10px;width:100%;padding:9px;background:none;border:1.5px solid #fca5a5;border-radius:9px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;">
            ✕ 인증 취소
          </button>`
-      : `<button class="btn-outline" style="width:100%;padding:14px;font-size:15px;border-color:#86efac;color:#166534;" onclick="checkTa()">
-               📸 팀방에 사진 인증 후 체크
-             </button>`
+      : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+           <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#86efac;color:#166534;font-weight:700;" onclick="checkTa('high')">
+             📸 10통 이상<br><span style="font-size:11px;font-weight:500;">인증완료</span>
+           </button>
+           <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#fbbf24;color:#92400e;font-weight:700;" onclick="checkTa('low')">
+             📸 10통 이하<br><span style="font-size:11px;font-weight:500;">인증완료</span>
+           </button>
+         </div>`
     }
     ${memberList}
   </div>`;
 }
 
-async function checkTa() {
+async function checkTa(taType) {
   const now = new Date();
-  const targetDate = new Date(twDate);
-  targetDate.setDate(targetDate.getDate() + 1);
-  targetDate.setHours(6, 1, 0, 0);
   const _isSat = new Date(twDate).getDay() === 6;
-  const isLate = !_isSat && (now > targetDate); // 토요일은 지각 없음
+  let isLate = false;
+  if (!_isSat) {
+    const deadline = new Date(twDate);
+    deadline.setDate(deadline.getDate() + 1);
+    if (taType === 'high') {
+      deadline.setHours(6, 1, 0, 0); // 10통 이상: 다음날 06:01 마감
+    } else {
+      deadline.setHours(7, 0, 0, 0); // 10통 이하: 다음날 07:00 마감
+    }
+    isLate = now > deadline;
+  }
   try {
     await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set(
-      {ta: {checked: true, late: isLate, checkedAt: firebase.firestore.FieldValue.serverTimestamp()}}, {merge: true}
+      {ta: {taType, checked: true, late: isLate, checkedAt: firebase.firestore.FieldValue.serverTimestamp()}}, {merge: true}
     );
     if (!twReports[CU.uid]) twReports[CU.uid] = {};
-    twReports[CU.uid].ta = {checked: true, late: isLate};
+    twReports[CU.uid].ta = {taType, checked: true, late: isLate};
     if (isLate) await recordLate(CU.uid, twDate, 'ta');
     renderTeamwork(true);
-    toast(isLate ? '인증 완료 (TA 지각)' : '인증 완료 ✅', isLate ? 'error' : 'success');
+    const label = taType === 'high' ? '10통 이상' : '10통 이하';
+    toast(isLate ? `${label} 인증완료 (TA 지각)` : `${label} 인증완료 ✅`, isLate ? 'error' : 'success');
   } catch(e) { toast('오류', 'error'); }
 }
 
@@ -6038,6 +6136,7 @@ async function _autoRecordLates() {
   const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
   const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
   const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
+  const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
   const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
 
   // 자동지각 전 서버에서 최신 데이터 재확인 (Firestore 캐시 우회)
@@ -6123,11 +6222,13 @@ async function _autoRecordLates() {
     }
   }
 
-  // 5. TA인증 (다음날 06:00 마감, 토요일 제외)
+  // 5. TA인증 (10통 이상: 다음날 06:01 마감 / 10통 이하·미체크: 다음날 07:00 마감, 토요일 제외)
   const _twDaySelf = new Date(twDate).getDay(); // 0=일,6=토
-  if (!_isOff && now > dlNext6 && _twDaySelf !== 6) {
+  if (!_isOff && _twDaySelf !== 6) {
     const ta = myR.ta || {};
-    if (!ta.checked && !ta.url && !ta.late && !ta.autoLatedAt) {
+    const taType = ta.taType || (ta.checked ? 'high' : null);
+    const taDeadlinePassed = taType === 'high' ? now > dlNext6 : now > dlNext7;
+    if (taDeadlinePassed && !ta.late && !ta.autoLatedAt) {
       try {
         await recordLate(CU.uid, twDate, 'ta');
         await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
@@ -6159,6 +6260,7 @@ async function _autoRecordLatesForTeam() {
   const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
   const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
   const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
+  const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
   const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
 
   // 팀장 uid 집합 (팀장은 지각처리 제외)
@@ -6253,11 +6355,13 @@ async function _autoRecordLatesForTeam() {
       }
     }
 
-    // 5. TA인증 (다음날 06:01 마감, 토요일 제외)
+    // 5. TA인증 (10통 이상: 06:01 마감 / 10통 이하·미체크: 07:00 마감, 토요일 제외)
     const _twDayTeam = new Date(twDate).getDay(); // 0=일,6=토
-    if (!_uidIsOff && now > dlNext6 && _twDayTeam !== 6) {
+    if (!_uidIsOff && _twDayTeam !== 6) {
       const ta = r.ta || {};
-      if (!ta.checked && !ta.url && !ta.late && !ta.autoLatedAt) {
+      const taType = ta.taType || (ta.checked ? 'high' : null);
+      const taDeadlinePassed = taType === 'high' ? now > dlNext6 : now > dlNext7;
+      if (taDeadlinePassed && !ta.late && !ta.autoLatedAt) {
         try {
           await recordLate(uid, twDate, 'ta');
           await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
@@ -7234,6 +7338,252 @@ function fmtRrn(el) {
   // 커서 위치 보정
   const newPos = formatted.length === 8 && pos >= 7 ? 8 : Math.min(pos, formatted.length);
   el.setSelectionRange(newPos, newPos);
+}
+
+/* ── 마인드맵 탭 전환 ── */
+let currentMmTab = 'customer';
+function switchMmTab(type, btn) {
+  currentMmTab = type;
+  document.querySelectorAll('#sec-mindmap .tab').forEach(t=>t.classList.remove('active'));
+  if(btn) btn.classList.add('active');
+  const areas = ['customer','lineage'];
+  areas.forEach(a => {
+    const el = $('mm-area-'+a);
+    if(el) el.style.display = a===type ? '' : 'none';
+  });
+  try { renderMindmap(type); } catch(e) {}
+}
+
+/* ── 캘린더 년월 선택기 ── */
+function openCalYearMonth() {
+  const picker = $('cal-ym-picker');
+  if (!picker) return;
+  if (picker.style.display === 'none' || !picker.style.display) {
+    // 년도 옵션 채우기
+    const ySel = $('cal-year-sel');
+    const mSel = $('cal-month-sel');
+    if (ySel) {
+      ySel.innerHTML = '';
+      const startY = cy - 3, endY = cy + 2;
+      for (let y = startY; y <= endY; y++) {
+        const opt = document.createElement('option');
+        opt.value = y; opt.textContent = y + '년';
+        if (y === cy) opt.selected = true;
+        ySel.appendChild(opt);
+      }
+    }
+    if (mSel) {
+      mSel.innerHTML = '';
+      for (let m = 0; m < 12; m++) {
+        const opt = document.createElement('option');
+        opt.value = m; opt.textContent = (m+1) + '월';
+        if (m === cm) opt.selected = true;
+        mSel.appendChild(opt);
+      }
+    }
+    picker.style.display = 'block';
+  } else {
+    picker.style.display = 'none';
+  }
+}
+function applyCalYearMonth() {
+  const ySel = $('cal-year-sel');
+  const mSel = $('cal-month-sel');
+  if (ySel) cy = parseInt(ySel.value);
+  if (mSel) cm = parseInt(mSel.value);
+  renderCal();
+}
+function closeCalYearMonth() {
+  const picker = $('cal-ym-picker');
+  if (picker) picker.style.display = 'none';
+}
+
+/* ── 할일 드래그 순서 변경 ── */
+let _todoDragSrc = null;
+function todoDragStart(e) {
+  _todoDragSrc = e.currentTarget;
+  e.dataTransfer.effectAllowed = 'move';
+  e.currentTarget.style.opacity = '0.5';
+}
+function todoDragOver(e) {
+  e.preventDefault();
+  e.dataTransfer.dropEffect = 'move';
+  return false;
+}
+async function todoDrop(e) {
+  e.stopPropagation();
+  const target = e.currentTarget;
+  if (!_todoDragSrc || _todoDragSrc === target) return;
+  const srcId = _todoDragSrc.dataset.id;
+  const tgtId = target.dataset.id;
+  const srcOrder = parseFloat(_todoDragSrc.dataset.order) || 0;
+  const tgtOrder = parseFloat(target.dataset.order) || 0;
+  // 순서 교환
+  const srcIdx = allTodos.findIndex(t=>t.id===srcId);
+  const tgtIdx = allTodos.findIndex(t=>t.id===tgtId);
+  if (srcIdx<0||tgtIdx<0) return;
+  allTodos[srcIdx].sortOrder = tgtOrder;
+  allTodos[tgtIdx].sortOrder = srcOrder;
+  renderTodos();
+  // Firestore 업데이트
+  try {
+    await col('todos').doc(srcId).update({sortOrder: tgtOrder});
+    await col('todos').doc(tgtId).update({sortOrder: srcOrder});
+  } catch(e) {}
+  return false;
+}
+function todoDragEnd(e) {
+  e.currentTarget.style.opacity = '';
+  _todoDragSrc = null;
+}
+
+/* ── 공지사항 시스템 ── */
+let allBranchNotices = [], allTeamNotices = [];
+
+function _initNoticeListeners() {
+  db.collection('branch_notices').orderBy('createdAt','desc').onSnapshot(s => {
+    allBranchNotices = s.docs.map(d=>({id:d.id,...d.data()}));
+    renderBranchNotices();
+  }, ()=>{});
+  db.collection('team_notices').orderBy('createdAt','desc').onSnapshot(s => {
+    allTeamNotices = s.docs.map(d=>({id:d.id,...d.data()}));
+    renderTeamNotices();
+  }, ()=>{});
+}
+
+function _canWriteBranchNotice() {
+  if (!CU) return false;
+  const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
+  const isBM = CU.role==='manager';
+  const isSM = isTeamLeader(CU.uid);
+  return isAdmin || isBM || isSM;
+}
+function _canWriteTeamNotice() {
+  if (!CU) return false;
+  const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
+  const isSM = isTeamLeader(CU.uid);
+  return isAdmin || isSM;
+}
+
+function renderBranchNotices() {
+  const el = $('branch-notice-list');
+  const addBtn = $('branch-notice-add-btn');
+  if (!el) return;
+  if (addBtn) addBtn.style.display = _canWriteBranchNotice() ? 'inline-block' : 'none';
+  if (!allBranchNotices.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:10px 0;">공지사항 없음</div>';
+    return;
+  }
+  const isAdmin = CU && (CU.employeeId===ADMIN_ID || CU.role==='admin');
+  el.innerHTML = allBranchNotices.map(n => {
+    const canEdit = _canWriteBranchNotice() && (isAdmin || n.authorUid === CU.uid);
+    const ts = n.createdAt ? (() => { try { const d=n.createdAt.toDate?n.createdAt.toDate():new Date(n.createdAt.seconds*1000); return d.toLocaleDateString('ko-KR',{month:'short',day:'numeric'}); } catch(e){return '';} })() : '';
+    return `<div style="background:white;border:1.5px solid var(--gray-100);border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--gray-800);margin-bottom:4px;">${esc(n.title)}</div>
+          <div style="font-size:12px;color:var(--gray-600);white-space:pre-wrap;">${esc(n.content)}</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:6px;">${esc(n.authorName||'')} ${ts}</div>
+        </div>
+        ${canEdit ? `<div style="display:flex;gap:4px;flex-shrink:0;">
+          <button onclick="openBranchNoticeEdit('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid var(--gray-200);border-radius:5px;background:white;cursor:pointer;">✏️</button>
+          <button onclick="delBranchNotice('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid #fca5a5;border-radius:5px;background:white;color:var(--danger);cursor:pointer;">🗑</button>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderTeamNotices() {
+  const el = $('team-notice-list');
+  const addBtn = $('team-notice-add-btn');
+  if (!el) return;
+  if (addBtn) addBtn.style.display = _canWriteTeamNotice() ? 'inline-block' : 'none';
+  if (!CU) return;
+  const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
+  const myT = myTeam();
+  const myTeamId = myT ? myT.id : null;
+  // 팀 필터: 관리자는 전체, 그 외 내 팀만
+  const filtered = allTeamNotices.filter(n => isAdmin || n.teamId === myTeamId);
+  if (!filtered.length) {
+    el.innerHTML = '<div style="font-size:13px;color:var(--gray-400);padding:10px 0;">팀 공지사항 없음</div>';
+    return;
+  }
+  el.innerHTML = filtered.map(n => {
+    const canEdit = _canWriteTeamNotice() && (isAdmin || n.authorUid === CU.uid);
+    const ts = n.createdAt ? (() => { try { const d=n.createdAt.toDate?n.createdAt.toDate():new Date(n.createdAt.seconds*1000); return d.toLocaleDateString('ko-KR',{month:'short',day:'numeric'}); } catch(e){return '';} })() : '';
+    const teamLabel = isAdmin && n.teamName ? `<span style="background:var(--primary-bg);color:var(--primary);font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;margin-right:5px;">${esc(n.teamName)}</span>` : '';
+    return `<div style="background:white;border:1.5px solid var(--gray-100);border-radius:10px;padding:12px;margin-bottom:8px;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
+        <div style="flex:1;">
+          <div style="font-size:13px;font-weight:700;color:var(--gray-800);margin-bottom:4px;">${teamLabel}${esc(n.title)}</div>
+          <div style="font-size:12px;color:var(--gray-600);white-space:pre-wrap;">${esc(n.content)}</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:6px;">${esc(n.authorName||'')} ${ts}</div>
+        </div>
+        ${canEdit ? `<div style="display:flex;gap:4px;flex-shrink:0;">
+          <button onclick="openTeamNoticeEdit('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid var(--gray-200);border-radius:5px;background:white;cursor:pointer;">✏️</button>
+          <button onclick="delTeamNotice('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid #fca5a5;border-radius:5px;background:white;color:var(--danger);cursor:pointer;">🗑</button>
+        </div>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openBranchNoticeAdd() {
+  if (!_canWriteBranchNotice()) return;
+  $('bn-eid').value=''; $('bn-title').value=''; $('bn-content').value='';
+  openModal('m-branch-notice');
+}
+function openBranchNoticeEdit(id) {
+  const n = allBranchNotices.find(x=>x.id===id);
+  if (!n) return;
+  $('bn-eid').value=id; $('bn-title').value=n.title||''; $('bn-content').value=n.content||'';
+  openModal('m-branch-notice');
+}
+async function saveBranchNotice() {
+  const title=$('bn-title').value.trim(), content=$('bn-content').value.trim();
+  if(!title||!content) { toast('제목과 내용을 입력하세요','error'); return; }
+  const eid=$('bn-eid').value;
+  const data={title,content,authorUid:CU.uid,authorName:CU.name||'',updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  try {
+    if(eid) await db.collection('branch_notices').doc(eid).update(data);
+    else { data.createdAt=firebase.firestore.FieldValue.serverTimestamp(); await db.collection('branch_notices').add(data); }
+    closeModal('m-branch-notice'); toast('저장됨','success');
+  } catch(e) { toast('오류','error'); }
+}
+async function delBranchNotice(id) {
+  if(!confirm('삭제하시겠습니까?')) return;
+  try { await db.collection('branch_notices').doc(id).delete(); toast('삭제됨'); } catch(e) { toast('오류','error'); }
+}
+
+function openTeamNoticeAdd() {
+  if (!_canWriteTeamNotice()) return;
+  $('tn-eid').value=''; $('tn-title').value=''; $('tn-content').value='';
+  openModal('m-team-notice');
+}
+function openTeamNoticeEdit(id) {
+  const n = allTeamNotices.find(x=>x.id===id);
+  if (!n) return;
+  $('tn-eid').value=id; $('tn-title').value=n.title||''; $('tn-content').value=n.content||'';
+  openModal('m-team-notice');
+}
+async function saveTeamNotice() {
+  const title=$('tn-title').value.trim(), content=$('tn-content').value.trim();
+  if(!title||!content) { toast('제목과 내용을 입력하세요','error'); return; }
+  const eid=$('tn-eid').value;
+  const myT = myTeam();
+  const data={title,content,authorUid:CU.uid,authorName:CU.name||'',
+    teamId: myT?myT.id:'', teamName: myT?myT.name:'',
+    updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
+  try {
+    if(eid) await db.collection('team_notices').doc(eid).update(data);
+    else { data.createdAt=firebase.firestore.FieldValue.serverTimestamp(); await db.collection('team_notices').add(data); }
+    closeModal('m-team-notice'); toast('저장됨','success');
+  } catch(e) { toast('오류','error'); }
+}
+async function delTeamNotice(id) {
+  if(!confirm('삭제하시겠습니까?')) return;
+  try { await db.collection('team_notices').doc(id).delete(); toast('삭제됨'); } catch(e) { toast('오류','error'); }
 }
 
 function fmtPhone(v) {
