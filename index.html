@@ -6127,6 +6127,9 @@ function goSection(n,b){
   if(n==='teamwork') enterTeamwork();
   if(n==='team-admin') { loadAllUsers().then(renderTeamAdmin); }
   if(n==='admin-stats') renderAdminStats();
+  if(n==='customers') try{renderCustomers();}catch(e){}
+  if(n==='todo') try{renderCal();renderTodos();}catch(e){}
+  if(n==='prospects') try{renderProspects();}catch(e){}
 }
 
 function openModal(id){$(id).classList.add('open');} function closeModal(id){$(id).classList.remove('open');}
