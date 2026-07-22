@@ -2029,7 +2029,8 @@ auth.onAuthStateChanged(async (fbUser) => {
     CU = { uid: fbUser.uid, ...snap.data() };
     if (CU.status === 'pending') { $('pending-name-msg').textContent = CU.name + '님,'; showScreen('pending'); return; }
     if (CU.status === 'rejected') { await auth.signOut(); showErr('l-err', '❌ 승인이 거절되었습니다.'); return; }
-    await initApp(); showScreen('app');
+    try { await initApp(); } catch(e) { console.error('initApp 오류:', e); }
+    showScreen('app');
     // 관리자/팀장: 신규 가입 실시간 알림 리스너
     if (CU.role === 'admin' || CU.role === 'manager') {
       const _notifFrom = firebase.firestore.Timestamp.now();
@@ -2346,7 +2347,8 @@ async function initApp() {
   await Promise.all([loadTodos(), loadCustomers(), loadProspects()]);
   await initMindmaps();
   await loadPromo();
-  renderAll(); renderHome();
+  try { renderAll(); } catch(e) {}
+  try { renderHome(); } catch(e) {}
 }
 
 /* ── 기본 데이터 시드 (최초 1회) ── */
