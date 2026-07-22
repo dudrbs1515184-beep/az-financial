@@ -1727,6 +1727,8 @@ firebase.initializeApp(firebaseConfig);
 const fns = firebase.app().functions('asia-northeast3');
 fns.useEmulator && false; // 프로덕션 사용
 const auth = firebase.auth(); const db = firebase.firestore(); const storage = firebase.storage();
+// 모바일 오프라인 캐시 활성화 — 느린 네트워크에서도 캐시로 즉시 렌더링
+db.enablePersistence({synchronizeTabs:false}).catch(()=>{});
 const ADMIN_ID = '23070090';
 
 /* ── 전역 변수 ── */
@@ -2161,9 +2163,50 @@ async function saveProfilePassword() {
 
 /* ── 데이터 로드 ── */
 const col = (n) => db.collection('users').doc(CU.uid).collection(n);
-async function loadTodos() { try { const s=await col('todos').orderBy('createdAt','desc').get(); allTodos=s.docs.map(d=>({id:d.id,...d.data()})); } catch(e){allTodos=[];} }
-async function loadCustomers() { try { const s=await col('customers').orderBy('createdAt','desc').get(); allCustomers=s.docs.map(d=>({id:d.id,...d.data()})); } catch(e){allCustomers=[];} }
-async function loadProspects() { try { const s=await col('prospects').orderBy('createdAt','desc').get(); allProspects=s.docs.map(d=>({id:d.id,...d.data()})); } catch(e){allProspects=[];} }
+/* ── 실시간 리스너 (onSnapshot) — 모바일 캐시+자동갱신 ── */
+let _unsubTodos=null, _unsubCustomers=null, _unsubProspects=null;
+function loadTodos() {
+  if(_unsubTodos){_unsubTodos();_unsubTodos=null;}
+  return new Promise(resolve=>{
+    let resolved=false;
+    _unsubTodos=col('todos').orderBy('createdAt','desc').onSnapshot(s=>{
+      allTodos=s.docs.map(d=>({id:d.id,...d.data()}));
+      try{
+        if($('sec-todo')&&$('sec-todo').classList.contains('active')){renderCal();renderTodos();}
+        if($('sec-home')&&$('sec-home').classList.contains('active'))renderHome();
+      }catch(e){}
+      if(!resolved){resolved=true;resolve();}
+    },e=>{allTodos=[];if(!resolved){resolved=true;resolve();}});
+  });
+}
+function loadCustomers() {
+  if(_unsubCustomers){_unsubCustomers();_unsubCustomers=null;}
+  return new Promise(resolve=>{
+    let resolved=false;
+    _unsubCustomers=col('customers').orderBy('createdAt','desc').onSnapshot(s=>{
+      allCustomers=s.docs.map(d=>({id:d.id,...d.data()}));
+      try{
+        if($('sec-customers')&&$('sec-customers').classList.contains('active'))renderCustomers();
+        if($('sec-home')&&$('sec-home').classList.contains('active'))renderHome();
+      }catch(e){}
+      if(!resolved){resolved=true;resolve();}
+    },e=>{allCustomers=[];if(!resolved){resolved=true;resolve();}});
+  });
+}
+function loadProspects() {
+  if(_unsubProspects){_unsubProspects();_unsubProspects=null;}
+  return new Promise(resolve=>{
+    let resolved=false;
+    _unsubProspects=col('prospects').orderBy('createdAt','desc').onSnapshot(s=>{
+      allProspects=s.docs.map(d=>({id:d.id,...d.data()}));
+      try{
+        if($('sec-prospects')&&$('sec-prospects').classList.contains('active'))renderProspects();
+        if($('sec-home')&&$('sec-home').classList.contains('active'))renderHome();
+      }catch(e){}
+      if(!resolved){resolved=true;resolve();}
+    },e=>{allProspects=[];if(!resolved){resolved=true;resolve();}});
+  });
+}
 
 /* ── 프로모션 계산기 ── */
 async function loadPromo() {
@@ -8994,45 +9037,12 @@ document.addEventListener('click', function(e) {
   function attachObservers() {
     listIds.forEach(id => {
       const el = $(id);
-      if (el) observer.observe(el, { childList: true });
+      if (el) observer.observe(el, {childList: true});
     });
   }
-  // DOM 준비 후 연결
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', attachObservers);
-  } else {
-    attachObservers();
-    setTimeout(attachObservers, 1200); // Firebase 로드 후 재시도
-  }
+  attachObservers();
 })();
 
-// ── 홈 통계 카드 카운트업 애니메이션 ──
-function _countUpAll() {
-  document.querySelectorAll('[data-countup]').forEach(el => {
-    const target = parseInt(el.dataset.countup, 10);
-    if (isNaN(target)) return;
-    const start = performance.now();
-    const dur = 700;
-    (function step(ts) {
-      const p = Math.min((ts - start) / dur, 1);
-      const ease = 1 - Math.pow(1 - p, 3);
-      el.textContent = Math.round(ease * target);
-      if (p < 1) requestAnimationFrame(step);
-    })(start);
-  });
-}
-
-// ── 섹션 전환 시 스크롤 상단 이동 ──
-const _origGoSection = goSection;
-window.goSection = function(n, b) {
-  _origGoSection(n, b);
-  setTimeout(() => {
-    const main = document.querySelector('.main');
-    if (main) main.scrollTop = 0;
-  }, 50);
-};
-
-// ── 다크/라이트 전환 시 부드럽게 ──
 function toggleThemeSmooth() {
   document.documentElement.style.setProperty('transition','none');
   const body = document.body;
