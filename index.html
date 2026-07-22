@@ -379,6 +379,15 @@
       .modal-actions{flex-direction:column;gap:6px;}
       .modal-actions .btn-primary,.modal-actions .btn-ghost,.modal-actions .btn-outline,.modal-actions .btn-danger-ghost{width:100%;}
     }
+    /* ── 모바일 애니메이션 비활성화 (fill-mode:both 로 인한 콘텐츠 불표시 방지) ── */
+    @media(max-width:767px){
+      .section.active{animation:none!important;opacity:1!important;}
+      .az-list-anim>*{animation:none!important;opacity:1!important;}
+    }
+    @media(prefers-reduced-motion:reduce){
+      .section.active{animation:none!important;opacity:1!important;}
+      .az-list-anim>*{animation:none!important;opacity:1!important;}
+    }
 
     /* ── 세부 개선 ── */
     .app-header{backdrop-filter:blur(12px);}
@@ -2623,7 +2632,8 @@ async function initApp() {
   await Promise.all([loadTodos(), loadCustomers(), loadProspects()]);
   await initMindmaps();
   await loadPromo();
-  renderAll(); renderHome();
+  try{renderAll();}catch(e){}
+  try{renderHome();}catch(e){}
 }
 
 /* ── 기본 데이터 시드 (최초 1회) ── */
@@ -6135,7 +6145,7 @@ function goSection(n,b){
 function openModal(id){$(id).classList.add('open');} function closeModal(id){$(id).classList.remove('open');}
 function showScreen(n){$('screen-loading').style.display='none';$('screen-login').style.display=n==='login'?'flex':'none';$('screen-signup').style.display=n==='signup'?'flex':'none';$('screen-pending').style.display=n==='pending'?'block':'none';$('screen-app').style.display=n==='app'?'block':'none';if(n==='login'){$('l-btn').disabled=false;$('l-btn').textContent='로그인';}}
 function showLogin(){showScreen('login');} function showSignup(){showScreen('signup');}
-function renderAll(){try{renderCal();renderTodos();renderCustomers();renderProspects();}catch(e){} _restoreGcalToken();}
+function renderAll(){try{renderCal();}catch(e){}try{renderTodos();}catch(e){}try{renderCustomers();}catch(e){}try{renderProspects();}catch(e){}try{_restoreGcalToken();}catch(e){}}
 function $(id){return document.getElementById(id);} function esc(s){return String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');} function eattr(s){return String(s||'').replace(/"/g,'&quot;').replace(/'/g,'&#39;');} function empty(ic,ms){return`<div class="empty"><div class="empty-icon">${ic}</div><div class="empty-text">${ms}</div></div>`;} function showErr(id,msg){$(id).textContent=msg;$(id).style.display='block';} function hideErr(id){$(id).style.display='none';} let tt; function toast(m,t=''){const e=$('toast');e.textContent=m;e.className='toast show '+t;clearTimeout(tt);tt=setTimeout(()=>e.classList.remove('show'),2500);}
 document.addEventListener('click',e=>{if(e.target.classList.contains('overlay'))closeModal(e.target.id);});
 document.addEventListener('DOMContentLoaded',()=>{
