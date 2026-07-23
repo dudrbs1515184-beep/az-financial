@@ -1120,13 +1120,21 @@
 <div class="overlay" id="m-mindmap">
   <div class="modal">
     <div class="modal-head"><div class="modal-title" id="m-mm-title">노드 추가</div><button class="modal-close" onclick="closeModal('m-mindmap')">✕</button></div>
-    <div class="field"><label>이름 *</label><input type="text" id="mm-node-label" placeholder="예: 홍길동" onkeydown="if(event.key==='Enter')saveMmNode()"></div>
-    <div class="field" id="mm-relation-row" style="display:none;">
-      <label>관계</label>
-      <select id="mm-node-relation">
-        <option value="child">🟢 하위계보 (내가 영입한 사람)</option>
-        <option value="parent">🟡 상위계보 (나를 영입한 사람)</option>
-      </select>
+    <!-- 단일 수정 모드 -->
+    <div id="mm-single-row">
+      <div class="field"><label>이름 *</label><input type="text" id="mm-node-label" placeholder="예: 홍길동" onkeydown="if(event.key==='Enter')saveMmNode()"></div>
+      <div class="field" id="mm-relation-row" style="display:none;">
+        <label>관계</label>
+        <select id="mm-node-relation">
+          <option value="child">🟢 하위계보 (내가 영입한 사람)</option>
+          <option value="parent">🟡 상위계보 (나를 영입한 사람)</option>
+        </select>
+      </div>
+    </div>
+    <!-- 다중 추가 모드 -->
+    <div id="mm-multi-rows" style="display:none;">
+      <div id="mm-rows-container"></div>
+      <button class="btn-ghost" style="width:100%;margin-top:4px;padding:9px;" onclick="addMmRow()">+ 행 추가</button>
     </div>
     <div class="modal-actions">
       <button class="btn-danger-ghost" id="mm-del-btn" onclick="delMmNode()" style="display:none;margin-right:auto;">🗑 삭제</button>
@@ -1373,6 +1381,14 @@ function _openSMSQ(k){const d=window._smsQ[k];if(d)openSMS(d.phone,d.msg);}
 function openSMS(phone,msg){if(!phone){toast('전화번호가 없습니다','error');return;}$('sms-phone').value=phone;$('sms-content').value=msg;openModal('m-sms');}
 function doSendSMS(){const phone=($('sms-phone').value||'').replace(/[^0-9]/g,'');const msg=$('sms-content').value||'';if(!phone){toast('번호가 없습니다','error');return;}const link=document.createElement('a');link.href='sms:'+phone+(msg?'?body='+encodeURIComponent(msg):'');link.click();closeModal('m-sms');}
 /* ── 메모 내용 URL 자동 링크 변환 ── */
+function toggleNote(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const arrow = document.getElementById(id.replace('note-body-', 'note-arrow-'));
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
+}
 function linkify(text){if(!text)return'';const re=/(https?:\/\/[^\s<>"]+|www\.[^\s<>"]+)/g;return text.split(re).map((part,i)=>{if(i%2===1){const href=part.startsWith('www.')?'https://'+part:part;return`<a href="${esc(href)}" target="_blank" rel="noopener noreferrer" style="color:var(--primary);text-decoration:underline;word-break:break-all;">${esc(part)}</a>`;}return esc(part);}).join('');}
 /* ── 메모장 파일 미리보기 ── */
 function previewNoteFile(input){const f=input.files[0];if(!f)return;const prev=$('note-file-preview');if(prev)prev.textContent='📎 '+f.name+' ('+Math.round(f.size/1024)+'KB)';}
@@ -3575,15 +3591,21 @@ function renderSharedNotes() {
         ${n.content ? `<div style="font-size:13px;color:var(--gray-600);margin-top:8px;">${esc(n.content)}</div>` : ''}
       </div>`;
     }
-    return `<div class="item-card">
-      <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
-        <div><h3 style="font-size:15px;">${esc(n.subject)}</h3>
+    return `<div class="item-card" style="cursor:pointer;" onclick="toggleNote('note-body-${n.id}')">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+        <div style="flex:1;min-width:0;">
+          <h3 style="font-size:15px;margin:0;">${esc(n.subject)}</h3>
           <div style="font-size:11px;color:var(--gray-400);margin-top:2px;">📅 ${dateStr}${updStr&&updStr!==dateStr?' (수정 '+updStr+')':''} · ${esc(n.authorName||'')}</div>
         </div>
-        ${canEdit ? `<div style="display:flex;gap:4px;"><button class="icon-btn" onclick="openNoteEdit('${n.id}')">✏️</button><button class="icon-btn" onclick="delSharedNote('${n.id}')">🗑</button></div>` : ''}
+        <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;margin-left:8px;" onclick="event.stopPropagation()">
+          ${canEdit ? `<button class="icon-btn" onclick="openNoteEdit('${n.id}')">✏️</button><button class="icon-btn" onclick="delSharedNote('${n.id}')">🗑</button>` : ''}
+          <span id="note-arrow-${n.id}" style="font-size:11px;color:var(--gray-400);padding:4px 4px 4px 6px;">▼</span>
+        </div>
       </div>
-      <div style="font-size:14px;white-space:pre-wrap;background:#f8fafc;padding:12px;border-radius:8px;">${linkify(n.content||'')}</div>
-      ${n.attachUrl?`<div style="margin-top:8px;"><a href="${esc(n.attachUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;text-decoration:none;">📎 ${esc(n.attachName||'첨부파일')} <span style="opacity:.6;font-size:10px;">다운로드</span></a></div>`:''}
+      <div id="note-body-${n.id}" style="display:none;margin-top:10px;" onclick="event.stopPropagation()">
+        <div style="font-size:14px;white-space:pre-wrap;background:#f8fafc;padding:12px;border-radius:8px;">${linkify(n.content||'')}</div>
+        ${n.attachUrl?`<div style="margin-top:8px;"><a href="${esc(n.attachUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;text-decoration:none;">📎 ${esc(n.attachName||'첨부파일')} <span style="opacity:.6;font-size:10px;">다운로드</span></a></div>`:''}
+      </div>
     </div>`;
   }).join('');
 }
@@ -4118,19 +4140,38 @@ async function onMmAdminChange(uid) {
   }
   renderMindmap('customer'); renderMindmap('lineage');
 }
+function addMmRow() {
+  const isLineage = mmEditCtx.type === 'lineage';
+  const container = $('mm-rows-container');
+  const div = document.createElement('div');
+  div.style.cssText = 'display:flex;gap:8px;align-items:center;margin-bottom:8px;';
+  const inp = document.createElement('input');
+  inp.type = 'text'; inp.className = 'mm-row-label'; inp.placeholder = '이름';
+  inp.style.cssText = 'flex:1;padding:10px 14px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:14px;outline:none;';
+  div.appendChild(inp);
+  if (isLineage) {
+    const sel = document.createElement('select');
+    sel.className = 'mm-row-relation';
+    sel.style.cssText = 'padding:8px 10px;border:1.5px solid var(--gray-200);border-radius:10px;font-size:13px;background:#fff;';
+    sel.innerHTML = '<option value="child">🟢 하위</option><option value="parent">🟡 상위</option>';
+    div.appendChild(sel);
+  }
+  const delBtn = document.createElement('button');
+  delBtn.style.cssText = 'flex-shrink:0;background:#fee2e2;border:none;border-radius:8px;padding:6px 10px;color:#dc2626;cursor:pointer;font-size:15px;line-height:1;';
+  delBtn.textContent = '✕';
+  delBtn.onclick = () => { if ($('mm-rows-container').children.length > 1) div.remove(); };
+  div.appendChild(delBtn);
+  container.appendChild(div);
+  inp.focus();
+}
 function openMmAdd(type, parentId) {
   if(mmAdminUid){toast('다른 사용자의 마인드맵은 수정할 수 없습니다','error');return;}
   mmEditCtx={nodeId:null,type,parentId:parentId||null};
-  $('m-mm-title').textContent='노드 추가'; $('mm-node-label').value='';
-  if(type==='lineage'){
-    const mm=lineageMindmap;
-    const pNode=parentId?mm.nodes.find(n=>n.id===parentId):null;
-    $('mm-node-relation').value=(pNode&&pNode.relation)||'child';
-    $('mm-relation-row').style.display='';
-  } else {
-    $('mm-node-relation').value='child';
-    $('mm-relation-row').style.display='none';
-  }
+  $('m-mm-title').textContent='노드 추가';
+  $('mm-single-row').style.display='none';
+  $('mm-multi-rows').style.display='';
+  $('mm-rows-container').innerHTML='';
+  addMmRow();
   $('mm-del-btn').style.display='none';
   openModal('m-mindmap');
 }
@@ -4141,21 +4182,30 @@ function openMmEdit(nodeId, type) {
   $('m-mm-title').textContent='노드 수정'; $('mm-node-label').value=node.label||'';
   $('mm-node-relation').value=node.relation||'child';
   $('mm-relation-row').style.display=type==='lineage'?'':'none';
+  $('mm-single-row').style.display='';
+  $('mm-multi-rows').style.display='none';
   $('mm-del-btn').style.display='';
   openModal('m-mindmap');
 }
 function saveMmNode() {
-  const label=$('mm-node-label').value.trim();
-  if(!label){toast('이름을 입력해주세요','error');return;}
   const type=mmEditCtx.type;
   const mm=type==='customer'?customerMindmap:lineageMindmap;
   if(mmEditCtx.nodeId){
+    const label=$('mm-node-label').value.trim();
+    if(!label){toast('이름을 입력해주세요','error');return;}
     const node=mm.nodes.find(n=>n.id===mmEditCtx.nodeId);
     if(node){node.label=label;if(type==='lineage')node.relation=$('mm-node-relation').value;}
   } else {
-    const newNode={id:'n'+Date.now(),label,isCenter:false,x:null,y:null,parentId:mmEditCtx.parentId||null};
-    if(type==='lineage') newNode.relation=$('mm-node-relation').value;
-    mm.nodes.push(newNode);
+    const labelInputs=[...document.querySelectorAll('.mm-row-label')];
+    const relSelects=[...document.querySelectorAll('.mm-row-relation')];
+    const entries=labelInputs.map((inp,i)=>({label:inp.value.trim(),relation:relSelects[i]?relSelects[i].value:'child'})).filter(e=>e.label);
+    if(!entries.length){toast('이름을 입력해주세요','error');return;}
+    const ts=Date.now();
+    entries.forEach((e,i)=>{
+      const newNode={id:'n'+ts+'_'+i,label:e.label,isCenter:false,x:null,y:null,parentId:mmEditCtx.parentId||null};
+      if(type==='lineage') newNode.relation=e.relation;
+      mm.nodes.push(newNode);
+    });
   }
   closeModal('m-mindmap'); saveMindmap(type); renderMindmap(type); toast('저장됨','success');
 }
@@ -4943,6 +4993,17 @@ function _getRoleLabel(u) {
 }
 const ROLE_ORDER = {BM:1, '총무':2, SM:3, ASM:4, FC:5};
 
+function _twStatusIcons(uid) {
+  const r = twReports[uid] || {};
+  const checks = [
+    {icon:'📍', done: !!(r.attend && r.attend.status)},
+    {icon:'📝', done: !!(r.activity && r.activity.content)},
+    {icon:'🌙', done: !!(r.review && r.review.content)},
+    {icon:'📸', done: !!(r.ta && (r.ta.checked || r.ta.url))},
+  ];
+  return checks.map(c => '<span title="' + (c.icon==='📍'?'출근':c.icon==='📝'?'활동보고':c.icon==='🌙'?'하루후기':'TA') + '" style="opacity:' + (c.done?1:0.2) + ';font-size:11px;">' + c.icon + '</span>').join('');
+}
+
 function renderTeamAdmin() {
   const wrap = $('team-admin-container');
   if (!wrap) return;
@@ -5027,8 +5088,8 @@ function renderTeamAdmin() {
         </div>
       </div>
       <div>
-        ${t.leader ? `<span class="team-member-chip leader">👑 ${esc(t.leader.name)} (SM)</span>` : ''}
-        ${t.members.filter(m => m?.uid !== t.leader?.uid).map(m => `<span class="team-member-chip">${esc(m.name)}${canAssign?` <span style="cursor:pointer;color:#ef4444;margin-left:4px;" onclick="removeTeamMember('${m.uid}')">✕</span>`:''}</span>`).join('')}
+        ${t.leader ? `<span class="team-member-chip leader">👑 ${esc(t.leader.name)} (SM) <span style="margin-left:4px;">${_twStatusIcons(t.leader.uid)}</span></span>` : ''}
+        ${t.members.filter(m => m?.uid !== t.leader?.uid).map(m => `<span class="team-member-chip">${esc(m.name)} <span style="margin-left:3px;">${_twStatusIcons(m.uid)}</span>${canAssign?` <span style="cursor:pointer;color:#ef4444;margin-left:4px;" onclick="removeTeamMember('${m.uid}')">✕</span>`:''}</span>`).join('')}
         ${!hasMembers ? '<span style="font-size:12px;color:var(--gray-300);">팀원 없음</span>' : ''}
       </div>
     </div>`;
@@ -5857,11 +5918,72 @@ function _fmtSavedAt(ts) {
     return d.toLocaleTimeString('ko-KR', {hour:'2-digit', minute:'2-digit'});
   } catch(e) { return '-'; }
 }
+function toggleMemberDetail(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  const btn = document.getElementById(id + '_btn');
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (btn) btn.textContent = isOpen ? '▼' : '▲';
+}
+
+function _tw_memberDetailListHtml(type) {
+  const myT = myTeam();
+  if (!myT) return '';
+  const memberUids = (myT.memberIds||[]).filter(uid => uid !== myT.leaderId);
+  const items = memberUids.map(uid => {
+    const u = allUsers.find(x => x.uid === uid);
+    if (!u) return null;
+    const r = twReports[uid] || {};
+    let done = false, late = false, content = '';
+    if (type === 'activity') {
+      const a = r.activity || {};
+      done = !!a.content; late = !!a.late; content = a.content || '';
+    } else if (type === 'review') {
+      const rv = r.review || {};
+      done = !!rv.content; late = !!rv.late; content = rv.content || '';
+    }
+    const absent = !!(myT.absentUids && myT.absentUids[uid]);
+    return {uid, name: u.name, done, late, content, absent};
+  }).filter(Boolean);
+  if (!items.length) return '';
+  items.sort((a, b) => {
+    if (a.absent !== b.absent) return a.absent ? 1 : -1;
+    return a.done === b.done ? 0 : a.done ? 1 : -1;
+  });
+  const doneCount = items.filter(i => i.done && !i.absent).length;
+  const activeCount = items.filter(i => !i.absent).length;
+  const rows = items.map(it => {
+    const detId = 'tw_det_' + it.uid + '_' + type;
+    const hasContent = it.done && !!it.content;
+    const preview = hasContent ? (it.content.length > 22 ? it.content.slice(0,22)+'…' : it.content) : '';
+    const dotBg = it.absent ? 'var(--gray-200)' : it.done ? (it.late ? 'var(--warning)' : 'var(--success)') : 'var(--gray-300)';
+    const textColor = it.absent ? 'var(--gray-400)' : it.done ? (it.late ? 'var(--danger)' : 'var(--gray-500)') : 'var(--gray-400)';
+    const detailText = it.absent ? '미출근' : it.done ? esc(preview) : '미완료';
+    const headStyle = 'display:flex;align-items:center;gap:8px;' + (hasContent ? 'cursor:pointer;' : '');
+    const headClick = hasContent ? ' onclick="toggleMemberDetail(\'' + detId + '\')"' : '';
+    let row = '<div style="border-bottom:1px solid var(--gray-50);padding:6px 0;">';
+    row += '<div style="' + headStyle + '"' + headClick + '>';
+    row += '<span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:' + dotBg + ';"></span>';
+    row += '<span style="font-size:13px;font-weight:600;min-width:50px;">' + esc(it.name) + '</span>';
+    if (!it.absent && it.late) row += '<span style="font-size:11px;color:var(--danger);white-space:nowrap;">⏰</span>';
+    row += '<span style="font-size:12px;color:' + textColor + ';flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + detailText + '</span>';
+    if (hasContent) row += '<span id="' + detId + '_btn" style="font-size:11px;color:var(--gray-400);flex-shrink:0;">▼</span>';
+    row += '</div>';
+    if (hasContent) row += '<div id="' + detId + '" style="display:none;margin-top:6px;background:var(--gray-50);border-radius:8px;padding:10px 12px;font-size:13px;white-space:pre-wrap;line-height:1.6;max-height:200px;overflow-y:auto;">' + esc(it.content) + '</div>';
+    row += '</div>';
+    return row;
+  }).join('');
+  return '<div style="margin-top:14px;border-top:1px solid var(--gray-100);padding-top:10px;">'
+    + '<div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:8px;">팀원 현황 ' + doneCount + '/' + activeCount + '명</div>'
+    + rows + '</div>';
+}
+
 function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
   const a = myR.activity || {};
   const hasDone = !!a.content;
   const chip = _chipStatus(hasDone, a.late, '미작성');
-  const memberList = _tw_memberListHtml('activity');
+  const memberList = _tw_memberDetailListHtml('activity');
   if (isLeader) {
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">📝 활동보고</div></div>
@@ -5921,7 +6043,7 @@ function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
   const r = myR.review || {};
   const hasDone = !!r.content;
   const chip = _chipStatus(hasDone, r.late, '미작성');
-  const memberList = _tw_memberListHtml('review');
+  const memberList = _tw_memberDetailListHtml('review');
   if (isLeader) {
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">🌙 하루후기</div></div>
