@@ -1271,6 +1271,8 @@
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">액션만남</label><input type="number" id="goal-ach-action" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:4px;">CIS(명)</label><input type="number" id="goal-ach-cis" min="0" placeholder="0" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;text-align:center;"></div>
       </div>
+      <button type="button" onclick="saveAchNone()" style="width:100%;margin-top:10px;padding:9px;background:#fff;border:1.5px dashed #86c99a;border-radius:8px;color:#166534;font-size:13px;font-weight:700;cursor:pointer;">🚫 달성 없음 (0으로 제출)</button>
+      <div style="font-size:11px;color:var(--gray-400);margin-top:5px;text-align:center;">이번 주 달성이 없으면 눌러서 제출하세요 (지각 방지)</div>
     </div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-goals')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveGoal()">저장</button></div>
   </div>
@@ -3604,7 +3606,7 @@ function renderSharedNotes() {
       </div>
       <div id="note-body-${n.id}" style="display:none;margin-top:10px;" onclick="event.stopPropagation()">
         <div style="font-size:14px;white-space:pre-wrap;background:#f8fafc;padding:12px;border-radius:8px;">${linkify(n.content||'')}</div>
-        ${n.attachUrl?`<div style="margin-top:8px;"><a href="${esc(n.attachUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-flex;align-items:center;gap:5px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;text-decoration:none;">📎 ${esc(n.attachName||'첨부파일')} <span style="opacity:.6;font-size:10px;">다운로드</span></a></div>`:''}
+        ${n.attachUrl?`<div style="margin-top:8px;"><a href="${esc(n.attachUrl)}" target="_blank" rel="noopener noreferrer" download="${eattr(n.attachName||'첨부파일')}" style="display:inline-flex;align-items:center;gap:5px;background:#f0f9ff;border:1px solid #bae6fd;color:#0369a1;border-radius:8px;padding:5px 10px;font-size:12px;font-weight:600;text-decoration:none;">📎 ${esc(n.attachName||'첨부파일')} <span style="opacity:.6;font-size:10px;">다운로드</span></a></div>`:''}
       </div>
     </div>`;
   }).join('');
@@ -3649,42 +3651,43 @@ async function saveSharedNote() {
   let photoUrl = window._noteCurrentPhotoUrl || '';
   const photoFile = $('note-photo-file') ? $('note-photo-file').files[0] : null;
   if (photoFile) {
+    const prog = $('note-photo-progress'); const bar = $('note-photo-progress-bar'); const txt = $('note-photo-progress-text');
+    if(prog) prog.style.display='';
     try {
-      const prog = $('note-photo-progress'); const bar = $('note-photo-progress-bar'); const txt = $('note-photo-progress-text');
-      if(prog) prog.style.display='';
-      const storageRef = storage.ref('shared_notes/' + Date.now() + '_' + photoFile.name.replace(/[^a-zA-Z0-9.]/g,'_'));
-      const uploadTask = storageRef.put(photoFile);
-      photoUrl = await new Promise((res,rej) => {
-        uploadTask.on('state_changed',
-          snap => { const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100); if(bar) bar.style.width=pct+'%'; if(txt) txt.textContent='업로드 중... '+pct+'%'; },
-          rej,
-          async () => { res(await storageRef.getDownloadURL()); }
-        );
-      });
-      if(prog) prog.style.display='none';
-    } catch(e) { toast('사진 업로드 실패: '+e.message,'error'); return; }
+      photoUrl = await _noteStorageUpload(photoFile, 'shared_notes/', bar, txt);
+    } catch(e) {
+      // Storage 멈춤/권한 → base64 폴백 (이미지 압축)
+      try {
+        if(txt) txt.textContent='이미지 최적화 중...';
+        photoUrl = await _compressBase64(photoFile, 1200, 0.7);
+        if (photoUrl.length > 950000) photoUrl = await _compressBase64(photoFile, 800, 0.6);
+        if (photoUrl.length > 950000) { if(prog) prog.style.display='none'; toast('이미지가 너무 큽니다. 더 작은 사진을 사용하세요.','error'); return; }
+      } catch(e2) { if(prog) prog.style.display='none'; toast('사진 처리 실패: '+e2.message,'error'); return; }
+    }
+    if(prog) prog.style.display='none';
   }
   // 파일 첨부 업로드 (메모장 탭)
   let attachUrl = window._noteCurrentAttachUrl || '';
   let attachName = window._noteCurrentAttachName || '';
   const attachFile = $('note-attach-file') ? $('note-attach-file').files[0] : null;
   if (attachFile) {
+    const prog2=$('note-file-progress'), bar2=$('note-file-progress-bar'), txt2=$('note-file-progress-text');
+    if(prog2) prog2.style.display='';
     try {
-      const prog2=$('note-file-progress'), bar2=$('note-file-progress-bar'), txt2=$('note-file-progress-text');
-      if(prog2) prog2.style.display='';
-      const safeName = attachFile.name.replace(/[^a-zA-Z0-9가-힣._-]/g,'_');
-      const sRef = storage.ref('shared_notes/files/' + Date.now() + '_' + safeName);
-      const task = sRef.put(attachFile);
-      attachUrl = await new Promise((res,rej)=>{
-        task.on('state_changed',
-          snap=>{const pct=Math.round(snap.bytesTransferred/snap.totalBytes*100);if(bar2)bar2.style.width=pct+'%';if(txt2)txt2.textContent='업로드 중... '+pct+'%';},
-          rej,
-          async()=>{res(await sRef.getDownloadURL());}
-        );
-      });
+      attachUrl = await _noteStorageUpload(attachFile, 'shared_notes/files/', bar2, txt2);
       attachName = attachFile.name;
-      if(prog2) prog2.style.display='none';
-    } catch(e) { toast('파일 업로드 실패: '+e.message,'error'); return; }
+    } catch(e) {
+      // Storage 멈춤/권한 → base64 폴백 (1MB 이하만 임시 저장)
+      try {
+        if(txt2) txt2.textContent='파일 처리 중...';
+        attachUrl = attachFile.type.startsWith('image/')
+          ? await _compressBase64(attachFile, 1400, 0.75)
+          : await _readDataURL(attachFile);
+        if (attachUrl.length > 950000) { if(prog2) prog2.style.display='none'; toast('파일이 커서 저장할 수 없습니다. Storage 설정이 필요하며, 임시로는 1MB 이하 파일만 가능합니다.','error'); return; }
+        attachName = attachFile.name;
+      } catch(e2) { if(prog2) prog2.style.display='none'; toast('파일 처리 실패: '+e2.message,'error'); return; }
+    }
+    if(prog2) prog2.style.display='none';
   }
   try {
     if (eid) {
@@ -3694,6 +3697,26 @@ async function saveSharedNote() {
     }
     closeModal('m-notebook');
   } catch(e) { toast('오류','error'); }
+}
+/* 메모장 업로드: Storage 시도(5초 무응답 시 폴백). 진행이 시작되면 끝까지 대기 */
+function _noteStorageUpload(file, pathPrefix, bar, txt){
+  return new Promise((resolve, reject) => {
+    try {
+      const safe = file.name.replace(/[^a-zA-Z0-9가-힣._-]/g,'_');
+      const ref = storage.ref(pathPrefix + Date.now() + '_' + safe);
+      const timer = setTimeout(() => reject(new Error('timeout')), 5000);
+      const task = ref.put(file);
+      task.on('state_changed',
+        snap => {
+          if (snap.bytesTransferred > 0) clearTimeout(timer); // 실제 전송 시작 → 멈춤 아님
+          const pct = Math.round(snap.bytesTransferred/snap.totalBytes*100);
+          if(bar) bar.style.width=pct+'%'; if(txt) txt.textContent='업로드 중... '+pct+'%';
+        },
+        e => { clearTimeout(timer); reject(e); },
+        async () => { clearTimeout(timer); resolve(await ref.getDownloadURL()); }
+      );
+    } catch(e) { reject(e); }
+  });
 }
 async function delSharedNote(id){if(confirm('삭제?'))await db.collection('shared_notes').doc(id).delete();}
 
@@ -5127,8 +5150,7 @@ async function openTeamAssign(teamNum) {
   const userSel = $('ta-user-select');
   const searchInput = $('ta-user-search');
   if (searchInput) searchInput.value = '';
-  userSel.innerHTML = '<option value="">회원을 선택하세요</option>' +
-    allUsers.map(u => `<option value="${u.uid}">${esc(u.name)} (${u.employeeId||''})</option>`).join('');
+  userSel.innerHTML = _teamAssignUserOptions('');
 
   // 팀 목록 1~20 동적 생성
   const teamSel = $('ta-team-select');
@@ -5326,7 +5348,7 @@ async function renderTeamwork(skipReload) {
   // 팀원 현황 요약 — 관리자 + 해당팀 팀장만 표시
   const teamStatusHtml = (isAdmin || isLeader) ? _tw_teamStatus() : '';
 
-  wrap.innerHTML = attendHtml + goalHtml + actHtml + revHtml + taHtml + teamStatusHtml + lateHtml;
+  wrap.innerHTML = attendHtml + actHtml + revHtml + taHtml + goalHtml + teamStatusHtml + lateHtml;
 }
 
 function _chipStatus(done, late, pendingLabel) {
@@ -5359,7 +5381,7 @@ function _tw_memberListHtml(type) {
     const u = allUsers.find(x => x.uid === uid);
     if (!u) return null;
     const r = twReports[uid] || {};
-    let done = false, late = false, detail = '';
+    let done = false, late = false, detail = '', _taPhoto = '';
 
     if (type === 'attend') {
       const a = r.attend || {};
@@ -5394,12 +5416,14 @@ function _tw_memberListHtml(type) {
       if (done) detail = rv.content.length > 28 ? rv.content.slice(0, 28) + '…' : rv.content;
     } else if (type === 'ta') {
       const ta = r.ta || {};
-      done = !!(ta.checked || ta.url);
+      done = !!(ta.checked || ta.taType || ta.url);
       late = !!ta.late;
-      if (done) detail = '인증 완료';
+      _taPhoto = ta.photoUrl || '';
+      if (done) detail = ta.taType === 'high' ? '10통 이상 인증' : ta.taType === 'low' ? '10통 이하 인증' : '인증 완료';
+      else if (_taPhoto) detail = '사진 등록됨 (통화수 미선택)';
     }
         const absent = !!(myT.absentUids && myT.absentUids[uid]);
-    return {uid, name: u.name, done, late, detail, absent};
+    return {uid, name: u.name, done, late, detail, absent, photoUrl: _taPhoto};
   }).filter(Boolean);
 
   if (!items.length) return '';
@@ -5416,8 +5440,9 @@ function _tw_memberListHtml(type) {
       <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${it.absent ? 'var(--gray-200)' : it.done ? (it.late?'var(--warning)':'var(--success)') : 'var(--gray-300)'};" ></span>
       <span style="font-size:13px;font-weight:600;min-width:50px;">${esc(it.name)}</span>
       ${!it.absent && it.late ? '<span style="font-size:11px;color:var(--danger);white-space:nowrap;">⏰</span>' : ''}
+      ${it.photoUrl ? `<img src="${esc(it.photoUrl)}" onclick="_openTaImg(this)" style="width:30px;height:30px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-200);cursor:zoom-in;flex-shrink:0;">` : ''}
       <span style="font-size:12px;color:${it.absent?'var(--gray-400)':it.done?(it.late?'var(--danger)':'var(--gray-500)'):'var(--gray-400)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
-        ${it.absent ? '미출근' : it.done ? esc(it.detail) : '미완료'}
+        ${it.absent ? '미출근' : it.done ? esc(it.detail) : (it.photoUrl ? esc(it.detail) : '미완료')}
       </span>
     </div>`).join('')}
   </div>`;
@@ -5653,7 +5678,7 @@ async function _tw_goalSection(canEdit, isLeader) {
   const myGoal = (twGoals[CU.uid] || {})[weekNum] || {};
 
   const monDL = _getWeekDeadline(twDate, 1, 12, 1);  // 목표: 월요일 12:00
-  const sunDL = _getWeekDeadline(twDate, 0, 18, 0);  // 달성: 일요일 18:00
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0);  // 달성: 일요일 20:00
   const goalDLLabel = now <= monDL ? '✅ 마감 전' : '⚠️ 마감 초과';
   const achDLLabel  = now <= sunDL ? '✅ 마감 전' : '⚠️ 마감 초과';
 
@@ -5674,6 +5699,7 @@ async function _tw_goalSection(canEdit, isLeader) {
   }
 
   // 내 목표/달성 카드
+  const myAchDone = !!(myGoal.achDone || myGoal.achAt);
   let myRows = '';
   if (hasDone) {
     const FIELDS = [
@@ -5682,11 +5708,14 @@ async function _tw_goalSection(canEdit, isLeader) {
       {lbl:'액션만남', gv: myGoal.goalAction||0, av: myGoal.achAction||0, unit:''},
       {lbl:'CIS',    gv: myGoal.goalCis||0,    av: myGoal.achCis||0,    unit:'명'},
     ];
+    // 달성 제출 완료 시 초록·굵게, 미제출 시 회색 "미제출"
+    const achColor = myAchDone ? '#166534' : 'var(--gray-300)';
+    const achWeight = myAchDone ? '700' : '400';
     myRows = `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
       ${FIELDS.map(f => `<div style="background:var(--primary-bg);border-radius:8px;padding:10px;text-align:center;">
         <div style="font-size:10px;color:var(--primary);font-weight:700;margin-bottom:4px;">📌 ${f.lbl}</div>
         <div style="font-size:18px;font-weight:900;color:var(--gray-800);">${f.gv}${f.unit}</div>
-        <div style="font-size:10px;color:#166534;">달성 ${f.av}${f.unit}</div>
+        <div style="font-size:10px;color:${achColor};font-weight:${achWeight};">${myAchDone ? '달성 '+f.av+f.unit : '달성 미제출'}</div>
       </div>`).join('')}
     </div>`;
   }
@@ -5700,7 +5729,7 @@ async function _tw_goalSection(canEdit, isLeader) {
     ${goalAutoNote}
     <div style="font-size:12px;color:var(--gray-500);margin-bottom:6px;">${weekRange}</div>
     <div style="font-size:12px;color:var(--gray-500);margin-bottom:2px;">📋 목표 마감: 월요일 12:00 · ${goalDLLabel}${goalAtStr ? ` · <span style="color:#166534;font-weight:600;">완료 ${goalAtStr}</span>` : ''}</div>
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">📊 달성 마감: 일요일 18:00 · ${achDLLabel}${achAtStr ? ` · <span style="color:#166534;font-weight:600;">완료 ${achAtStr}</span>` : ''}</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">📊 달성 마감: 일요일 20:00 · ${achDLLabel}${achAtStr ? ` · <span style="color:#166534;font-weight:600;">완료 ${achAtStr}</span>` : ''}</div>
     ${myRows}
     <button class="btn-outline" style="width:100%;padding:11px;" onclick="openGoalModal()">
       ${hasDone ? '수정하기' : '목표·달성 입력하기'}
@@ -5730,7 +5759,8 @@ function _tw_goalTableHtml(weekNum) {
     const g = (twGoals[uid]||{})[weekNum] || {};
     const hasDone = g.goalCount !== undefined || g.achCount !== undefined;
     const late = !!g.late;
-    return {name: u.name, hasDone, late, g};
+    const achDone = !!(g.achDone || g.achAt); // 달성 제출 여부
+    return {name: u.name, hasDone, achDone, late, g};
   }).filter(Boolean);
 
   if (!rows.length) return '';
@@ -5751,7 +5781,17 @@ function _tw_goalTableHtml(weekNum) {
     sACs += Number(r.g.achCis)||0;     sAA  += Number(r.g.achAction)||0;
   });
 
-  const makeTable = (title, bgColor, getVals) => `
+  // 완료시각 포맷: "M/D HH:MM" (없으면 '')
+  const _fmtDone = (ts) => {
+    if (!ts) return '';
+    try {
+      const d = ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts.seconds ? ts.seconds*1000 : ts));
+      if (isNaN(d)) return '';
+      return `${d.getMonth()+1}/${d.getDate()} ${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
+    } catch(e) { return ''; }
+  };
+  // doneFn: 해당 행이 "제출됨"인지 판정 / doneColor: 제출 시 숫자 색상(있으면) / timeFn: 완료시각 반환
+  const makeTable = (title, bgColor, getVals, doneFn, doneColor, timeFn) => `
     <div style="margin-top:14px;">
       <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:6px;">${title}</div>
       <div style="overflow-x:auto;border-radius:10px;border:1px solid var(--gray-100);">
@@ -5768,16 +5808,22 @@ function _tw_goalTableHtml(weekNum) {
           <tbody>
             ${rows.map((r,i) => {
               const v = getVals(r.g);
-              const nameCell = r.late
+              const isDone = doneFn ? doneFn(r) : r.hasDone;
+              const doneTime = timeFn ? timeFn(r) : '';
+              const nameTop = r.late
                 ? `${esc(r.name)}<span style="font-size:10px;color:var(--danger);margin-left:3px;">⏰</span>`
                 : esc(r.name);
+              const nameCell = doneTime
+                ? `${nameTop}<div style="font-size:10px;color:var(--gray-400);font-weight:400;margin-top:1px;">✅ ${doneTime}</div>`
+                : nameTop;
               const emptyCell = `<span style="color:var(--gray-300);">-</span>`;
+              const cell = (val) => isDone ? (doneColor ? `<span style="color:${doneColor};font-weight:700;">${val}</span>` : val) : emptyCell;
               return `<tr style="${rowStyle(i)}">
                 <td style="${tdName}">${nameCell}</td>
-                <td style="${tdStyle}">${r.hasDone ? v[0] : emptyCell}</td>
-                <td style="${tdStyle}">${r.hasDone ? v[1] : emptyCell}</td>
-                <td style="${tdStyle}">${r.hasDone ? v[2] : emptyCell}</td>
-                <td style="${tdStyle}">${r.hasDone ? v[3] : emptyCell}</td>
+                <td style="${tdStyle}">${cell(v[0])}</td>
+                <td style="${tdStyle}">${cell(v[1])}</td>
+                <td style="${tdStyle}">${cell(v[2])}</td>
+                <td style="${tdStyle}">${cell(v[3])}</td>
               </tr>`;
             }).join('')}
           </tbody>
@@ -5790,13 +5836,13 @@ function _tw_goalTableHtml(weekNum) {
 
   const goalTable = makeTable('📌 목표', '#f0f9ff', g => [
     g.goalCount||0, g.goalCanp||0, g.goalAction||0, g.goalCis||0
-  ]);
+  ], undefined, undefined, r => _fmtDone(r.g.goalAt));
   const achTable = makeTable('✅ 달성', '#f0fdf4', g => [
     g.achCount||0, g.achCanp||0, g.achAction||0, g.achCis||0
-  ]);
+  ], r => r.achDone, '#166534', r => _fmtDone(r.g.achAt));
 
   return `<div style="margin-top:12px;border-top:1px solid var(--gray-100);padding-top:10px;">
-    <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:2px;">팀원 현황 ${rows.filter(r=>r.hasDone).length}/${rows.length}명 제출</div>
+    <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:2px;">팀원 현황 · 목표 ${rows.filter(r=>r.hasDone).length}/${rows.length}명 · <span style="color:#166534;">달성 ${rows.filter(r=>r.achDone).length}/${rows.length}명</span> 제출</div>
     ${goalTable}${achTable}
   </div>`;
 }
@@ -5850,7 +5896,7 @@ async function openGoalModal() {
     $('goal-ach-action').value    = g.achAction  != null ? g.achAction  : '';
   } catch(e) {}
   const monDL = _getWeekDeadline(twDate, 1, 12, 1);
-  const sunDL = _getWeekDeadline(twDate, 0, 18, 0);
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0);
   const now = new Date();
   const _wr = _getWeekRange(twDate);
   const _goalStatus = now > monDL ? '⚠️ 마감 초과' : '✅ 마감 전';
@@ -5858,7 +5904,7 @@ async function openGoalModal() {
   $('goals-deadline-info').innerHTML =
     `<span style="font-weight:600;">${_wr}</span><br>` +
     `📋 목표: 월요일 12:00 마감 · ${_goalStatus}<br>` +
-    `📊 달성: 일요일 18:00 마감 · ${_achStatus}<br>` +
+    `📊 달성: 일요일 20:00 마감 · ${_achStatus}<br>` +
     `<span style="color:#dc2626;font-size:11px;">※ 늦으면 목표취합 지각 처리</span>`;
   openModal('m-goals');
 }
@@ -5875,7 +5921,7 @@ async function saveGoal() {
   const weekNum = _getWeekNum(twDate);
   const now = new Date();
   const monDL = _getWeekDeadline(twDate, 1, 12, 1); // 목표 마감: 월요일 12:00
-  const sunDL = _getWeekDeadline(twDate, 0, 18, 0); // 달성 마감: 일요일 18:00
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
   const existingGoal = (twGoals[CU.uid]||{})[weekNum] || {};
   // 목표 필드 입력 여부
   const hasGoalInput = goalCount || goalCanp || goalCis || goalAction;
@@ -5891,23 +5937,51 @@ async function saveGoal() {
 
   const FS = firebase.firestore.FieldValue.serverTimestamp();
   const existingTs = existingGoal;
+  // 달성 제출 여부: 값이 있거나(hasAchInput) 이전에 이미 제출(없음 포함)했으면 유지
+  const achDone = !!hasAchInput || !!existingGoal.achDone;
   const updateData = {goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction,
-       late: isLate, goalLate, achLate, updatedAt: FS};
+       late: isLate, goalLate, achLate, achDone, updatedAt: FS};
   // 목표 최초 입력 시각 저장
   if (hasGoalInput && !existingTs.goalAt) updateData.goalAt = FS;
   // 달성 최초 입력 시각 저장
-  if (hasAchInput && !existingTs.achAt) updateData.achAt = FS;
+  if (achDone && !existingTs.achAt) updateData.achAt = FS;
   try {
     await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).set(
       updateData, {merge:true}
     );
     if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
-    twGoals[CU.uid][weekNum] = {...existingGoal, ...{goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate, goalLate, achLate}};
+    twGoals[CU.uid][weekNum] = {...existingGoal, ...{goalCount, goalCanp, goalCis, goalAction, achCount, achCanp, achCis, achAction, late: isLate, goalLate, achLate, achDone}};
     if (isLate) await recordLate(CU.uid, twDate, 'goal');
     closeModal('m-goals');
     renderTeamwork(true);
     const lateMsg = goalLate && achLate ? '목표·달성 지각' : goalLate ? '목표 지각' : achLate ? '달성 지각' : '';
     toast(isLate ? `저장됨 (${lateMsg} 처리)` : '저장됨', isLate ? 'error' : 'success');
+  } catch(e) { toast('오류','error'); }
+}
+
+/* 달성 없음: 달성 4개 값을 0으로 제출(achDone=true). 목표 필드는 건드리지 않음 */
+async function saveAchNone() {
+  if (!confirm('이번 주 달성을 "없음(0)"으로 제출합니다.\n제출 후에도 수정 가능합니다. 진행할까요?')) return;
+  const weekNum = _getWeekNum(twDate);
+  const now = new Date();
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
+  const existingGoal = (twGoals[CU.uid]||{})[weekNum] || {};
+  const prevAchLateOk = existingGoal.achLate === false ||
+                        (existingGoal.achLate === undefined && existingGoal.late === false);
+  const achLate = !prevAchLateOk && (now > sunDL);
+  const isLate = !!existingGoal.goalLate || achLate;
+  const FS = firebase.firestore.FieldValue.serverTimestamp();
+  const updateData = {achCount:0, achCanp:0, achCis:0, achAction:0,
+       achDone:true, achLate, late:isLate, updatedAt:FS};
+  if (!existingGoal.achAt) updateData.achAt = FS;
+  try {
+    await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).set(updateData, {merge:true});
+    if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
+    twGoals[CU.uid][weekNum] = {...existingGoal, achCount:0, achCanp:0, achCis:0, achAction:0, achDone:true, achLate, late:isLate};
+    if (achLate) await recordLate(CU.uid, twDate, 'goal');
+    closeModal('m-goals');
+    renderTeamwork(true);
+    toast(achLate ? '달성 없음 제출됨 (달성 지각 처리)' : '달성 없음 제출됨 ✅', achLate ? 'error' : 'success');
   } catch(e) { toast('오류','error'); }
 }
 
@@ -6127,34 +6201,51 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
     } catch(e) {}
   }
   const taAutoNote = !hasDone ? _autoLateNote(ta) : '';
-  const taTypeLabel = taType === 'high' ? '10통 이상 인증완료' : taType === 'low' ? '10통 이하 인증완료' : '팀방 사진 인증 완료';
+  const taTypeLabel = taType === 'high' ? '10통 이상 인증완료' : taType === 'low' ? '10통 이하 인증완료' : '사진 인증 완료';
+  const hasPhoto = !!ta.photoUrl;
+  const photoImg = hasPhoto ? `<img src="${esc(ta.photoUrl)}" onclick="_openTaImg(this)" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--gray-100);margin-bottom:10px;cursor:zoom-in;">` : '';
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📸 TA인증</div>${chip}</div>
     ${taAutoNote}
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">팀방에 사진 올린 뒤 아래 버튼을 누르세요 · 10통 이하/미체크 시 다음날 07:00 기준 지각</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">사진을 먼저 등록한 뒤 10통 이상/이하를 선택하세요 · 미등록·10통 이하/미체크 시 다음날 07:00 기준 지각</div>
     ${hasDone
       ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center;">
            <div style="font-size:18px;margin-bottom:4px;">✅</div>
            <div style="font-weight:700;color:#166534;">${taTypeLabel}</div>
            ${checkedTime ? `<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">완료 시각 ${checkedTime}${isAdmin ? '<button onclick="adminEditTime(\'ta\',\'checkedAt\')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>' : ''}</div>` : ''}
          </div>
+         ${photoImg ? `<div style="margin-top:10px;">${photoImg}</div>` : ''}
          <button onclick="cancelTa()" style="margin-top:10px;width:100%;padding:9px;background:none;border:1.5px solid #fca5a5;border-radius:9px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;">
            ✕ 인증 취소
          </button>`
-      : `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-           <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#86efac;color:#166534;font-weight:700;" onclick="checkTa('high')">
-             📸 10통 이상<br><span style="font-size:11px;font-weight:500;">인증완료</span>
-           </button>
-           <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#fbbf24;color:#92400e;font-weight:700;" onclick="checkTa('low')">
-             📸 10통 이하<br><span style="font-size:11px;font-weight:500;">인증완료</span>
-           </button>
-         </div>`
+      : (hasPhoto
+        ? `${photoImg}
+           <label style="display:block;text-align:center;padding:8px;margin-bottom:12px;font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">
+             🔄 사진 다시 등록
+             <input type="file" accept="image/*" capture="environment" onchange="uploadTaPhoto(this)" style="display:none;">
+           </label>
+           <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">통화 수를 선택하면 인증이 완료됩니다</div>
+           <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+             <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#86efac;color:#166534;font-weight:700;" onclick="checkTa('high')">
+               📞 10통 이상<br><span style="font-size:11px;font-weight:500;">인증완료</span>
+             </button>
+             <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#fbbf24;color:#92400e;font-weight:700;" onclick="checkTa('low')">
+               📞 10통 이하<br><span style="font-size:11px;font-weight:500;">인증완료</span>
+             </button>
+           </div>`
+        : `<label style="display:block;text-align:center;padding:20px;border:2px dashed #93c5fd;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:15px;font-weight:700;cursor:pointer;">
+             📷 사진 등록 (촬영 / 앨범 선택)
+             <div style="font-size:11px;font-weight:500;color:var(--gray-500);margin-top:6px;">사진을 등록해야 10통 인증 버튼이 나타납니다</div>
+             <input type="file" accept="image/*" capture="environment" onchange="uploadTaPhoto(this)" style="display:none;">
+           </label>`)
     }
     ${memberList}
   </div>`;
 }
 
 async function checkTa(taType) {
+  const _ta0 = (twReports[CU.uid] || {}).ta || {};
+  if (!_ta0.photoUrl) { toast('먼저 인증 사진을 등록하세요','error'); return; }
   const now = new Date();
   const _isSat = new Date(twDate).getDay() === 6;
   let isLate = false;
@@ -6173,7 +6264,7 @@ async function checkTa(taType) {
       {ta: {taType, checked: true, late: isLate, checkedAt: firebase.firestore.FieldValue.serverTimestamp()}}, {merge: true}
     );
     if (!twReports[CU.uid]) twReports[CU.uid] = {};
-    twReports[CU.uid].ta = {taType, checked: true, late: isLate};
+    twReports[CU.uid].ta = {...(twReports[CU.uid].ta||{}), taType, checked: true, late: isLate};
     if (isLate) await recordLate(CU.uid, twDate, 'ta');
     renderTeamwork(true);
     const label = taType === 'high' ? '10통 이상' : '10통 이하';
@@ -6187,15 +6278,64 @@ async function cancelTa() {
   const isLeader = myT && myT.leaderId === CU.uid;
   const isSelf = true; // 이 함수는 항상 본인 TA 취소
   if (!isSelf && !isAdmin && !isLeader) { toast('취소 권한이 없습니다', 'error'); return; }
-  if (!confirm('TA인증을 취소하시겠습니까?')) return;
+  if (!confirm('TA인증을 취소하시겠습니까? (등록한 사진도 함께 삭제됩니다)')) return;
   try {
     await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set(
-      {ta: {checked: false, checkedAt: null, late: false}}, {merge: true}
+      {ta: {checked: false, taType: null, checkedAt: null, late: false, photoUrl: null, photoAt: null}}, {merge: true}
     );
     if (twReports[CU.uid]) twReports[CU.uid].ta = {};
     renderTeamwork(true);
     toast('TA인증 취소됨');
   } catch(e) { toast('오류', 'error'); }
+}
+
+/* TA인증 사진 업로드: Storage 시도 → 실패 시 base64 폴백 (사진만) */
+let _taPhotoUploading = false;
+async function uploadTaPhoto(input) {
+  const f = input && input.files && input.files[0];
+  if (!f) return;
+  if (!f.type.startsWith('image/')) { toast('이미지 파일만 등록할 수 있습니다','error'); return; }
+  if (_taPhotoUploading) return;
+  _taPhotoUploading = true;
+  toast('사진 업로드 중...','success');
+  let url = '';
+  try {
+    url = await _noteStorageUpload(f, 'tw_ta/' + twDate + '/' + CU.uid + '_', null, null);
+  } catch(e) {
+    // Storage 멈춤/권한 → base64 폴백 (압축)
+    try {
+      url = await _compressBase64(f, 1200, 0.7);
+      if (url.length > 950000) url = await _compressBase64(f, 800, 0.6);
+      if (url.length > 950000) { _taPhotoUploading = false; toast('사진이 너무 큽니다. 다시 시도해주세요.','error'); return; }
+    } catch(e2) { _taPhotoUploading = false; toast('사진 처리 실패: '+e2.message,'error'); return; }
+  }
+  try {
+    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set(
+      {ta: {photoUrl: url, photoAt: firebase.firestore.FieldValue.serverTimestamp()}}, {merge: true}
+    );
+    if (!twReports[CU.uid]) twReports[CU.uid] = {};
+    if (!twReports[CU.uid].ta) twReports[CU.uid].ta = {};
+    twReports[CU.uid].ta.photoUrl = url;
+    _taPhotoUploading = false;
+    renderTeamwork(true);
+    toast('사진 등록 완료 ✅ 이제 10통 이상/이하를 선택하세요','success');
+  } catch(e) { _taPhotoUploading = false; toast('저장 오류','error'); }
+}
+
+/* 인증 사진 확대 보기 (Storage URL·base64 공용) */
+function _openTaImg(imgEl) {
+  const src = imgEl && imgEl.getAttribute('src'); if (!src) return;
+  let ov = document.getElementById('_ta-img-ov');
+  if (!ov) {
+    ov = document.createElement('div');
+    ov.id = '_ta-img-ov';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
+    ov.onclick = () => { ov.style.display = 'none'; };
+    ov.innerHTML = '<img style="max-width:100%;max-height:100%;border-radius:8px;">';
+    document.body.appendChild(ov);
+  }
+  ov.querySelector('img').src = src;
+  ov.style.display = 'flex';
 }
 
 function _tw_teamStatus() {
@@ -6320,6 +6460,7 @@ async function _autoRecordLates() {
   const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
   const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
   const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
+  const sunDL   = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
 
   // 자동지각 전 서버에서 최신 데이터 재확인 (Firestore 캐시 우회)
   try {
@@ -6348,7 +6489,7 @@ async function _autoRecordLates() {
     }
   }
 
-  // 2. 목표취합 (목표: 월요일 12:00 / 달성: 일요일 18:00 — 자동지각은 월요일 기준)
+  // 2. 목표취합 (목표: 월요일 12:00 / 달성: 일요일 20:00 — 목표 미제출은 월요일, 달성은 아래 2b)
   if (now > monDL) {
     const hasDone = myGoal.goalCount !== undefined || myGoal.achCount !== undefined;
     if (!hasDone && !myGoal.late && !myGoal.autoLatedAt) {
@@ -6360,6 +6501,24 @@ async function _autoRecordLates() {
         if (!twGoals[CU.uid][weekNum]) twGoals[CU.uid][weekNum] = {};
         twGoals[CU.uid][weekNum].late = true;
         twGoals[CU.uid][weekNum].autoLatedAt = now;
+      } catch(e) {}
+    }
+  }
+
+  // 2b. 달성취합 (일요일 20:00 마감) — 미제출 시 자동 지각 (주 1회, 목표지각 이미 있으면 표시만)
+  if (now > sunDL) {
+    const achSubmitted = !!myGoal.achDone || !!myGoal.achAt;
+    if (!achSubmitted && !myGoal.achLate && !myGoal.achAutoLatedAt) {
+      try {
+        const alreadyGoalLate = !!myGoal.late || !!myGoal.autoLatedAt;
+        if (!alreadyGoalLate) await recordLate(CU.uid, twDate, 'goal');
+        await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum))
+          .set({achLate:true, achAutoLatedAt:srv(), late:true}, {merge:true});
+        if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
+        if (!twGoals[CU.uid][weekNum]) twGoals[CU.uid][weekNum] = {};
+        twGoals[CU.uid][weekNum].achLate = true;
+        twGoals[CU.uid][weekNum].achAutoLatedAt = now;
+        twGoals[CU.uid][weekNum].late = true;
       } catch(e) {}
     }
   }
@@ -6444,6 +6603,7 @@ async function _autoRecordLatesForTeam() {
   const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
   const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
   const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
+  const sunDL   = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
 
   // 팀장 uid 집합 (팀장은 지각처리 제외)
   const leaderUids = new Set(Object.values(allTeams).map(t => t.leaderId).filter(Boolean));
@@ -6499,6 +6659,23 @@ async function _autoRecordLatesForTeam() {
           if (!twGoals[uid]) twGoals[uid] = {};
           if (!twGoals[uid][weekNum]) twGoals[uid][weekNum] = {};
           twGoals[uid][weekNum].late = true; twGoals[uid][weekNum].autoLatedAt = now;
+        } catch(e) {}
+      }
+    }
+
+    // 2b. 달성취합 (일요일 20:00 마감) — 미제출 시 자동 지각 (주 1회, 목표지각 이미 있으면 표시만)
+    if (now > sunDL) {
+      const achSubmitted = !!goal.achDone || !!goal.achAt;
+      if (!achSubmitted && !goal.achLate && !goal.achAutoLatedAt) {
+        try {
+          const alreadyGoalLate = !!goal.late || !!goal.autoLatedAt;
+          if (!alreadyGoalLate) await recordLate(uid, twDate, 'goal');
+          await db.collection('users').doc(uid).collection('tw_goals').doc(String(weekNum))
+            .set({achLate:true, achAutoLatedAt:srv(), late:true}, {merge:true});
+          if (!twGoals[uid]) twGoals[uid] = {};
+          if (!twGoals[uid][weekNum]) twGoals[uid][weekNum] = {};
+          twGoals[uid][weekNum].achLate = true; twGoals[uid][weekNum].achAutoLatedAt = now;
+          twGoals[uid][weekNum].late = true;
         } catch(e) {}
       }
     }
@@ -6754,10 +6931,31 @@ async function enterTeamwork() {
 function filterTeamAssignUsers(q) {
   const sel = $('ta-user-select');
   if (!sel) return;
-  const lower = q.toLowerCase().trim();
-  sel.innerHTML = '<option value="">회원을 선택하세요</option>' +
-    allUsers.filter(u => !lower || (u.name||'').toLowerCase().includes(lower) || (u.employeeId||'').toLowerCase().includes(lower))
-    .map(u => `<option value="${u.uid}">${esc(u.name)} (${u.employeeId||''})</option>`).join('');
+  sel.innerHTML = _teamAssignUserOptions(q);
+}
+// 팀 배정 셀렉트 옵션 생성: 미배정 회원을 맨 위 그룹으로 우선 표시
+function _teamAssignUserOptions(q) {
+  const lower = (q||'').toLowerCase().trim();
+  const usedUids = new Set(Object.values(allTeams||{}).flatMap(t => [...(t.memberIds||[]), t.leaderId].filter(Boolean)));
+  const matched = allUsers.filter(u => !lower || (u.name||'').toLowerCase().includes(lower) || (u.employeeId||'').toLowerCase().includes(lower));
+  const byName = (a,b) => (a.name||'').localeCompare(b.name||'','ko');
+  const unassigned = matched.filter(u => !usedUids.has(u.uid)).sort(byName);
+  const assigned = matched.filter(u => usedUids.has(u.uid)).sort(byName);
+  let html = '<option value="">회원을 선택하세요</option>';
+  if (unassigned.length) {
+    html += `<optgroup label="⚠️ 미배정 (${unassigned.length}명)">` +
+      unassigned.map(u => `<option value="${u.uid}">${esc(u.name)} (${u.employeeId||''})</option>`).join('') +
+      '</optgroup>';
+  }
+  if (assigned.length) {
+    html += `<optgroup label="배정됨 (${assigned.length}명)">` +
+      assigned.map(u => {
+        const t = Object.values(allTeams||{}).find(t => t.leaderId===u.uid || (t.memberIds||[]).includes(u.uid));
+        return `<option value="${u.uid}">${esc(u.name)} (${u.employeeId||''})${t?' · '+t.teamNum+'팀':''}</option>`;
+      }).join('') +
+      '</optgroup>';
+  }
+  return html;
 }
 
 /* ── 연락처 탭 전환 ── */
