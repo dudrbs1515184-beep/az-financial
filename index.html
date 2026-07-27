@@ -5228,6 +5228,40 @@ function tw_today() {
 function tw_isWeekday(dateStr) {
   const d = new Date(dateStr); return d.getDay() !== 0 && d.getDay() !== 6;
 }
+/* ── 공휴일(2026~2027) — 출근보고 면제 / 설날·추석 당일 — 전 팀원 자동 OFF ── */
+const TW_HOLIDAYS = new Set([
+  // 2026
+  '2026-01-01', // 신정
+  '2026-02-16','2026-02-17','2026-02-18', // 설날 연휴(당일 2/17)
+  '2026-03-01','2026-03-02', // 삼일절·대체
+  '2026-05-05', // 어린이날
+  '2026-05-24','2026-05-25', // 부처님오신날·대체
+  '2026-06-06', // 현충일
+  '2026-08-15','2026-08-17', // 광복절·대체
+  '2026-09-24','2026-09-25','2026-09-26','2026-09-28', // 추석 연휴(당일 9/25)·대체
+  '2026-10-03','2026-10-05', // 개천절·대체
+  '2026-10-09', // 한글날
+  '2026-12-25', // 성탄절
+  // 2027
+  '2027-01-01', // 신정
+  '2027-02-06','2027-02-07','2027-02-08','2027-02-09', // 설날 연휴(당일 2/7)·대체
+  '2027-03-01', // 삼일절
+  '2027-05-05', // 어린이날
+  '2027-05-13', // 부처님오신날
+  '2027-06-06', // 현충일
+  '2027-08-15','2027-08-16', // 광복절·대체
+  '2027-09-14','2027-09-15','2027-09-16', // 추석 연휴(당일 9/15)
+  '2027-10-03','2027-10-04', // 개천절·대체
+  '2027-10-09','2027-10-11', // 한글날·대체
+  '2027-12-25','2027-12-27'  // 성탄절·대체
+]);
+const TW_AUTO_OFF_DAYS = new Set(['2026-02-17','2026-09-25','2027-02-07','2027-09-15']); // 설날·추석 당일
+function tw_isHoliday(dateStr) { return TW_HOLIDAYS.has(dateStr); }
+function tw_isAutoOffDay(dateStr) { return TW_AUTO_OFF_DAYS.has(dateStr); }
+function tw_isSaturday(dateStr) { return new Date(dateStr).getDay() === 6; }
+function tw_isSunday(dateStr) { return new Date(dateStr).getDay() === 0; }
+// 출근보고 필요일: 일요일·공휴일 제외 (토요일 포함)
+function tw_attendRequired(dateStr) { return !tw_isSunday(dateStr) && !tw_isHoliday(dateStr); }
 function tw_dateLabel(dateStr) {
   const d = new Date(dateStr);
   const day = ['일','월','화','수','목','금','토'][d.getDay()];
@@ -5331,7 +5365,7 @@ async function renderTeamwork(skipReload) {
 
   const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
   const myT2 = myTeam();
-  const isLeader = !!(myT2 && myT2.leaderId === CU.uid);
+  const isLeader = !isAdmin && !!(myT2 && myT2.leaderId === CU.uid);
   const canEdit = isAdminOrLeader();
   const isWD = tw_isWeekday(twDate);
   const myR = twReports[CU.uid] || {};
@@ -5372,7 +5406,7 @@ function _tw_memberListHtml(type) {
   const myT = myTeam();
   if (!myT) return '';
   const weekNum = _getWeekNum(twDate);
-  const STATUS_LBL = {wake:'기상', depart:'출발', arrive:'도착', direct:'직출', off:'OFF'};
+  const STATUS_LBL = {wake:'기상', depart:'출발', arrive:'도착', direct:'직출', off:'OFF', photo:'출근사진'};
 
   // 팀장 본인 제외한 팀원만
   const memberUids = (myT.memberIds||[]).filter(uid => uid !== myT.leaderId);
@@ -5387,9 +5421,11 @@ function _tw_memberListHtml(type) {
       const a = r.attend || {};
       done = !!a.status;
       late = !!a.late;
+      _taPhoto = a.photoUrl || ''; // 토요일 출근 사진 썸네일
       if (done && a.allTimes) {
         const _ATT_ORDER = ['wake','depart','arrive','direct','off'];
         detail = _ATT_ORDER.filter(k=>a.allTimes[k]).map(k => {
+          if (k === 'direct' || k === 'off') return STATUS_LBL[k]||k; // 직출·OFF는 시간 미표시
           const v = a.allTimes[k];
           try {
             const t = v instanceof Date ? v : (v.toDate ? v.toDate() : new Date(v.seconds * 1000));
@@ -5453,9 +5489,16 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   const STATUS = [{k:'wake',e:'🌅',l:'기상'},{k:'depart',e:'🚗',l:'출발'},{k:'arrive',e:'🏢',l:'도착'},{k:'direct',e:'📍',l:'직출'},{k:'off',e:'🏖',l:'OFF'}];
   const memberList = _tw_memberListHtml('attend');
 
-  if (!isWD) {
+  const _isSun = tw_isSunday(twDate);
+  const _isHol = tw_isHoliday(twDate);
+  const _isAutoOff = tw_isAutoOffDay(twDate);
+  const _isSat = tw_isSaturday(twDate);
+
+  // 일요일·공휴일: 출근보고 제외 (설날·추석 당일은 전 팀원 OFF)
+  if (_isSun || _isHol) {
+    const lbl = _isAutoOff ? '명절 · 전 팀원 OFF 🌙' : (_isHol ? '공휴일 · 출근보고 제외 🎉' : '일요일 · 출근보고 제외');
     return `<div class="tw-section">
-      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><span class="tw-status-chip pending">주말 제외</span></div>
+      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><span class="tw-status-chip pending">${lbl}</span></div>
       ${memberList}
     </div>`;
   }
@@ -5465,6 +5508,38 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div></div>
       ${memberList || '<div style="color:var(--gray-400);font-size:13px;">팀원 없음</div>'}
+    </div>`;
+  }
+
+  // 토요일: 출근 사진 업로드 전용 (10:00 마감)
+  if (_isSat) {
+    const hasPhoto = !!a.photoUrl;
+    const satLate = !!a.late;
+    const satChip = satLate ? `<span class="tw-status-chip late">⏰ 출근지각</span>`
+      : (hasPhoto ? `<span class="tw-status-chip done">✅ 출근완료</span>` : `<span class="tw-status-chip pending">미등록</span>`);
+    let pTime = '';
+    if (hasPhoto && (a.photoAt || a.time)) {
+      try { const raw=a.photoAt||a.time; const d=raw.toDate?raw.toDate():new Date(raw); pTime=d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}); } catch(e) {}
+    }
+    const satPhotoImg = hasPhoto ? `<img src="${esc(a.photoUrl)}" onclick="_openTaImg(this)" style="width:100%;max-height:220px;object-fit:cover;border-radius:10px;border:1px solid var(--gray-100);margin-bottom:10px;cursor:zoom-in;">` : '';
+    const satAutoNote = !hasPhoto ? _autoLateNote(a) : '';
+    return `<div class="tw-section">
+      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div>${satChip}</div>
+      ${satAutoNote}
+      <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">토요일은 <b>10:00 이전</b>에 출근 사진을 등록하세요. 미등록 시 출근지각 처리됩니다.</p>
+      ${hasPhoto
+        ? `${satPhotoImg}
+           <div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:12px;text-align:center;margin-bottom:8px;">
+             <div style="font-weight:700;color:#166534;">✅ 출근 사진 등록 완료</div>
+             ${pTime?`<div style="font-size:12px;color:var(--gray-400);margin-top:3px;">등록 ${pTime}</div>`:''}
+           </div>
+           <label style="display:block;text-align:center;padding:8px;font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">🔄 사진 다시 등록<input type="file" accept="image/*" onchange="uploadSatAttendPhoto(this)" style="display:none;"></label>`
+        : `<label style="display:block;text-align:center;padding:20px;border:2px dashed #93c5fd;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:15px;font-weight:700;cursor:pointer;">
+             🖼 출근 사진 등록 (앨범에서 선택)
+             <div style="font-size:11px;font-weight:500;color:var(--gray-500);margin-top:6px;">10:00 이전 등록 시 정상 출근 처리</div>
+             <input type="file" accept="image/*" onchange="uploadSatAttendPhoto(this)" style="display:none;">
+           </label>`}
+      ${memberList}
     </div>`;
   }
 
@@ -5484,7 +5559,7 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
 
   const btns = STATUS.map(s => {
     const isSelected = a.status === s.k;
-    const t = allTimes[s.k] ? new Date(allTimes[s.k].toDate ? allTimes[s.k].toDate() : allTimes[s.k]).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
+    const t = (allTimes[s.k] && s.k !== 'direct' && s.k !== 'off') ? new Date(allTimes[s.k].toDate ? allTimes[s.k].toDate() : allTimes[s.k]).toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}) : '';
     // 비활성화 조건
     let disabled = false;
     // 날짜 제한: 기상·출발·도착은 오늘만 / 직출·OFF는 어제~7일 후
@@ -5500,8 +5575,8 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
     </button>`;
   }).join('');
 
-  // 직출·OFF 취소 버튼 (선택된 경우)
-  const canCancelDirectOff = (a.status === 'direct' || a.status === 'off') && canEdit;
+  // 직출·OFF 취소 버튼 (본인이 잘못 체크한 경우 개인도 해제 가능)
+  const canCancelDirectOff = (a.status === 'direct' || a.status === 'off');
   const cancelBtn = canCancelDirectOff
     ? `<button onclick="cancelAttend()" style="margin-top:8px;width:100%;padding:8px;border-radius:8px;border:1px solid var(--gray-300);background:#fff5f5;color:#dc2626;font-size:13px;cursor:pointer;">✕ ${a.status==='direct'?'직출':'OFF'} 체크 취소</button>`
     : '';
@@ -5580,6 +5655,19 @@ async function selectAttend(status) {
     late: isLate,
     allTimes: {...prevAllTimes, [status]: now}
   };
+  // 직출·OFF로 덮어쓸 때는 취소 시 복원할 수 있도록 이전 실제 체크인 상태를 별도 보관
+  if (status === 'direct' || status === 'off') {
+    if (prevStatus && prevStatus !== 'direct' && prevStatus !== 'off') {
+      attendData.savedStatus = prevStatus;
+      attendData.savedLate = !!(myR.attend||{}).late;
+    } else if (prevStatus === 'direct' || prevStatus === 'off') {
+      const existingSaved = (myR.attend||{}).savedStatus;
+      if (existingSaved) {
+        attendData.savedStatus = existingSaved;
+        attendData.savedLate = !!(myR.attend||{}).savedLate;
+      }
+    }
+  }
 
   try {
     await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set({attend: attendData}, {merge:true});
@@ -5594,17 +5682,38 @@ async function selectAttend(status) {
 
 async function cancelAttend() {
   const myR = twReports[CU.uid] || {};
-  const prevStatus = (myR.attend || {}).status;
+  const att = myR.attend || {};
+  const prevStatus = att.status;
   if (prevStatus !== 'direct' && prevStatus !== 'off') {
     toast('직출·OFF 체크만 취소할 수 있습니다', 'error'); return;
   }
   const label = prevStatus === 'direct' ? '직출' : 'OFF';
   if (!confirm(`${label} 체크를 취소하시겠습니까?`)) return;
   try {
-    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).update({
-      attend: firebase.firestore.FieldValue.delete()
-    });
-    if (twReports[CU.uid]) twReports[CU.uid].attend = {};
+    const docRef = db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate);
+    const savedStatus = att.savedStatus; // 직출·OFF 체크 전 실제 기상·출발·도착 상태 (있었다면)
+    if (savedStatus) {
+      // 이전 실제 체크인 상태로 복원하고, 취소한 직출·OFF 시각만 제거 (기존 기상·출발·도착 시각은 유지)
+      const newAllTimes = {...(att.allTimes||{})};
+      delete newAllTimes[prevStatus];
+      const restoredAttend = {...att, status: savedStatus, late: !!att.savedLate, allTimes: newAllTimes};
+      delete restoredAttend.savedStatus;
+      delete restoredAttend.savedLate;
+      await docRef.update({
+        'attend.status': savedStatus,
+        'attend.late': !!att.savedLate,
+        'attend.allTimes': newAllTimes,
+        'attend.savedStatus': firebase.firestore.FieldValue.delete(),
+        'attend.savedLate': firebase.firestore.FieldValue.delete()
+      });
+      if (twReports[CU.uid]) twReports[CU.uid].attend = restoredAttend;
+    } else {
+      // 직출·OFF 이전에 실제 체크인이 없었다면 전체 삭제
+      await docRef.update({
+        attend: firebase.firestore.FieldValue.delete()
+      });
+      if (twReports[CU.uid]) twReports[CU.uid].attend = {};
+    }
     renderTeamwork(true);
     toast(`${label} 체크가 취소되었습니다`, 'success');
   } catch(e) { toast('취소 중 오류가 발생했습니다', 'error'); }
@@ -6222,7 +6331,7 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
         ? `${photoImg}
            <label style="display:block;text-align:center;padding:8px;margin-bottom:12px;font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">
              🔄 사진 다시 등록
-             <input type="file" accept="image/*" capture="environment" onchange="uploadTaPhoto(this)" style="display:none;">
+             <input type="file" accept="image/*" onchange="uploadTaPhoto(this)" style="display:none;">
            </label>
            <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">통화 수를 선택하면 인증이 완료됩니다</div>
            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
@@ -6234,9 +6343,9 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
              </button>
            </div>`
         : `<label style="display:block;text-align:center;padding:20px;border:2px dashed #93c5fd;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:15px;font-weight:700;cursor:pointer;">
-             📷 사진 등록 (촬영 / 앨범 선택)
+             🖼 사진 등록 (앨범에서 선택)
              <div style="font-size:11px;font-weight:500;color:var(--gray-500);margin-top:6px;">사진을 등록해야 10통 인증 버튼이 나타납니다</div>
-             <input type="file" accept="image/*" capture="environment" onchange="uploadTaPhoto(this)" style="display:none;">
+             <input type="file" accept="image/*" onchange="uploadTaPhoto(this)" style="display:none;">
            </label>`)
     }
     ${memberList}
@@ -6320,6 +6429,46 @@ async function uploadTaPhoto(input) {
     renderTeamwork(true);
     toast('사진 등록 완료 ✅ 이제 10통 이상/이하를 선택하세요','success');
   } catch(e) { _taPhotoUploading = false; toast('저장 오류','error'); }
+}
+
+/* 토요일 출근 사진 업로드: Storage 시도 → 실패 시 base64 폴백 (10:00 지각 판정) */
+let _satAttUploading = false;
+async function uploadSatAttendPhoto(input) {
+  const f = input && input.files && input.files[0];
+  if (!f) return;
+  if (!f.type.startsWith('image/')) { toast('이미지 파일만 등록할 수 있습니다','error'); return; }
+  if (_satAttUploading) return;
+  _satAttUploading = true;
+  toast('사진 업로드 중...','success');
+  let url = '';
+  try {
+    url = await _noteStorageUpload(f, 'tw_attend/' + twDate + '/' + CU.uid + '_', null, null);
+  } catch(e) {
+    // Storage 멈춤/권한 → base64 폴백 (압축)
+    try {
+      url = await _compressBase64(f, 1200, 0.7);
+      if (url.length > 950000) url = await _compressBase64(f, 800, 0.6);
+      if (url.length > 950000) { _satAttUploading = false; toast('사진이 너무 큽니다. 다시 시도해주세요.','error'); return; }
+    } catch(e2) { _satAttUploading = false; toast('사진 처리 실패: '+e2.message,'error'); return; }
+  }
+  // 지각 판정: 토요일 10:00 기준 (최초 등록만 판정, 재등록은 기존 지각상태 유지)
+  const now = new Date();
+  const dl10 = new Date(twDate); dl10.setHours(10,0,0,0);
+  const prev = (twReports[CU.uid]||{}).attend || {};
+  const already = !!prev.photoUrl;
+  const isLate = already ? !!prev.late : (now > dl10);
+  const FS = firebase.firestore.FieldValue.serverTimestamp();
+  try {
+    const upd = {status:'photo', photoUrl:url, photoAt:FS, late:isLate};
+    if (!already) upd.time = FS;
+    await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set({attend: upd}, {merge:true});
+    if (!twReports[CU.uid]) twReports[CU.uid] = {};
+    twReports[CU.uid].attend = {...prev, status:'photo', photoUrl:url, late:isLate};
+    if (isLate && !already) await recordLate(CU.uid, twDate, 'attendance');
+    _satAttUploading = false;
+    renderTeamwork(true);
+    toast(isLate ? '출근 사진 등록 (지각 처리됨)' : '출근 사진 등록 완료 ✅', isLate ? 'error' : 'success');
+  } catch(e) { _satAttUploading = false; toast('저장 오류','error'); }
 }
 
 /* 인증 사진 확대 보기 (Storage URL·base64 공용) */
@@ -6445,8 +6594,9 @@ async function recordLate(uid, date, type) {
 async function _autoRecordLates() {
   if (!CU) return;
   if (twDate !== tw_today()) return; // 오늘 날짜가 아니면 자동지각 실행 안 함
+  const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
   const myT = myTeam();
-  if (myT && myT.leaderId === CU.uid) return; // 팀장 제외
+  if (!isAdmin && myT && myT.leaderId === CU.uid) return; // 팀장 제외 (관리자는 제외 대상 아님)
   // 미출근자는 지각 기록 제외
   if (myT && myT.absentUids && myT.absentUids[CU.uid]) return;
   const now = new Date();
@@ -6456,6 +6606,7 @@ async function _autoRecordLates() {
   const srv = () => firebase.firestore.FieldValue.serverTimestamp();
 
   const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
+  const dl10    = new Date(twDate); dl10.setHours(10,0,0,0); // 토요일 출근사진 마감
   const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
   const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
   const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
@@ -6470,8 +6621,23 @@ async function _autoRecordLates() {
   } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 */ }
   const myR = twReports[CU.uid] || {};
 
-  // 1. 출근보고 (평일 08:00 마감)
-  if (isWD && now > dl8) {
+  // 0. 명절 당일(설날·추석) 자동 OFF 처리 — 전 팀원 OFF, 모든 지각 제외
+  if (tw_isAutoOffDay(twDate)) {
+    if ((myR.attend||{}).status !== 'off') {
+      try {
+        await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
+          .set({attend:{status:'off', late:false, autoOff:true, time:srv()}},{merge:true});
+        if (!twReports[CU.uid]) twReports[CU.uid] = {};
+        twReports[CU.uid].attend = {...(myR.attend||{}), status:'off', late:false, autoOff:true};
+      } catch(e) {}
+    }
+    return; // 명절 당일은 모든 자동지각 제외
+  }
+
+  // 1. 출근보고 (평일 08:00 / 토요일 10:00 마감, 일요일·공휴일 제외)
+  const _attReq = !tw_isSunday(twDate) && !tw_isHoliday(twDate);
+  const _attDL  = tw_isSaturday(twDate) ? dl10 : dl8;
+  if (_attReq && now > _attDL) {
     const a = myR.attend || {};
     if (!a.status && !a.late && !a.autoLatedAt) {
       try {
@@ -6599,11 +6765,16 @@ async function _autoRecordLatesForTeam() {
   const srv = () => firebase.firestore.FieldValue.serverTimestamp();
 
   const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
+  const dl10    = new Date(twDate); dl10.setHours(10,0,0,0); // 토요일 출근사진 마감
   const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
   const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
   const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
   const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
   const sunDL   = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
+
+  const _isAutoOff = tw_isAutoOffDay(twDate); // 명절 당일(설날·추석) 여부
+  const _attReq    = !tw_isSunday(twDate) && !tw_isHoliday(twDate); // 출근보고 필요 여부
+  const _attDL     = tw_isSaturday(twDate) ? dl10 : dl8; // 토요일 10:00 / 평일 08:00
 
   // 팀장 uid 집합 (팀장은 지각처리 제외)
   const leaderUids = new Set(Object.values(allTeams).map(t => t.leaderId).filter(Boolean));
@@ -6628,11 +6799,23 @@ async function _autoRecordLatesForTeam() {
       r = _fSnap.exists ? _fSnap.data() : {};
       twReports[uid] = r;
     } catch(e) { r = twReports[uid] || {}; }
+    // 0. 명절 당일(설날·추석) 자동 OFF 처리 — 전 팀원 OFF, 모든 지각 제외
+    if (_isAutoOff) {
+      if ((r.attend||{}).status !== 'off') {
+        try {
+          await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
+            .set({attend:{status:'off', late:false, autoOff:true, time:srv()}},{merge:true});
+          if (!twReports[uid]) twReports[uid] = {};
+          twReports[uid].attend = {...(r.attend||{}), status:'off', late:false, autoOff:true};
+        } catch(e) {}
+      }
+      continue; // 명절 당일은 모든 자동지각 제외
+    }
     const _uidIsOff = (r.attend||{}).status === 'off'; // OFF 체크한 날은 활동/하루후기/TA 지각 제외
     const goal = (twGoals[uid] || {})[weekNum] || {};
 
-    // 1. 출근보고 (평일 08:00 마감)
-    if (isWD && now > dl8) {
+    // 1. 출근보고 (평일 08:00 / 토요일 10:00 마감, 일요일·공휴일 제외)
+    if (_attReq && now > _attDL) {
       const a = r.attend || {};
       if (!a.status && !a.late && !a.autoLatedAt) {
         try {
