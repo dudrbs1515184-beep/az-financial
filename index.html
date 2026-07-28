@@ -524,6 +524,13 @@
         </div>
         <div class="cal-grid" id="cal-grid"></div><div class="cal-selected-date" id="cal-selected-label"></div>
       </div>
+      <div class="alert-section" id="todo-month-section">
+        <div class="alert-title" onclick="toggleTodoMonthSection()" style="cursor:pointer;justify-content:space-between;">
+          <span>📆 이번달 해야할일 <span id="todo-month-count" style="color:var(--gray-400);font-weight:600;text-transform:none;letter-spacing:0;"></span></span>
+          <span id="todo-month-arrow" style="display:inline-block;transition:transform .2s;">▼</span>
+        </div>
+        <div id="todo-month-list"></div>
+      </div>
       <div class="todo-add-row"><input type="text" id="todo-input" placeholder="할 일 입력..." onkeydown="if(event.key==='Enter')addTodo()"><button class="todo-add-btn" onclick="addTodo()">+ 추가</button></div>
       <div id="todo-list"></div>
     </section>
@@ -634,9 +641,11 @@
         <button class="btn-outline" id="note-add-btn" style="display:none;" onclick="openNoteAdd()">+ 등록</button>
       </div>
       <div class="tabs">
-        <button class="tab active" id="notebook-tab-memo" onclick="switchNoteTab('memo',this)">📝 메모장</button>
-        <button class="tab" id="notebook-tab-tip" onclick="switchNoteTab('tip',this)">💡 영업 꿀팁</button>
-        <button class="tab" id="notebook-tab-photo" onclick="switchNoteTab('photo',this)">📷 사진첩</button>
+        <button class="tab active" id="notebook-tab-memo" onclick="switchNoteTab('memo',this)">📝 공용메모장</button>
+        <button class="tab" id="notebook-tab-sales" onclick="switchNoteTab('sales',this)">💼 영업메모장</button>
+        <button class="tab" id="notebook-tab-biz" onclick="switchNoteTab('biz',this)">🏢 사업메모장</button>
+        <button class="tab" id="notebook-tab-personal" onclick="switchNoteTab('personal',this)">🔒 개인 메모장</button>
+        <button class="tab" id="notebook-tab-edu" onclick="switchNoteTab('edu',this)">📚 교육자료</button>
       </div>
       <div class="search-wrap" style="margin-top:8px;">
         <span class="search-icon">🔍</span>
@@ -1027,10 +1036,6 @@
     <div class="modal-head"><div class="modal-title">할일 수정</div><button class="modal-close" onclick="closeModal('m-todo-edit')">✕</button></div>
     <input type="hidden" id="todo-edit-id">
     <div class="field"><label>내용 *</label><input type="text" id="todo-edit-text" placeholder="할 일 내용"></div>
-    <div style="display:flex;gap:10px;">
-      <div class="field" style="flex:1;"><label>날짜 *</label><input type="date" id="todo-edit-date"></div>
-      <div class="field" style="flex:0 0 120px;"><label>시간</label><input type="time" id="todo-edit-time"></div>
-    </div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-todo-edit')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveTodoEdit()">저장</button></div>
   </div>
 </div>
@@ -1344,6 +1349,7 @@
   <div class="modal" style="max-width:480px;">
     <div class="modal-head"><div class="modal-title">📣 팀별 공지사항</div><button class="modal-close" onclick="closeModal('m-team-notice')">✕</button></div>
     <input type="hidden" id="tn-eid">
+    <div class="field" id="tn-team-field" style="display:none;"><label>대상 팀 *</label><select id="tn-team-select"></select></div>
     <div class="field"><label>제목 *</label><input type="text" id="tn-title" placeholder="공지사항 제목"></div>
     <div class="field"><label>내용 *</label><textarea id="tn-content" rows="5" placeholder="공지사항 내용을 입력하세요"></textarea></div>
     <div class="modal-actions">
@@ -2278,15 +2284,15 @@ async function delSharedGongsi(id) {
 /* ── 할일 수정 ── */
 function openTodoEdit(id) {
   const t=allTodos.find(x=>x.id===id); if(!t) return;
-  $('todo-edit-id').value=id; $('todo-edit-text').value=t.text||''; $('todo-edit-date').value=t.date||''; $('todo-edit-time').value=t.time||'';
+  $('todo-edit-id').value=id; $('todo-edit-text').value=t.text||'';
   openModal('m-todo-edit');
 }
 async function saveTodoEdit() {
-  const id=$('todo-edit-id').value, text=$('todo-edit-text').value.trim(), date=$('todo-edit-date').value, time=$('todo-edit-time').value||'';
+  const id=$('todo-edit-id').value, text=$('todo-edit-text').value.trim();
   if(!id||!text) return;
   try {
-    await col('todos').doc(id).update({text,date,time});
-    const t=allTodos.find(x=>x.id===id); if(t){t.text=text;t.date=date;t.time=time;}
+    await col('todos').doc(id).update({text});
+    const t=allTodos.find(x=>x.id===id); if(t){t.text=text;}
     closeModal('m-todo-edit'); renderCal(); renderTodos(); renderHome(); toast('수정됨','success');
   } catch(e){toast('오류','error');}
 }
@@ -3053,6 +3059,44 @@ function renderTodos(){
     </div>`;
   }).join('') : empty('✅','할 일이 없습니다');
   $('todo-list').innerHTML = contractHtml + todosHtml;
+  try{renderTodoMonthSection();}catch(e){}
+}
+// 이번달 해야할일 (실제 현재월 기준, 캘린더 탐색 상태와 무관)
+let _todoMonthCollapsed=false;
+function _isThisMonth(dateStr){
+  if(!dateStr) return false;
+  const now=new Date();
+  const ym=now.getFullYear()+'-'+String(now.getMonth()+1).padStart(2,'0');
+  return dateStr.slice(0,7)===ym;
+}
+function toggleTodoMonthSection(){
+  _todoMonthCollapsed=!_todoMonthCollapsed;
+  const list=$('todo-month-list'); const arrow=$('todo-month-arrow');
+  if(list) list.style.display=_todoMonthCollapsed?'none':'';
+  if(arrow) arrow.style.transform=_todoMonthCollapsed?'rotate(-90deg)':'rotate(0deg)';
+}
+function renderTodoMonthSection(){
+  const listEl=$('todo-month-list'), countEl=$('todo-month-count');
+  if(!listEl) return;
+  const items=(allTodos||[]).filter(t=>_isThisMonth(t.date));
+  items.sort((a,b)=>{
+    if(a.done!==b.done) return a.done?1:-1;
+    return _todoKey(a).localeCompare(_todoKey(b));
+  });
+  const doneCnt=items.filter(t=>t.done).length;
+  if(countEl) countEl.textContent=items.length?`(${doneCnt}/${items.length})`:'';
+  listEl.innerHTML = items.length ? items.map(t=>{
+    return `<div class="todo-item ${t.done?'done':''}" data-id="${t.id}">
+      <div class="todo-check" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div>
+      <div style="flex:1;cursor:pointer;" onclick="cs='${t.date}';renderCal();renderTodos();">
+        <div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">📅 ${t.date||''}</div>
+        <div class="todo-text">${esc(t.text)}</div>
+      </div>
+      <button class="icon-btn" onclick="openTodoEdit('${t.id}')">✏️</button>
+      <button class="icon-btn" onclick="delTodo('${t.id}')">🗑</button>
+    </div>`;
+  }).join('') : empty('📆','이번 달 등록된 할 일이 없습니다');
+  if(_todoMonthCollapsed){listEl.style.display='none';const arrow=$('todo-month-arrow');if(arrow)arrow.style.transform='rotate(-90deg)';}
 }
 
 /* ── 고객관리 ── */
@@ -3538,30 +3582,37 @@ async function delProspect(id,e){e&&e.stopPropagation();if(!confirm('삭제?'))r
 function renderProspects(q=''){let l=[...allProspects];if(q){const lq=q.toLowerCase();l=l.filter(p=>p.name?.includes(lq));}const em={high:'🔴',med:'🟡',low:'🟢'};$('prospect-list').innerHTML=l.length?l.map(p=>`<div class="item-card"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><div class="card-name">${em[p.pri]||em.med} ${esc(p.name)}</div><div><button class="icon-btn" onclick="openPEdit('${p.id}')">✏️</button><button class="icon-btn" onclick="delProspect('${p.id}',event)">🗑</button></div></div><div class="card-meta">${p.phone?`<a href="tel:${p.phone.replace(/\D/g,'')}" class="meta-item" style="color:var(--primary);font-weight:600;text-decoration:none;" onclick="event.stopPropagation()">📞 ${esc(p.phone)}</a>`:''}${p.rel?`<div class="meta-item">👤 ${esc(p.rel)}</div>`:''}${p.product?`<div class="meta-item">📋 ${esc(p.product)}</div>`:''}</div>${p.memo?`<div style="font-size:12px;color:var(--gray-500);margin-top:8px;">${esc(p.memo)}</div>`:''}</div>`).join(''):empty('🎯','없습니다');}
 
 /* ── 메모장 ── */
-let currentNoteTab = 'memo'; // memo | tip | photo
+let currentNoteTab = 'memo'; // memo(공용메모장) | sales(영업메모장) | biz(사업메모장) | personal(개인 메모장, 본인 글만) | edu(교육자료, 본인 글만)
 function switchNoteTab(tab, btn) {
   currentNoteTab = tab;
   document.querySelectorAll('#sec-notebook .tabs .tab').forEach(t => t.classList.remove('active'));
   if (btn) btn.classList.add('active');
-  // + 등록 버튼 권한 처리
-  const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
-  const isSM = isTeamLeader(CU.uid);
   const noteAddBtn = $('note-add-btn');
-  if (tab === 'memo') {
-    if (noteAddBtn) noteAddBtn.style.display = 'block'; // 메모장: 모든 사람 등록 가능
-  } else if (tab === 'tip') {
-    if (noteAddBtn) noteAddBtn.style.display = 'block'; // 영업꿀팁: 모든 사람 등록 가능
-  } else if (tab === 'photo') {
-    if (noteAddBtn) noteAddBtn.style.display = (isAdmin || isSM) ? 'block' : 'none';
+  if (noteAddBtn) {
+    if (tab === 'sales' || tab === 'biz') {
+      // 영업메모장/사업메모장: 지점장·SM·ASM·관리자만 등록 가능 (수정·삭제 권한과 동일)
+      const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
+      const isSM = isTeamLeader(CU.uid);
+      const isBM = CU.role==='manager';
+      const isASM = CU.jobRole==='ASM';
+      noteAddBtn.style.display = (isAdmin || isBM || isSM || isASM) ? 'block' : 'none';
+    } else {
+      noteAddBtn.style.display = 'block'; // 공용메모장/개인메모장/교육자료: 모두 등록 가능
+    }
   }
   renderSharedNotes();
 }
 function renderSharedNotes() {
   const isAdmin = CU.employeeId===ADMIN_ID||CU.role==='admin';
   const isSM = isTeamLeader(CU.uid);
+  const isBM = CU.role==='manager';
+  const isASM = CU.jobRole==='ASM';
   const q = ($('notebook-search') ? $('notebook-search').value : '').toLowerCase().trim();
   // 탭별 필터
-  const tabNotes = allSharedNotes.filter(n => (n.noteTab || 'tip') === currentNoteTab);
+  let tabNotes = allSharedNotes.filter(n => (n.noteTab || 'tip') === currentNoteTab);
+  if (currentNoteTab === 'personal' || currentNoteTab === 'edu') {
+    tabNotes = tabNotes.filter(n => n.authorUid === CU.uid); // 완전 비공개: 본인 글만 열람
+  }
   const notes = q ? tabNotes.filter(n => (n.subject||'').toLowerCase().includes(q) || (n.content||'').toLowerCase().includes(q)) : tabNotes;
   const el = $('notebook-list');
   if (!notes.length) { el.innerHTML = empty('📝', '등록된 내용이 없습니다'); return; }
@@ -3569,15 +3620,18 @@ function renderSharedNotes() {
     // 수정 권한
     const isOwner = n.authorUid === CU.uid;
     let canEdit = false, canDel = false;
-    if (n.noteTab === 'tip') {
-      canEdit = isAdmin || isOwner; // 영업꿀팁: 올린 사람 또는 관리자만 수정
-      canDel = isAdmin || isOwner;
+    if (n.noteTab === 'personal' || n.noteTab === 'edu') {
+      canEdit = isOwner; // 개인 메모장/교육자료: 본인만 수정·삭제
+      canDel = isOwner;
     } else if (n.noteTab === 'memo') {
-      canEdit = isAdmin || isSM; // 메모장: SM, 관리자만 수정
+      canEdit = isAdmin || isSM; // 공용메모장: SM, 관리자만 수정
       canDel = isAdmin || isSM;
+    } else if (n.noteTab === 'sales' || n.noteTab === 'biz') {
+      canEdit = isAdmin || isBM || isSM || isASM; // 영업메모장/사업메모장: 지점장·SM·ASM·관리자만 수정
+      canDel = isAdmin || isBM || isSM || isASM;
     } else {
-      canEdit = isAdmin || isSM; // 사진첩: SM, 관리자만
-      canDel = isAdmin || isSM;
+      canEdit = isAdmin || isOwner; // 레거시(영업꿀팁/사진첩) 데이터: 작성자 또는 관리자
+      canDel = isAdmin || isOwner;
     }
     const dateStr = n.createdAt ? (n.createdAt.toDate ? n.createdAt.toDate().toLocaleDateString('ko-KR') : new Date(n.createdAt).toLocaleDateString('ko-KR')) : '';
     const updStr = n.updatedAt ? (n.updatedAt.toDate ? n.updatedAt.toDate().toLocaleDateString('ko-KR') : new Date(n.updatedAt).toLocaleDateString('ko-KR')) : '';
@@ -3647,7 +3701,7 @@ function openNoteAdd() {
   const newsel = $('note-file-newsel'); if(newsel) newsel.textContent='';
   window._noteCurrentAttachments = [];
   _renderNoteAttachPreview();
-  $('m-note-title').textContent = currentNoteTab === 'photo' ? '사진 등록' : currentNoteTab === 'memo' ? '메모 등록' : '영업 꿀팁 등록';
+  $('m-note-title').textContent = currentNoteTab === 'personal' ? '개인 메모 등록' : currentNoteTab === 'edu' ? '교육자료 등록' : currentNoteTab === 'sales' ? '영업메모 등록' : currentNoteTab === 'biz' ? '사업메모 등록' : '메모 등록';
   openModal('m-notebook');
 }
 function openNoteEdit(id) {
@@ -3664,7 +3718,7 @@ function openNoteEdit(id) {
   _renderNoteAttachPreview();
   if($('note-attach-file')) $('note-attach-file').value='';
   const newsel = $('note-file-newsel'); if(newsel) newsel.textContent='';
-  $('m-note-title').textContent = n.noteTab==='photo' ? '사진 수정' : n.noteTab==='memo' ? '메모 수정' : '영업 꿀팁 수정';
+  $('m-note-title').textContent = n.noteTab==='personal' ? '개인 메모 수정' : n.noteTab==='edu' ? '교육자료 수정' : n.noteTab==='sales' ? '영업메모 수정' : n.noteTab==='biz' ? '사업메모 수정' : '메모 수정';
   openModal('m-notebook');
 }
 async function saveSharedNote() {
@@ -8137,7 +8191,8 @@ function _canWriteTeamNotice() {
   if (!CU) return false;
   const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
   const isSM = isTeamLeader(CU.uid);
-  return isAdmin || isSM;
+  const isASM = CU.jobRole === 'ASM';
+  return isAdmin || isSM || isASM;
 }
 
 function renderBranchNotices() {
@@ -8176,6 +8231,8 @@ function renderTeamNotices() {
   if (addBtn) addBtn.style.display = _canWriteTeamNotice() ? 'inline-block' : 'none';
   if (!CU) return;
   const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
+  const isSM = isTeamLeader(CU.uid);
+  const isASM = CU.jobRole === 'ASM';
   const myT = myTeam();
   const myTeamId = myT ? myT.id : null;
   // 팀 필터: 관리자는 전체, 그 외 내 팀만
@@ -8185,23 +8242,34 @@ function renderTeamNotices() {
     return;
   }
   el.innerHTML = filtered.map(n => {
-    const canEdit = _canWriteTeamNotice() && (isAdmin || n.authorUid === CU.uid);
+    // 관리자: 전체 공지 관리 가능 / SM·ASM: 소속 팀 공지는 작성자와 무관하게 관리 가능
+    const canEdit = isAdmin || ((isSM || isASM) && n.teamId === myTeamId);
     const ts = n.createdAt ? (() => { try { const d=n.createdAt.toDate?n.createdAt.toDate():new Date(n.createdAt.seconds*1000); return d.toLocaleDateString('ko-KR',{month:'short',day:'numeric'}); } catch(e){return '';} })() : '';
     const teamLabel = isAdmin && n.teamName ? `<span style="background:var(--primary-bg);color:var(--primary);font-size:10px;font-weight:700;padding:2px 6px;border-radius:5px;margin-right:5px;">${esc(n.teamName)}</span>` : '';
     return `<div style="background:white;border:1.5px solid var(--gray-100);border-radius:10px;padding:12px;margin-bottom:8px;">
-      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;">
-        <div style="flex:1;">
-          <div style="font-size:13px;font-weight:700;color:var(--gray-800);margin-bottom:4px;">${teamLabel}${esc(n.title)}</div>
-          <div style="font-size:12px;color:var(--gray-600);white-space:pre-wrap;">${esc(n.content)}</div>
-          <div style="font-size:10px;color:var(--gray-400);margin-top:6px;">${esc(n.authorName||'')} ${ts}</div>
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:8px;cursor:pointer;" onclick="toggleTeamNotice('${n.id}')">
+        <div style="flex:1;min-width:0;">
+          <div style="font-size:13px;font-weight:700;color:var(--gray-800);">${teamLabel}${esc(n.title)}</div>
+          <div style="font-size:10px;color:var(--gray-400);margin-top:4px;">${esc(n.authorName||'')} ${ts}</div>
         </div>
-        ${canEdit ? `<div style="display:flex;gap:4px;flex-shrink:0;">
-          <button onclick="openTeamNoticeEdit('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid var(--gray-200);border-radius:5px;background:white;cursor:pointer;">✏️</button>
-          <button onclick="delTeamNotice('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid #fca5a5;border-radius:5px;background:white;color:var(--danger);cursor:pointer;">🗑</button>
-        </div>` : ''}
+        <div style="display:flex;gap:4px;align-items:center;flex-shrink:0;" onclick="event.stopPropagation()">
+          ${canEdit ? `<button onclick="openTeamNoticeEdit('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid var(--gray-200);border-radius:5px;background:white;cursor:pointer;">✏️</button>
+          <button onclick="delTeamNotice('${n.id}')" style="font-size:11px;padding:3px 8px;border:1px solid #fca5a5;border-radius:5px;background:white;color:var(--danger);cursor:pointer;">🗑</button>` : ''}
+          <span id="tn-arrow-${n.id}" style="font-size:11px;color:var(--gray-400);padding:4px 4px 4px 6px;">▼</span>
+        </div>
+      </div>
+      <div id="tn-body-${n.id}" style="display:none;margin-top:8px;" onclick="event.stopPropagation()">
+        <div style="font-size:12px;color:var(--gray-600);white-space:pre-wrap;background:#f8fafc;padding:10px;border-radius:8px;">${esc(n.content)}</div>
       </div>
     </div>`;
   }).join('');
+}
+function toggleTeamNotice(id) {
+  const el = $('tn-body-'+id), arrow = $('tn-arrow-'+id);
+  if (!el) return;
+  const isOpen = el.style.display !== 'none';
+  el.style.display = isOpen ? 'none' : 'block';
+  if (arrow) arrow.textContent = isOpen ? '▼' : '▲';
 }
 
 function openBranchNoticeAdd() {
@@ -8231,24 +8299,48 @@ async function delBranchNotice(id) {
   try { await db.collection('branch_notices').doc(id).delete(); toast('삭제됨'); } catch(e) { toast('오류','error'); }
 }
 
+// 팀 선택 옵션 (팀번호 오름차순)
+function _teamNoticeTeamOptions(selectedId) {
+  const teams = Object.values(allTeams).filter(t => t.teamNum!=null).sort((a,b)=>a.teamNum-b.teamNum);
+  return teams.map(t => `<option value="${t.id}" ${t.id===selectedId?'selected':''}>${t.teamNum}팀</option>`).join('');
+}
 function openTeamNoticeAdd() {
   if (!_canWriteTeamNotice()) return;
   $('tn-eid').value=''; $('tn-title').value=''; $('tn-content').value='';
+  const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
+  const teamField = $('tn-team-field');
+  if (teamField) teamField.style.display = isAdmin ? '' : 'none';
+  if (isAdmin && $('tn-team-select')) { const myT=myTeam(); $('tn-team-select').innerHTML = _teamNoticeTeamOptions(myT?myT.id:''); }
   openModal('m-team-notice');
 }
 function openTeamNoticeEdit(id) {
   const n = allTeamNotices.find(x=>x.id===id);
   if (!n) return;
   $('tn-eid').value=id; $('tn-title').value=n.title||''; $('tn-content').value=n.content||'';
+  const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
+  const teamField = $('tn-team-field');
+  if (teamField) teamField.style.display = isAdmin ? '' : 'none';
+  if (isAdmin && $('tn-team-select')) $('tn-team-select').innerHTML = _teamNoticeTeamOptions(n.teamId||'');
   openModal('m-team-notice');
 }
 async function saveTeamNotice() {
   const title=$('tn-title').value.trim(), content=$('tn-content').value.trim();
   if(!title||!content) { toast('제목과 내용을 입력하세요','error'); return; }
   const eid=$('tn-eid').value;
-  const myT = myTeam();
+  const isAdmin = CU.employeeId===ADMIN_ID || CU.role==='admin';
+  let teamId='', teamName='';
+  if (isAdmin) {
+    const selId = $('tn-team-select') ? $('tn-team-select').value : '';
+    const t = selId ? allTeams[selId] : null;
+    if (!t) { toast('대상 팀을 선택하세요','error'); return; }
+    teamId = selId; teamName = `${t.teamNum}팀`;
+  } else {
+    const myT = myTeam();
+    if (!myT) { toast('소속된 팀이 없습니다','error'); return; }
+    teamId = myT.id; teamName = `${myT.teamNum}팀`;
+  }
   const data={title,content,authorUid:CU.uid,authorName:CU.name||'',
-    teamId: myT?myT.id:'', teamName: myT?myT.name:'',
+    teamId, teamName,
     updatedAt:firebase.firestore.FieldValue.serverTimestamp()};
   try {
     if(eid) await db.collection('team_notices').doc(eid).update(data);
