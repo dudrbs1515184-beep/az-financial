@@ -5088,7 +5088,27 @@ function goSection(n,b){
   if(n==='prospects') try{renderProspects();}catch(e){}
 }
 
-function openModal(id){$(id).classList.add('open');} function closeModal(id){$(id).classList.remove('open');}
+/* ── 모바일 뒤로가기(백버튼) 대응: 모달이 열려있을 때 뒤로가기를 누르면
+   앱 전체 종료 대신 모달만 닫히도록 히스토리 스택에 가드 엔트리를 쌓는다 ── */
+let _modalHistoryDepth = 0;
+function _pushModalHistory() {
+  _modalHistoryDepth++;
+  try { history.pushState({_modalGuard:_modalHistoryDepth}, '', location.href); } catch(e) {}
+}
+function _consumeModalHistory() {
+  // 저장/취소 등 프로그램적으로 모달을 닫을 때, 쌓아둔 가드 엔트리를 하나 소비(뒤로 이동)해 스택을 맞춘다
+  if (_modalHistoryDepth > 0) { try { history.back(); } catch(e) {} }
+}
+window.addEventListener('popstate', function() {
+  if (_modalHistoryDepth > 0) {
+    _modalHistoryDepth--;
+    document.querySelectorAll('.overlay.open').forEach(el => el.classList.remove('open'));
+    const _ov = document.getElementById('_ta-img-ov');
+    if (_ov && _ov.style.display !== 'none') _ov.style.display = 'none';
+  }
+  // _modalHistoryDepth가 0이면 열린 모달이 없다는 뜻이므로 실제 페이지 뒤로가기(앱 종료)를 그대로 허용
+});
+function openModal(id){$(id).classList.add('open');_pushModalHistory();} function closeModal(id){$(id).classList.remove('open');_consumeModalHistory();}
 function showScreen(n){$('screen-loading').style.display='none';$('screen-login').style.display=n==='login'?'flex':'none';$('screen-signup').style.display=n==='signup'?'flex':'none';$('screen-pending').style.display=n==='pending'?'block':'none';$('screen-app').style.display=n==='app'?'block':'none';if(n==='login'){$('l-btn').disabled=false;$('l-btn').textContent='로그인';}if(n==='app'){document.querySelectorAll('.section.active').forEach(s=>{s.style.opacity='1';s.style.display='block';}); }}
 function showLogin(){showScreen('login');} function showSignup(){showScreen('signup');}
 function renderAll(){try{renderCal();}catch(e){}try{renderTodos();}catch(e){}try{renderCustomers();}catch(e){}try{renderProspects();}catch(e){}try{_restoreGcalToken();}catch(e){}}
@@ -6682,11 +6702,12 @@ function _openTaGallery(uid, type) {
 function _showImgGallery(urls) {
   if (!urls || !urls.length) return;
   let ov = document.getElementById('_ta-img-ov');
+  const _alreadyOpen = !!(ov && ov.style.display === 'flex');
   if (!ov) {
     ov = document.createElement('div');
     ov.id = '_ta-img-ov';
     ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;';
-    ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
+    ov.onclick = (e) => { if (e.target === ov) { ov.style.display = 'none'; _consumeModalHistory(); } };
     document.body.appendChild(ov);
   }
   ov.innerHTML = `<div style="max-width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px;align-items:center;" onclick="event.stopPropagation()">
@@ -6694,6 +6715,7 @@ function _showImgGallery(urls) {
     ${urls.length > 1 ? `<div style="color:#fff;font-size:12px;">총 ${urls.length}장</div>` : ''}
   </div>`;
   ov.style.display = 'flex';
+  if (!_alreadyOpen) _pushModalHistory();
 }
 
 function _tw_teamStatus() {
