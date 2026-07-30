@@ -5595,7 +5595,7 @@ function _tw_memberListHtml(type) {
       <span style="width:8px;height:8px;border-radius:50%;flex-shrink:0;background:${it.absent ? 'var(--gray-200)' : it.done ? (it.late?'var(--warning)':'var(--success)') : 'var(--gray-300)'};" ></span>
       <span style="font-size:13px;font-weight:600;min-width:50px;">${esc(it.name)}</span>
       ${!it.absent && it.late ? '<span style="font-size:11px;color:var(--danger);white-space:nowrap;">⏰</span>' : ''}
-      ${it.photoUrl ? `<img src="${esc(it.photoUrl)}" onclick="_openTaImg(this)" style="width:30px;height:30px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-200);cursor:zoom-in;flex-shrink:0;">` : ''}
+      ${it.photoUrl ? `<img src="${esc(it.photoUrl)}" onclick="_openTaGallery('${it.uid}','${type}')" style="width:30px;height:30px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-200);cursor:zoom-in;flex-shrink:0;">` : ''}
       <span style="font-size:12px;color:${it.absent?'var(--gray-400)':it.done?(it.late?'var(--danger)':'var(--gray-500)'):'var(--gray-400)'};flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">
         ${it.absent ? '미출근' : it.done ? esc(it.detail) : (it.photoUrl ? esc(it.detail) : '미완료')}
       </span>
@@ -6071,7 +6071,10 @@ function _tw_goalTableHtml(weekNum) {
   ], r => r.achDone, '#166534', r => _fmtDone(r.g.achAt));
 
   return `<div style="margin-top:12px;border-top:1px solid var(--gray-100);padding-top:10px;">
-    <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:2px;">팀원 현황 · 목표 ${rows.filter(r=>r.hasDone).length}/${rows.length}명 · <span style="color:#166534;">달성 ${rows.filter(r=>r.achDone).length}/${rows.length}명</span> 제출</div>
+    <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
+      <span>팀원 현황 · 목표 ${rows.filter(r=>r.hasDone).length}/${rows.length}명 · <span style="color:#166534;">달성 ${rows.filter(r=>r.achDone).length}/${rows.length}명</span> 제출</span>
+      ${isAdm ? `<button onclick="repairGoalLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : ''}
+    </div>
     ${goalTable}${achTable}
   </div>`;
 }
@@ -6445,7 +6448,11 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
            ${checkedTime ? `<div style="font-size:12px;color:var(--gray-400);margin-top:4px;">완료 시각 ${checkedTime}${isAdmin ? '<button onclick="adminEditTime(\'ta\',\'checkedAt\')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>' : ''}</div>` : ''}
          </div>
          ${photoGallery ? `<div style="margin-top:10px;">${photoGallery}</div>` : ''}
-         <button onclick="cancelTa()" style="margin-top:10px;width:100%;padding:9px;background:none;border:1.5px solid #fca5a5;border-radius:9px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;">
+         <label style="display:block;text-align:center;padding:8px;margin-top:8px;font-size:12px;color:var(--primary);cursor:pointer;font-weight:600;">
+           ➕ 사진 추가 등록
+           <input type="file" accept="image/*" multiple onchange="uploadTaPhoto(this)" style="display:none;">
+         </label>
+         <button onclick="cancelTa()" style="margin-top:6px;width:100%;padding:9px;background:none;border:1.5px solid #fca5a5;border-radius:9px;color:var(--danger);font-size:13px;font-weight:600;cursor:pointer;">
            ✕ 인증 취소
          </button>`
       : (hasPhoto
@@ -6661,16 +6668,31 @@ async function deleteSatAttendPhoto(idx) {
 /* 인증 사진 확대 보기 (Storage URL·base64 공용) */
 function _openTaImg(imgEl) {
   const src = imgEl && imgEl.getAttribute('src'); if (!src) return;
+  _showImgGallery([src]);
+}
+/* 팀원 현황 목록의 썸네일 클릭 시, 해당 인원이 등록한 사진 전체를 갤러리로 열람 */
+function _openTaGallery(uid, type) {
+  const r = twReports[uid] || {};
+  const d = type === 'attend' ? (r.attend || {}) : (r.ta || {});
+  const urls = (d.photoUrls && d.photoUrls.length) ? d.photoUrls : (d.photoUrl ? [d.photoUrl] : []);
+  if (!urls.length) return;
+  _showImgGallery(urls);
+}
+/* 사진 1장 또는 여러장을 오버레이로 표시 (공용) */
+function _showImgGallery(urls) {
+  if (!urls || !urls.length) return;
   let ov = document.getElementById('_ta-img-ov');
   if (!ov) {
     ov = document.createElement('div');
     ov.id = '_ta-img-ov';
-    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;';
-    ov.onclick = () => { ov.style.display = 'none'; };
-    ov.innerHTML = '<img style="max-width:100%;max-height:100%;border-radius:8px;">';
+    ov.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.85);z-index:99999;display:flex;align-items:center;justify-content:center;padding:20px;overflow:auto;';
+    ov.onclick = (e) => { if (e.target === ov) ov.style.display = 'none'; };
     document.body.appendChild(ov);
   }
-  ov.querySelector('img').src = src;
+  ov.innerHTML = `<div style="max-width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:10px;align-items:center;" onclick="event.stopPropagation()">
+    ${urls.map(u => `<img src="${esc(u)}" style="max-width:100%;max-height:85vh;border-radius:8px;">`).join('')}
+    ${urls.length > 1 ? `<div style="color:#fff;font-size:12px;">총 ${urls.length}장</div>` : ''}
+  </div>`;
   ov.style.display = 'flex';
 }
 
@@ -6789,7 +6811,7 @@ async function _autoRecordLates() {
   const now = new Date();
   const isWD = tw_isWeekday(twDate);
   const weekNum = _getWeekNum(twDate);
-  const myGoal = (twGoals[CU.uid]||{})[weekNum] || {};
+  let myGoal = (twGoals[CU.uid]||{})[weekNum] || {};
   const srv = () => firebase.firestore.FieldValue.serverTimestamp();
 
   const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
@@ -6807,6 +6829,16 @@ async function _autoRecordLates() {
     else { delete twReports[CU.uid]; }
   } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 */ }
   const myR = twReports[CU.uid] || {};
+
+  // 목표 데이터도 최신 재확인 (사전 로딩 실패로 인한 오탐 지각처리 방지)
+  try {
+    const _freshGoalSnap = await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).get({source:'server'});
+    if (_freshGoalSnap.exists) {
+      myGoal = _freshGoalSnap.data();
+      if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
+      twGoals[CU.uid][weekNum] = myGoal;
+    }
+  } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 (섣부른 지각처리 방지) */ }
 
   // 0. 명절 당일(설날·추석) 자동 OFF 처리 — 전 팀원 OFF, 모든 지각 제외
   if (tw_isAutoOffDay(twDate)) {
@@ -6999,7 +7031,14 @@ async function _autoRecordLatesForTeam() {
       continue; // 명절 당일은 모든 자동지각 제외
     }
     const _uidIsOff = (r.attend||{}).status === 'off'; // OFF 체크한 날은 활동/하루후기/TA 지각 제외
-    const goal = (twGoals[uid] || {})[weekNum] || {};
+    // 목표 데이터도 서버에서 최신 재확인 (사전 로딩 실패로 인한 오탐 지각처리 방지)
+    let goal;
+    try {
+      const _gSnap = await db.collection('users').doc(uid).collection('tw_goals').doc(String(weekNum)).get({source:'server'});
+      goal = _gSnap.exists ? _gSnap.data() : {};
+      if (!twGoals[uid]) twGoals[uid] = {};
+      twGoals[uid][weekNum] = goal;
+    } catch(e) { goal = (twGoals[uid] || {})[weekNum] || {}; }
 
     // 1. 출근보고 (평일 08:00 / 토요일 10:00 마감, 일요일·공휴일 제외)
     if (_attReq && now > _attDL) {
@@ -7104,6 +7143,57 @@ async function _autoRecordLatesForTeam() {
       }
     }
   }
+}
+
+/* ── 목표취합 오탐 지각 복구 (관리자 전용): 실제로는 마감 전에 제출했는데
+   twGoals 사전 로딩 실패 등으로 잘못 지각처리된 기록을 실제 제출시각(goalAt/achAt) 기준으로 재검사·복구 ── */
+async function repairGoalLateFlags() {
+  if (!CU) return;
+  const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
+  if (!isAdmin) { toast('관리자만 실행할 수 있습니다', 'error'); return; }
+  if (!confirm('이번 주 목표취합 지각 기록을 실제 제출시각 기준으로 재검사하고,\n잘못 지각처리된 경우 복구할까요?')) return;
+
+  const weekNum = _getWeekNum(twDate);
+  const monDL = _getWeekDeadline(twDate, 1, 12, 1);
+  const sunDL = _getWeekDeadline(twDate, 0, 20, 0);
+  const toTs = (ts) => { if(!ts) return null; try { return ts.toDate ? ts.toDate() : new Date(ts.seconds*1000); } catch(e){ return null; } };
+
+  let checked = 0, fixed = 0, errCount = 0;
+  for (const u of allUsers) {
+    try {
+      const ref = db.collection('users').doc(u.uid).collection('tw_goals').doc(String(weekNum));
+      const snap = await ref.get({source:'server'});
+      if (!snap.exists) continue;
+      checked++;
+      const g = snap.data();
+      const goalAtDate = toTs(g.goalAt);
+      const achAtDate  = toTs(g.achAt);
+      const patch = {};
+
+      // 목표: 실제 제출시각이 월요일 12:00 이전인데 지각으로 찍힌 경우만 복구
+      if (goalAtDate && goalAtDate <= monDL && (g.goalLate === true || (g.late === true && g.autoLatedAt))) {
+        patch.goalLate = false;
+        patch.autoLatedAt = firebase.firestore.FieldValue.delete();
+      }
+      // 달성: 실제 제출시각이 일요일 20:00 이전인데 지각으로 찍힌 경우만 복구
+      if (achAtDate && achAtDate <= sunDL && g.achLate === true && g.achAutoLatedAt) {
+        patch.achLate = false;
+        patch.achAutoLatedAt = firebase.firestore.FieldValue.delete();
+      }
+
+      if (Object.keys(patch).length) {
+        const newGoalLate = patch.goalLate !== undefined ? patch.goalLate : !!g.goalLate;
+        const newAchLate  = patch.achLate  !== undefined ? patch.achLate  : !!g.achLate;
+        patch.late = newGoalLate || newAchLate;
+        await ref.set(patch, {merge:true});
+        if (!twGoals[u.uid]) twGoals[u.uid] = {};
+        twGoals[u.uid][weekNum] = {...g, ...patch, autoLatedAt: undefined, achAutoLatedAt: undefined};
+        fixed++;
+      }
+    } catch(e) { errCount++; }
+  }
+  toast(`검사 ${checked}건 · 복구 ${fixed}건${errCount ? ` · 오류 ${errCount}건` : ''}`, fixed ? 'success' : 'info');
+  renderTeamwork(true);
 }
 
 /* ── 백그라운드 자동지각 체크 (팀워크 탭을 안 봐도 앱이 열려있으면 마감시각 지나면 자동 처리) ── */
