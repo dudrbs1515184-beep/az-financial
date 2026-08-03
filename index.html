@@ -443,7 +443,7 @@
   <nav class="sidebar">
     <button class="nav-btn active" onclick="goSection('home',this)">홈</button>
     <button class="nav-btn" onclick="goSection('teamwork',this)">보고 및 취합</button>
-    <button class="nav-btn" onclick="goSection('todo',this)">해야할일</button>
+    <button class="nav-btn" onclick="goSection('todo',this)">캘린더</button>
     <button class="nav-btn" onclick="goSection('customers',this)">고객관리</button>
     <button class="nav-btn" onclick="goSection('promo',this)">프로모션 계산기</button>
     <button class="nav-btn" onclick="goSection('insurance',this)">전체 보험사</button>
@@ -458,7 +458,7 @@
   <nav class="bottom-nav">
     <button class="bnav-btn active" onclick="goSection('home',this)"><span>홈</span></button>
     <button class="bnav-btn" onclick="goSection('teamwork',this)"><span>보고취합</span></button>
-    <button class="bnav-btn" onclick="goSection('todo',this)"><span>할일</span></button>
+    <button class="bnav-btn" onclick="goSection('todo',this)"><span>캘린더</span></button>
     <button class="bnav-btn" onclick="goSection('customers',this)"><span>고객</span></button>
     <button class="bnav-btn" onclick="goSection('promo',this)"><span>프로모션</span></button>
     <button class="bnav-btn" onclick="goSection('insurance',this)"><span>전체보험사</span></button>
@@ -506,9 +506,9 @@
       <div id="home-empty" style="display:none;"><div class="empty"><div class="empty-icon">✨</div><div class="empty-text">모든 업무가 정상입니다!</div></div></div>
     </section>
 
-    <!-- 해야할일 -->
+    <!-- 캘린더 -->
     <section id="sec-todo" class="section">
-      <div class="sec-head"><h2 class="sec-title">해야할일</h2><select class="todo-filter" id="todo-filter" onchange="renderTodos()"><option value="all">전체</option><option value="pending">진행중</option><option value="done">완료</option></select></div>
+      <div class="sec-head"><h2 class="sec-title">캘린더</h2><select class="todo-filter" id="todo-filter" onchange="renderTodos()"><option value="all">전체</option><option value="pending">진행중</option><option value="done">완료</option></select></div>
       <div class="cal-wrap">
         <div class="cal-header">
           <button class="cal-nav" onclick="calMove(-1)">&#8249;</button>
@@ -526,7 +526,7 @@
       </div>
       <div class="alert-section" id="todo-month-section">
         <div class="alert-title" onclick="toggleTodoMonthSection()" style="cursor:pointer;justify-content:space-between;">
-          <span>📆 이번달 해야할일 <span id="todo-month-count" style="color:var(--gray-400);font-weight:600;text-transform:none;letter-spacing:0;"></span></span>
+          <span>📆 업무 체크사항 <span id="todo-month-count" style="color:var(--gray-400);font-weight:600;text-transform:none;letter-spacing:0;"></span></span>
           <span id="todo-month-arrow" style="display:inline-block;transition:transform .2s;">▼</span>
         </div>
         <div id="todo-month-list"></div>
@@ -3351,7 +3351,7 @@ async function saveBulkImport() {
 }
 
 function openCAdd(){$('m-c-title').textContent='고객 추가';$('c-eid').value='';['c-name','c-rrn','c-telecom','c-phone','c-addr','c-job','c-driving','c-stage','c-silbi','c-silbi-date'].forEach(id=>$(id).value='');$('c-is-prospect').checked=false;$('c-last-contact').value='';$('c-memo').value='';_loadCarRows([]);_loadInsuredRows([]);_loadChildRows([]);_cRrnFull='';_cRrnMasked=false;$('c-rrn').readOnly=false;$('c-rrn-view-btn').style.display='none';openModal('m-customer');}
-function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';_cRrnFull=fmtRrnVal(c.rrn||'');if(_cRrnFull){$('c-rrn').value=maskRrnVal(_cRrnFull);$('c-rrn').readOnly=true;_cRrnMasked=true;$('c-rrn-view-btn').style.display='inline-block';$('c-rrn-view-btn').textContent='👁 보기';}else{$('c-rrn').value='';$('c-rrn').readOnly=false;_cRrnMasked=false;$('c-rrn-view-btn').style.display='none';}$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-silbi-date').value=c.silbiDate||'';$('c-is-prospect').checked=!!c.isProspect;$('c-last-contact').value=c.lastContact||'';$('c-memo').value=c.memo||'';_loadCarRows(_getCarInsurances(c));_loadInsuredRows(c.insuredList||[]);_loadChildRows(c.children||[]);closeModal('m-cdetail');openModal('m-customer');}
+function openCEdit(id){const c=allCustomers.find(x=>x.id===id);if(!c)return;$('m-c-title').textContent='고객 수정';$('c-eid').value=id;$('c-name').value=c.name||'';_cRrnFull=fmtRrnVal(c.rrn||'');if(_cRrnFull){$('c-rrn').value=maskRrnVal(_cRrnFull);$('c-rrn').readOnly=true;_cRrnMasked=true;$('c-rrn-view-btn').style.display='inline-block';$('c-rrn-view-btn').textContent='👁 보기';}else{$('c-rrn').value='';$('c-rrn').readOnly=false;_cRrnMasked=false;$('c-rrn-view-btn').style.display='none';}$('c-telecom').value=c.telecom||'';$('c-phone').value=fmtPhone(c.phone||'');$('c-addr').value=c.addr||'';$('c-job').value=c.job||'';$('c-driving').value=c.driving||'';$('c-stage').value=c.stage||'';$('c-silbi').value=c.silbi||'';$('c-silbi-date').value=c.silbiDate||'';$('c-is-prospect').checked=!!c.isProspect;$('c-last-contact').value=c.lastContact||'';$('c-memo').value=c.memo||'';_loadCarRows(_getCarInsurances(c));_loadInsuredRows(c.insuredList||[]);_loadChildRows(c.children||[]);swapModal('m-cdetail','m-customer');}
 
 
 async function saveCustomer(){const n=$('c-name').value.trim();if(!n)return;const eid=$('c-eid').value;const _ci=_getCarInsList(),_fc=_ci[0]||{};const d={name:n,rrn:(_cRrnMasked?_cRrnFull:$('c-rrn').value).replace(/-/g,'').slice(0,13),telecom:$('c-telecom').value,phone:$('c-phone').value.trim(),addr:$('c-addr').value.trim(),job:$('c-job').value.trim(),driving:$('c-driving').value,carInsurances:_ci,insCo:_fc.insCo||'',carDate:_fc.carDate||'',stage:$('c-stage').value.trim(),silbi:$('c-silbi').value.trim(),silbiDate:$('c-silbi-date').value||'',insuredList:_getInsuredList(),children:_getChildList(),isProspect:$('c-is-prospect').checked,lastContact:$('c-last-contact').value,memo:$('c-memo').value.trim()};if(!eid&&allCustomers.some(c=>c.name===d.name&&c.rrn===d.rrn&&d.rrn)){toast('이미 등록된 고객입니다 (이름+주민번호 동일)','error');return;}try{if(eid){await col('customers').doc(eid).update(d);const i=allCustomers.findIndex(c=>c.id===eid);allCustomers[i]={...allCustomers[i],...d};}else{d.createdAt=firebase.firestore.FieldValue.serverTimestamp();const r=await col('customers').add(d);allCustomers.unshift({id:r.id,...d});}closeModal('m-customer');renderCustomers();renderHome();toast('저장됨','success');}catch(e){toast('에러','error');}}
@@ -5109,6 +5109,7 @@ window.addEventListener('popstate', function() {
   // _modalHistoryDepth가 0이면 열린 모달이 없다는 뜻이므로 실제 페이지 뒤로가기(앱 종료)를 그대로 허용
 });
 function openModal(id){$(id).classList.add('open');_pushModalHistory();} function closeModal(id){$(id).classList.remove('open');_consumeModalHistory();}
+function swapModal(fromId,toId){$(fromId).classList.remove('open');$(toId).classList.add('open');}
 function showScreen(n){$('screen-loading').style.display='none';$('screen-login').style.display=n==='login'?'flex':'none';$('screen-signup').style.display=n==='signup'?'flex':'none';$('screen-pending').style.display=n==='pending'?'block':'none';$('screen-app').style.display=n==='app'?'block':'none';if(n==='login'){$('l-btn').disabled=false;$('l-btn').textContent='로그인';}if(n==='app'){document.querySelectorAll('.section.active').forEach(s=>{s.style.opacity='1';s.style.display='block';}); }}
 function showLogin(){showScreen('login');} function showSignup(){showScreen('signup');}
 function renderAll(){try{renderCal();}catch(e){}try{renderTodos();}catch(e){}try{renderCustomers();}catch(e){}try{renderProspects();}catch(e){}try{_restoreGcalToken();}catch(e){}}
@@ -6990,6 +6991,48 @@ async function _autoRecordLates() {
       } catch(e) {}
     }
   }
+
+  // 6. 어제자 하루후기·TA인증 재확인 (다음날 06:01/07:00 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
+  try {
+    const _prevD = new Date(twDate); _prevD.setDate(_prevD.getDate()-1);
+    const prevDate = _prevD.getFullYear()+'-'+String(_prevD.getMonth()+1).padStart(2,'0')+'-'+String(_prevD.getDate()).padStart(2,'0');
+    const prevDL6 = new Date(twDate); prevDL6.setHours(6,1,0,0);
+    const prevDL7 = new Date(twDate); prevDL7.setHours(7,0,0,0);
+    if (now > prevDL6 || now > prevDL7) {
+      const _prevSnap = await db.collection('users').doc(CU.uid).collection('tw_reports').doc(prevDate).get({source:'server'});
+      if (_prevSnap.exists) {
+        const pr = _prevSnap.data() || {};
+        if ((pr.attend||{}).status !== 'off') {
+          if (now > prevDL6) {
+            const rv = pr.review || {};
+            if (!rv.content && !rv.late && !rv.autoLatedAt) {
+              try {
+                await recordLate(CU.uid, prevDate, 'review');
+                await db.collection('users').doc(CU.uid).collection('tw_reports').doc(prevDate)
+                  .update({'review.late':true,'review.autoLatedAt':srv()})
+                  .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(prevDate)
+                    .set({review:{late:true,autoLatedAt:srv()}},{merge:true}));
+              } catch(e) {}
+            }
+          }
+          if (_prevD.getDay() !== 6) {
+            const ta = pr.ta || {};
+            const taType = ta.taType || (ta.checked ? 'high' : null);
+            const taDeadlinePassed = taType === 'high' ? now > prevDL6 : now > prevDL7;
+            if (taDeadlinePassed && !ta.late && !ta.autoLatedAt) {
+              try {
+                await recordLate(CU.uid, prevDate, 'ta');
+                await db.collection('users').doc(CU.uid).collection('tw_reports').doc(prevDate)
+                  .update({'ta.late':true,'ta.autoLatedAt':srv()})
+                  .catch(()=>db.collection('users').doc(CU.uid).collection('tw_reports').doc(prevDate)
+                    .set({ta:{late:true,autoLatedAt:srv()}},{merge:true}));
+              } catch(e) {}
+            }
+          }
+        }
+      }
+    }
+  } catch(e) {}
 }
 
 /* ── 관리자·팀장: 미로그인 팀원도 자동 지각처리 ── */
@@ -7164,6 +7207,48 @@ async function _autoRecordLatesForTeam() {
         } catch(e) {}
       }
     }
+
+    // 6. 어제자 하루후기·TA인증 재확인 (다음날 06:01/07:00 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
+    try {
+      const _prevD = new Date(twDate); _prevD.setDate(_prevD.getDate()-1);
+      const prevDate = _prevD.getFullYear()+'-'+String(_prevD.getMonth()+1).padStart(2,'0')+'-'+String(_prevD.getDate()).padStart(2,'0');
+      const prevDL6 = new Date(twDate); prevDL6.setHours(6,1,0,0);
+      const prevDL7 = new Date(twDate); prevDL7.setHours(7,0,0,0);
+      if (now > prevDL6 || now > prevDL7) {
+        const _prevSnap = await db.collection('users').doc(uid).collection('tw_reports').doc(prevDate).get({source:'server'});
+        if (_prevSnap.exists) {
+          const pr = _prevSnap.data() || {};
+          if ((pr.attend||{}).status !== 'off') {
+            if (now > prevDL6) {
+              const rv = pr.review || {};
+              if (!rv.content && !rv.late && !rv.autoLatedAt) {
+                try {
+                  await recordLate(uid, prevDate, 'review');
+                  await db.collection('users').doc(uid).collection('tw_reports').doc(prevDate)
+                    .update({'review.late':true,'review.autoLatedAt':srv()})
+                    .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(prevDate)
+                      .set({review:{late:true,autoLatedAt:srv()}},{merge:true}));
+                } catch(e) {}
+              }
+            }
+            if (_prevD.getDay() !== 6) {
+              const ta = pr.ta || {};
+              const taType = ta.taType || (ta.checked ? 'high' : null);
+              const taDeadlinePassed = taType === 'high' ? now > prevDL6 : now > prevDL7;
+              if (taDeadlinePassed && !ta.late && !ta.autoLatedAt) {
+                try {
+                  await recordLate(uid, prevDate, 'ta');
+                  await db.collection('users').doc(uid).collection('tw_reports').doc(prevDate)
+                    .update({'ta.late':true,'ta.autoLatedAt':srv()})
+                    .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(prevDate)
+                      .set({ta:{late:true,autoLatedAt:srv()}},{merge:true}));
+                } catch(e) {}
+              }
+            }
+          }
+        }
+      }
+    } catch(e) {}
   }
 }
 
