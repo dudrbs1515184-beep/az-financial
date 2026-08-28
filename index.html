@@ -1336,6 +1336,7 @@
         <div><label style="font-size:11px;color:var(--gray-500);display:block;margin-bottom:3px;">종류</label>
           <select id="late-add-type" style="width:100%;padding:8px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:13px;">
             <option value="attendance">출근지각</option>
+            <option value="attendance_low">07지각(저TA)</option>
             <option value="goal">목표취합</option>
             <option value="activity">활동보고</option>
             <option value="review">하루후기</option>
@@ -8149,14 +8150,17 @@ async function deleteLateRecord(uid, recordId) {
 async function addLateRecord() {
   const uid  = $('late-edit-uid').value;
   const date = $('late-add-date').value;
-  const type = $('late-add-type').value;
+  const sel  = $('late-add-type').value;
   if (!date) { toast('날짜를 선택하세요', 'error'); return; }
+  // 07지각(저TA)은 출근지각(attendance)과 동일 종류·벌금, lowTa 플래그만 추가 표기
+  const isLowTa = sel === 'attendance_low';
+  const type = isLowTa ? 'attendance' : sel;
   const fee = type === 'attendance' ? 20000 : 10000;
   try {
     // 고정 문서ID로 저장 → 같은 날짜·종류 중복 추가 방지
-    await db.collection('users').doc(uid).collection('late_records').doc(`${date}_${type}`).set({
-      date, type, fee, createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    const _doc = { date, type, fee, createdAt: firebase.firestore.FieldValue.serverTimestamp() };
+    if (isLowTa) _doc.lowTa = true;
+    await db.collection('users').doc(uid).collection('late_records').doc(`${date}_${type}`).set(_doc);
     await _renderLateEditRecords(uid);
     toast('추가됨', 'success');
     renderTeamwork(); // 메인 지각현황 즉시 갱신
