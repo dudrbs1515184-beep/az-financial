@@ -445,7 +445,7 @@
 
   <nav class="sidebar">
     <button class="nav-btn active" onclick="goSection('home',this)">홈</button>
-    <button class="nav-btn" onclick="goSection('teamwork',this)">보고 및 취합</button>
+    <button class="nav-btn" onclick="goSection('teamwork',this)">보고 및 취합<span id="nav-tw-badge" style="display:none;margin-left:5px;min-width:8px;height:8px;background:var(--danger);border-radius:50%;display:none;"></span></button>
     <button class="nav-btn" onclick="goSection('todo',this)">캘린더</button>
     <button class="nav-btn" onclick="goSection('customers',this)">고객관리</button>
     <button class="nav-btn" onclick="goSection('promo',this)">프로모션 계산기</button>
@@ -478,6 +478,8 @@
       <div style="margin-bottom:18px;padding:18px 20px;background:linear-gradient(135deg,var(--primary-bg) 0%,white 100%);border-radius:var(--radius-lg);border:1.5px solid var(--primary-light);">
         <h2 id="home-greeting" class="home-motto">안녕하세요 👋</h2>
       </div>
+      <!-- 목표/달성취합 마감 알림 배너 -->
+      <div id="home-tw-reminder" style="display:none;margin-bottom:14px;"></div>
       <!-- 지점 공지사항 -->
       <div id="home-branch-notice-section" style="margin-bottom:14px;">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
@@ -1304,7 +1306,7 @@
 <div class="overlay" id="m-activity">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">📝 활동보고</div><button class="modal-close" onclick="closeModal('m-activity')">✕</button></div>
-    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">당일 12:00 까지 작성 / 늦으면 지각 체크</p>
+    <p id="m-activity-dl" style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">당일 12:00 까지 작성 / 늦으면 지각 체크</p>
     <div class="field"><textarea id="activity-content" placeholder="오늘의 활동을 입력하세요..." style="min-height:120px;"></textarea></div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-activity')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveActivity()">저장</button></div>
   </div>
@@ -1314,7 +1316,7 @@
 <div class="overlay" id="m-review">
   <div class="modal">
     <div class="modal-head"><div class="modal-title">🌙 하루후기</div><button class="modal-close" onclick="closeModal('m-review')">✕</button></div>
-    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">다음날 06:00 까지 작성 / 늦으면 전날 지각 체크</p>
+    <p id="m-review-dl" style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">당일 자정(24:00)까지 작성 / 늦으면 지각 체크</p>
     <div class="field"><textarea id="review-content" placeholder="오늘 하루를 돌아보며..." style="min-height:120px;"></textarea></div>
     <div class="modal-actions"><button class="btn-ghost" onclick="closeModal('m-review')">취소</button><button class="btn-primary" style="width:auto;padding:10px 28px;" onclick="saveReview()">저장</button></div>
   </div>
@@ -1356,6 +1358,20 @@
     <div class="modal-actions">
       <button class="btn-ghost" onclick="closeModal('m-admtime')">취소</button>
       <button class="btn-primary" onclick="admSaveTimeEdit()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 팀별 마감 기준시간 설정 모달 (SM·ASM·관리자) -->
+<div class="overlay" id="m-dledit">
+  <div class="modal" style="max-width:480px;">
+    <div class="modal-head"><div class="modal-title">⏰ 마감 기준시간 설정</div><button class="modal-close" onclick="closeModal('m-dledit')">✕</button></div>
+    <div id="dledit-teamwrap" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--gray-100);"></div>
+    <div style="font-size:12px;color:var(--gray-500);line-height:1.5;margin-bottom:12px;background:#f8fafc;border-radius:8px;padding:10px 12px;">팀별로 지각 기준(마감)시간을 다르게 설정할 수 있습니다. 저장하면 우리 팀 전원의 자동 지각처리·마감안내에 즉시 반영됩니다.</div>
+    <div id="dledit-body" style="max-height:56vh;overflow-y:auto;"></div>
+    <div class="modal-actions">
+      <button class="btn-ghost" onclick="_dlEditReset()">기본값 복원</button>
+      <button class="btn-primary" onclick="saveTeamDL()">저장</button>
     </div>
   </div>
 </div>
@@ -2987,6 +3003,7 @@ function renderHome() {
   });
   if(homeTodos.length){$('home-todo-section').style.display='';ha=true;$('home-todo-list').innerHTML=homeTodos.map(t=>`<div class="todo-item ${t.done?'done':''}" style="margin-bottom:8px;"><div class="todo-check" onclick="toggleTodo('${t.id}')">${t.done?'✓':''}</div><div style="flex:1"><div style="font-size:11px;color:var(--gray-400);margin-bottom:2px;">📅 ${t.date||''}${t.time?` 🕐 ${t.time}`:''}</div><div class="todo-text">${esc(t.text)}</div></div><button class="icon-btn" onclick="openTodoEdit('${t.id}')">✏️</button></div>`).join('');}else{$('home-todo-section').style.display='none';}
   $('home-empty').style.display = ha ? 'none' : '';
+  try { _twCheckReminders(); } catch(e) {}
 }
 function parseDate(s){if(!s)return null; const d=new Date(String(s).replace(/[\.\/]/g,'-').trim()); return isNaN(d)?null:d;}
 function carDiff(s){const d=parseDate(s);if(!d)return null;const t=new Date();t.setHours(0,0,0,0);d.setHours(0,0,0,0);return Math.round((d-t)/86400000);}
@@ -5531,16 +5548,23 @@ async function renderTeamwork(skipReload) {
   wrap.innerHTML = dlSummaryHtml + attendHtml + actHtml + revHtml + taHtml + goalHtml + teamStatusHtml + lateHtml;
 }
 
-/* 마감시간 안내 — 활동보고·하루후기·TA인증·목표취합 마감을 팀원 누구나 한눈에 볼 수 있도록 상단에 표시 */
+/* 마감시간 안내 — 활동보고·하루후기·TA인증·목표취합 마감을 팀원 누구나 한눈에 볼 수 있도록 상단에 표시 (팀별 기준 반영) */
 function _tw_deadlineSummaryHtml() {
+  const c = _teamDLCfg(CU.uid);
+  const hm = o => String(o.h).padStart(2,'0') + ':' + String(o.m).padStart(2,'0');
+  const dayFull = ['일','월','화','수','목','금','토'];
+  const dailyTxt = o => (o.off===1 && o.h===0 && o.m===0) ? '당일 자정(24:00)' : (o.off===1 ? '익일 '+hm(o) : '당일 '+hm(o));
   const items = [
-    {icon:'📝', label:'활동보고', time:'당일 12:00'},
-    {icon:'🌙', label:'하루후기', time:'익일 06:00'},
-    {icon:'📸', label:'TA인증', time:'익일 06:01<br><span style="font-weight:500;">(10통 미만·미체크 07:00)</span>'},
-    {icon:'🎯', label:'목표취합', time:'목표 월요일 12:00<br>달성 일요일 20:00'},
+    {icon:'🏃', label:'출근', time:'평일 '+hm(c.attendWeekday)+' · 토 '+hm(c.attendSat)},
+    {icon:'📝', label:'활동보고', time:'당일 '+hm(c.activity)},
+    {icon:'🌙', label:'하루후기', time:dailyTxt(c.review)},
+    {icon:'📸', label:'TA인증', time:dailyTxt(c.ta)},
+    {icon:'🎯', label:'목표취합', time:'목표 '+dayFull[c.goal.day]+'요일 '+hm(c.goal)+'<br>달성 '+dayFull[c.achievement.day]+'요일 '+hm(c.achievement)},
   ];
+  const canCfg = _canEditTeamDL();
+  const editBtn = canCfg ? `<button onclick="openTeamDL()" style="background:var(--primary);color:#fff;border:none;border-radius:7px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;">⚙️ 기준시간 설정</button>` : '';
   return `<div class="tw-section" style="background:#f8fafc;">
-    <div class="tw-section-head"><div class="tw-section-title">⏰ 마감시간 안내</div></div>
+    <div class="tw-section-head" style="display:flex;justify-content:space-between;align-items:center;gap:8px;"><div class="tw-section-title">⏰ 마감시간 안내</div>${editBtn}</div>
     <div style="display:grid;grid-template-columns:repeat(2,1fr);gap:8px;">
       ${items.map(it => `<div style="background:#fff;border:1px solid var(--gray-100);border-radius:9px;padding:10px 12px;">
         <div style="font-size:12px;font-weight:700;color:var(--gray-700);margin-bottom:3px;">${it.icon} ${it.label}</div>
@@ -5548,6 +5572,178 @@ function _tw_deadlineSummaryHtml() {
       </div>`).join('')}
     </div>
   </div>`;
+}
+
+/* 팀별 마감 기준시간 편집 권한 판정 — 관리자 / 해당팀 SM(팀장) / 해당팀 ASM */
+function _canEditTeamDL() {
+  const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
+  if (isAdmin) return {mode:'admin', team: myTeam()};
+  const sm = Object.values(allTeams).find(t => t.leaderId === CU.uid);
+  if (sm) return {mode:'sm', team: sm};
+  if (CU.jobRole === 'ASM') { const t = _teamOf(CU.uid); if (t) return {mode:'asm', team: t}; }
+  return null;
+}
+
+let _dlEditTeamId = null;
+/* 기준시간 설정 모달 열기 */
+function openTeamDL() {
+  const perm = _canEditTeamDL();
+  if (!perm) { toast('권한이 없습니다'); return; }
+  const wrap = $('dledit-teamwrap');
+  if (perm.mode === 'admin') {
+    const teams = Object.values(allTeams).filter(t => t.teamNum).sort((a,b) => a.teamNum - b.teamNum);
+    _dlEditTeamId = (perm.team && perm.team.id) || (teams[0] && teams[0].id) || null;
+    wrap.innerHTML = `<label style="font-size:12px;font-weight:700;color:var(--gray-600);">대상 팀</label>
+      <select id="dledit-team-sel" onchange="_dlEditRender(this.value)" style="width:100%;margin-top:6px;padding:9px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;">
+        ${teams.map(t => `<option value="${t.id}" ${t.id===_dlEditTeamId?'selected':''}>${t.teamNum}팀</option>`).join('')}
+      </select>`;
+  } else {
+    _dlEditTeamId = perm.team.id;
+    wrap.innerHTML = `<div style="font-weight:700;font-size:15px;color:var(--gray-800);">${perm.team.teamNum}팀 <span style="font-size:12px;color:var(--gray-400);font-weight:500;">(${perm.mode==='sm'?'SM':'ASM'} 편집)</span></div>`;
+  }
+  if (!_dlEditTeamId) { toast('소속 팀이 없습니다'); return; }
+  _dlEditRender(_dlEditTeamId);
+  openModal('m-dledit');
+}
+
+/* 모달 본문 렌더 — 항목별 입력창 (forceDefault=true 이면 팀 설정 무시하고 기본값 표시) */
+function _dlEditRender(teamId, forceDefault) {
+  _dlEditTeamId = teamId;
+  const team = allTeams[teamId];
+  const cfg = forceDefault ? _teamDLCfg({}) : _teamDLCfg(team || {});
+  const hOpts = (sel) => Array.from({length:24}, (_,i)=>`<option value="${i}" ${i===sel?'selected':''}>${String(i).padStart(2,'0')}</option>`).join('');
+  const mOpts = (sel) => [0,10,15,20,30,40,45,50].map(m=>`<option value="${m}" ${m===sel?'selected':''}>${String(m).padStart(2,'0')}</option>`).join('');
+  const dayOpts = (sel) => ['일','월','화','수','목','금','토'].map((d,i)=>`<option value="${i}" ${i===sel?'selected':''}>${d}요일</option>`).join('');
+  const offOpts = (sel) => [[0,'당일'],[1,'익일']].map(([v,l])=>`<option value="${v}" ${v===sel?'selected':''}>${l}</option>`).join('');
+  const timeSel = (item, o, opts) => {
+    let pre = '';
+    if (opts.day) pre = `<select data-dl="${item}" data-k="day" style="padding:7px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;">${dayOpts(o.day)}</select>`;
+    else if (opts.off) pre = `<select data-dl="${item}" data-k="off" style="padding:7px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;">${offOpts(o.off)}</select>`;
+    return `<div style="display:flex;align-items:center;gap:5px;">${pre}
+      <select data-dl="${item}" data-k="h" style="padding:7px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;">${hOpts(o.h)}</select>
+      <span style="font-weight:700;color:var(--gray-400);">:</span>
+      <select data-dl="${item}" data-k="m" style="padding:7px;border:1.5px solid var(--gray-200);border-radius:7px;font-size:13px;">${mOpts(o.m)}</select></div>`;
+  };
+  const rows = [
+    {item:'attendWeekday', label:'🏃 평일 출근', opts:{}},
+    {item:'attendSat',     label:'📸 토요일 출근사진', opts:{}},
+    {item:'activity',      label:'📝 활동보고', opts:{}},
+    {item:'review',        label:'🌙 하루후기', opts:{off:true}},
+    {item:'ta',            label:'📷 TA인증', opts:{off:true}},
+    {item:'goal',          label:'🎯 목표취합', opts:{day:true}},
+    {item:'achievement',   label:'🏆 달성취합', opts:{day:true}},
+  ];
+  $('dledit-body').innerHTML = rows.map(r => `<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 2px;border-bottom:1px solid var(--gray-100);gap:10px;">
+    <div style="font-size:13px;font-weight:700;color:var(--gray-700);flex-shrink:0;">${r.label}</div>
+    ${timeSel(r.item, cfg[r.item], r.opts)}
+  </div>`).join('');
+}
+
+/* 기본값으로 되돌리기 (저장 전 화면만 — 저장을 눌러야 실제 반영) */
+function _dlEditReset() {
+  _dlEditRender(_dlEditTeamId, true);
+  toast('기본값으로 표시했습니다. 저장을 눌러야 반영됩니다.');
+}
+
+/* 저장 — shared_teams 문서의 dl 맵에 기록 */
+async function saveTeamDL() {
+  const perm = _canEditTeamDL();
+  if (!perm) { toast('권한이 없습니다'); return; }
+  const teamId = _dlEditTeamId;
+  const team = allTeams[teamId];
+  if (!team) { toast('팀 정보를 찾을 수 없습니다'); return; }
+  // SM·ASM은 본인 팀만 저장 가능 (관리자는 전 팀)
+  if (perm.mode !== 'admin' && perm.team.id !== teamId) { toast('본인 팀만 설정할 수 있습니다'); return; }
+  const dl = {};
+  document.querySelectorAll('#dledit-body [data-dl]').forEach(el => {
+    const item = el.getAttribute('data-dl');
+    const k = el.getAttribute('data-k');
+    if (!dl[item]) dl[item] = {};
+    dl[item][k] = parseInt(el.value, 10) || 0;
+  });
+  try {
+    await db.collection('shared_teams').doc(teamId).set({dl}, {merge:true});
+    allTeams[teamId] = Object.assign({}, team, {dl});
+    toast('마감 기준시간이 저장되었습니다', 'success');
+    closeModal('m-dledit');
+    if (typeof renderTeamwork === 'function') renderTeamwork(true);
+  } catch(e) {
+    toast('저장 실패: ' + (e.message || e));
+  }
+}
+
+/* ══════════ 목표/달성취합 마감 알림 (홈 배너 + 네비 뱃지 + 브라우저 알림) ══════════ */
+let _twReminderNotified = {}; // 하루 1회 브라우저 알림 중복 방지
+async function _twCheckReminders() {
+  const box = $('home-tw-reminder');
+  const navBadge = $('nav-tw-badge');
+  const hide = () => { if (box) { box.style.display='none'; box.innerHTML=''; } if (navBadge) navBadge.style.display='none'; };
+  try {
+    if (!CU) return hide();
+    const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
+    if (isAdmin || isTeamLeader(CU.uid)) return hide(); // 팀장·관리자는 개인 취합 제출 대상 아님
+    const today = tw_today();
+    const dow = new Date(today).getDay();
+    const cfg = _teamDLCfg(CU.uid);
+    const isGoalDay = dow === cfg.goal.day;
+    const isAchDay  = dow === cfg.achievement.day;
+    if (!isGoalDay && !isAchDay) return hide();
+    const weekNum = String(_getWeekNum(today));
+    let g = (twGoals[CU.uid] || {})[weekNum];
+    if (g === undefined) {
+      try { const s = await db.collection('users').doc(CU.uid).collection('tw_goals').doc(weekNum).get(); g = s.exists ? s.data() : {}; } catch(e) { g = {}; }
+    }
+    const goalSubmitted = !!(g && (g.goalAt || g.goalCount));
+    const achSubmitted  = !!(g && (g.achDone || g.achAt));
+    const now = new Date();
+    const cards = [];
+    const notifyMsgs = [];
+    if (isGoalDay && !goalSubmitted) {
+      cards.push(_twReminderCard('🎯', '목표취합', _twDeadlineLabel(CU.uid,'goal'), now > _twDeadline(CU.uid,'goal',today)));
+      notifyMsgs.push('목표취합');
+    }
+    if (isAchDay && !achSubmitted) {
+      cards.push(_twReminderCard('🏆', '달성취합', _twDeadlineLabel(CU.uid,'achievement'), now > _twDeadline(CU.uid,'achievement',today)));
+      notifyMsgs.push('달성취합');
+    }
+    if (!cards.length) return hide();
+    let pushBtn = '';
+    if ('Notification' in window && Notification.permission !== 'granted') {
+      pushBtn = `<button onclick="enableTwPush()" style="margin-top:2px;width:100%;background:#fff;border:1.5px solid var(--primary);color:var(--primary);border-radius:8px;padding:8px;font-size:12.5px;font-weight:700;cursor:pointer;">🔔 브라우저 알림 켜기</button>`;
+    }
+    box.innerHTML = cards.join('') + pushBtn;
+    box.style.display = '';
+    if (navBadge) navBadge.style.display = 'inline-block';
+    if ('Notification' in window && Notification.permission === 'granted' && notifyMsgs.length) {
+      const key = today + '_' + notifyMsgs.join('_');
+      if (!_twReminderNotified[key]) {
+        _twReminderNotified[key] = true;
+        try { new Notification('AZ 취합 마감 알림', {body: notifyMsgs.join('·') + ' 아직 미제출입니다. 오늘 마감이에요!'}); } catch(e) {}
+      }
+    }
+  } catch(e) { hide(); }
+}
+
+function _twReminderCard(icon, label, dlLabel, over) {
+  const bg = over ? '#fef2f2' : '#eff6ff';
+  const bd = over ? 'var(--danger)' : 'var(--primary)';
+  const badge = over
+    ? '<span style="flex-shrink:0;background:var(--danger);color:#fff;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">마감 지남</span>'
+    : '<span style="flex-shrink:0;background:var(--primary);color:#fff;border-radius:6px;padding:2px 7px;font-size:11px;font-weight:700;">오늘 마감</span>';
+  return `<div onclick="goSection('teamwork')" style="cursor:pointer;background:${bg};border:1.5px solid ${bd};border-radius:12px;padding:12px 14px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;gap:10px;">
+    <div><div style="font-size:14px;font-weight:800;color:var(--gray-800);">${icon} ${label} 마감일이에요</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-top:2px;">마감 ${dlLabel} · 아직 제출하지 않았어요</div></div>
+    ${badge}
+  </div>`;
+}
+
+async function enableTwPush() {
+  if (!('Notification' in window)) { toast('이 브라우저는 알림을 지원하지 않습니다'); return; }
+  try {
+    const p = await Notification.requestPermission();
+    if (p === 'granted') { toast('알림이 켜졌습니다', 'success'); _twCheckReminders(); }
+    else toast('알림 권한이 거부되었습니다');
+  } catch(e) { toast('알림 설정 실패'); }
 }
 
 function _chipStatus(done, late, pendingLabel) {
@@ -5809,7 +6005,7 @@ async function selectAttend(status) {
     isLate = false; // OFF는 지각 없음
   } else {
     const exempt = status === 'direct';
-    const hour8 = new Date(twDate); hour8.setHours(8,0,0,0);
+    const hour8 = _twDeadline(CU.uid, 'attendWeekday', twDate);
     if (!exempt && tw_isWeekday(twDate)) {
       if (status === 'depart' || status === 'arrive') {
         // 기상(wake) 시각이 있으면 그 시각 기준, 없으면 현재 시각 기준
@@ -5926,11 +6122,11 @@ async function adminEditTime(section, field) {
   // 지각 재판정
   let newLate = false;
   if (section === 'activity') {
-    const dl12 = new Date(twDate); dl12.setHours(12, 0, 0, 0);
+    const dl12 = _twDeadline(CU.uid, 'activity', twDate);
     newLate = newDate > dl12;
   } else if (section === 'review' || section === 'ta') {
-    const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6, 0, 0, 0);
-    newLate = newDate > dlNext6;
+    const dlMid = _twDeadline(CU.uid, section, twDate); // 팀 기준 마감(기본: 당일 자정=익일 00:00)
+    newLate = newDate > dlMid;
   }
 
   try {
@@ -6019,7 +6215,7 @@ async function _admSyncLate(uid, date, type, isLate) {
     if (isLate) {
       if (snap.empty) {
         const fee = type === 'attendance' ? 20000 : 10000;
-        await col.add({date, type, fee, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+        await col.doc(`${date}_${type}`).set({date, type, fee, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
       }
     } else if (!snap.empty) {
       const batch = db.batch();
@@ -6072,7 +6268,7 @@ async function admSaveTimeEdit() {
       let newLate = false;
       const attUpd = {};
       if (photoNew) {
-        const dl10 = new Date(twDate); dl10.setHours(10,0,0,0);
+        const dl10 = _twDeadline(uid, 'attendSat', twDate);
         newLate = photoNew > dl10;
         attUpd.photoAt = TS.fromDate(photoNew);
       }
@@ -6083,7 +6279,7 @@ async function admSaveTimeEdit() {
         if (!photoNew) {
           if (a.status==='direct' || a.status==='off') { newLate = false; }
           else if (tw_isWeekday(twDate)) {
-            const dl8 = new Date(twDate); dl8.setHours(8,0,0,0);
+            const dl8 = _twDeadline(uid, 'attendWeekday', twDate);
             const ref = _admTsToDate(allTimes.wake || allTimes.depart || allTimes.arrive);
             newLate = ref ? ref > dl8 : false;
           }
@@ -6100,26 +6296,25 @@ async function admSaveTimeEdit() {
       if (e.group === 'attend') continue;
       const ts = TS.fromDate(e.newDate);
       if (e.group === 'activity') {
-        const dl = new Date(twDate); dl.setHours(12,0,0,0);
+        const dl = _twDeadline(uid, 'activity', twDate);
         const late = e.newDate > dl;
         await repRef.set({activity:{firstSavedAt:ts, late}}, {merge:true});
         twReports[uid].activity = {...(r.activity||{}), firstSavedAt:e.newDate, late};
         await _admSyncLate(uid, twDate, 'activity', late);
       } else if (e.group === 'review') {
-        const dl = new Date(twDate); dl.setDate(dl.getDate()+1); dl.setHours(6,0,0,0);
+        const dl = _twDeadline(uid, 'review', twDate); // 팀 기준(기본: 당일 자정=익일 00:00)
         const late = e.newDate > dl;
         await repRef.set({review:{firstSavedAt:ts, late}}, {merge:true});
         twReports[uid].review = {...(r.review||{}), firstSavedAt:e.newDate, late};
         await _admSyncLate(uid, twDate, 'review', late);
       } else if (e.group === 'ta') {
-        const taType = (r.ta||{}).taType || ((r.ta||{}).checked ? 'high' : null);
-        const dl = new Date(twDate); dl.setDate(dl.getDate()+1); dl.setHours(taType==='high'?6:7, 0, 0, 0);
+        const dl = _twDeadline(uid, 'ta', twDate); // 팀 기준(기본: 당일 자정=익일 00:00)
         const late = e.newDate > dl;
         await repRef.set({ta:{checkedAt:ts, late}}, {merge:true});
         twReports[uid].ta = {...(r.ta||{}), checkedAt:e.newDate, late};
         await _admSyncLate(uid, twDate, 'ta', late);
       } else if (e.group === 'goal') {
-        const dl = _getWeekDeadline(twDate, 1, 12, 0);
+        const dl = _twDeadline(uid, 'goal', twDate);
         const late = e.newDate > dl;
         await goalRef.set({goalAt:ts, late}, {merge:true});
         if (!twGoals[uid]) twGoals[uid] = {};
@@ -6127,7 +6322,7 @@ async function admSaveTimeEdit() {
         twGoals[uid][weekNum].goalAt = e.newDate; twGoals[uid][weekNum].late = late;
         await _admSyncLate(uid, twDate, 'goal', late);
       } else if (e.group === 'ach') {
-        const dl = _getWeekDeadline(twDate, 0, 20, 0);
+        const dl = _twDeadline(uid, 'achievement', twDate);
         const late = e.newDate > dl;
         await goalRef.set({achAt:ts, achLate:late, achDone:true}, {merge:true});
         if (!twGoals[uid]) twGoals[uid] = {};
@@ -6147,8 +6342,8 @@ async function _tw_goalSection(canEdit, isLeader) {
   const weekNum = _getWeekNum(twDate);
   const myGoal = (twGoals[CU.uid] || {})[weekNum] || {};
 
-  const monDL = _getWeekDeadline(twDate, 1, 12, 1);  // 목표: 월요일 12:00
-  const sunDL = _getWeekDeadline(twDate, 0, 20, 0);  // 달성: 일요일 20:00
+  const monDL = _twDeadline(CU.uid, 'goal', twDate, 1);  // 목표: 팀 기준(기본 월요일 12:00, 12:01부터 지각)
+  const sunDL = _twDeadline(CU.uid, 'achievement', twDate);  // 달성: 팀 기준(기본 일요일 20:00)
   const goalDLLabel = now <= monDL ? '✅ 마감 전' : '⚠️ 마감 초과';
   const achDLLabel  = now <= sunDL ? '✅ 마감 전' : '⚠️ 마감 초과';
 
@@ -6354,6 +6549,63 @@ function _getWeekDeadline(dateStr, targetDay, hour, min) {
   return dl;
 }
 
+/* ══════════ 팀별 마감시간(기준시간) 설정 ══════════
+   각 팀 문서(shared_teams)의 dl 맵에 항목별 기준시간을 저장. 없으면 아래 기본값 사용.
+   기본값은 현행 규칙과 100% 동일 → 팀이 별도 설정하지 않으면 기존 동작 그대로.
+   daily 항목: {off:일수, h:시, m:분} (off=0 당일, off=1 익일)  ·  weekly 항목: {day:요일(0=일,1=월), h, m} */
+const TW_DL_DEFAULTS = {
+  attendWeekday: {off:0, h:8,  m:0},   // 평일 출근 마감
+  attendSat:     {off:0, h:10, m:0},   // 토요일 출근사진 마감
+  activity:      {off:0, h:12, m:0},   // 활동보고 마감
+  review:        {off:1, h:0,  m:0},   // 하루후기 마감(당일 자정=익일 00:00)
+  ta:            {off:1, h:0,  m:0},   // TA인증 마감(당일 자정=익일 00:00)
+  goal:          {day:1, h:12, m:0},   // 목표취합 마감(월요일 12:00)
+  achievement:   {day:0, h:20, m:0},   // 달성취합 마감(일요일 20:00)
+};
+const TW_DL_ITEMS = ['attendWeekday','attendSat','activity','review','ta','goal','achievement'];
+const TW_DL_WEEKLY = {goal:true, achievement:true};
+const TW_DL_LABELS = {attendWeekday:'평일 출근', attendSat:'토요일 출근사진', activity:'활동보고', review:'하루후기', ta:'TA인증', goal:'목표취합', achievement:'달성취합'};
+
+// uid가 속한 팀 문서 반환(팀장/팀원 모두)
+function _teamOf(uid) {
+  return Object.values(allTeams).find(t => t.leaderId===uid || (t.memberIds||[]).includes(uid)) || null;
+}
+// uid 팀의 항목별 마감 설정(기본값 병합). team 객체를 직접 넘길 수도 있음.
+function _teamDLCfg(uidOrTeam) {
+  const t = (uidOrTeam && typeof uidOrTeam === 'object') ? uidOrTeam : _teamOf(uidOrTeam);
+  const dl = (t && t.dl) || {};
+  const out = {};
+  for (const k of TW_DL_ITEMS) out[k] = Object.assign({}, TW_DL_DEFAULTS[k], dl[k] || {});
+  return out;
+}
+// uid 팀 기준 특정 항목 마감시각 Date 반환. grace(분)는 자동지각 유예(예: 활동 12:01) 반영용.
+function _twDeadline(uid, item, dateStr, grace) {
+  const cfg = _teamDLCfg(uid)[item];
+  if (!cfg) return null;
+  let d;
+  if (TW_DL_WEEKLY[item]) {
+    d = _getWeekDeadline(dateStr, cfg.day, cfg.h, cfg.m);
+  } else {
+    d = new Date(dateStr);
+    if (cfg.off) d.setDate(d.getDate() + cfg.off);
+    d.setHours(cfg.h, cfg.m, 0, 0);
+  }
+  if (grace) d.setMinutes(d.getMinutes() + grace);
+  return d;
+}
+// 안내문구용 라벨 문자열. 예: '08:00' · '익일 00:00(당일 자정)' · '월 12:00' · '일 20:00'
+function _twDeadlineLabel(uid, item) {
+  const cfg = _teamDLCfg(uid)[item];
+  const hm = String(cfg.h).padStart(2,'0') + ':' + String(cfg.m).padStart(2,'0');
+  if (TW_DL_WEEKLY[item]) {
+    const dayName = ['일','월','화','수','목','금','토'][cfg.day] || '';
+    return dayName + ' ' + hm;
+  }
+  if (cfg.off === 1 && cfg.h === 0 && cfg.m === 0) return '당일 자정(24:00)';
+  if (cfg.off === 1) return '익일 ' + hm;
+  return hm;
+}
+
 async function openGoalModal() {
   const weekNum = _getWeekNum(twDate);
   try {
@@ -6368,16 +6620,18 @@ async function openGoalModal() {
     $('goal-ach-cis').value       = g.achCis     != null ? g.achCis     : '';
     $('goal-ach-action').value    = g.achAction  != null ? g.achAction  : '';
   } catch(e) {}
-  const monDL = _getWeekDeadline(twDate, 1, 12, 1);
-  const sunDL = _getWeekDeadline(twDate, 0, 20, 0);
+  const monDL = _twDeadline(CU.uid, 'goal', twDate, 1);
+  const sunDL = _twDeadline(CU.uid, 'achievement', twDate);
   const now = new Date();
   const _wr = _getWeekRange(twDate);
   const _goalStatus = now > monDL ? '⚠️ 마감 초과' : '✅ 마감 전';
   const _achStatus  = now > sunDL  ? '⚠️ 마감 초과' : '✅ 마감 전';
+  const _goalDayName = ['일','월','화','수','목','금','토'][_teamDLCfg(CU.uid).goal.day] || '월';
+  const _achDayName  = ['일','월','화','수','목','금','토'][_teamDLCfg(CU.uid).achievement.day] || '일';
   $('goals-deadline-info').innerHTML =
     `<span style="font-weight:600;">${_wr}</span><br>` +
-    `📋 목표: 월요일 12:00 마감 · ${_goalStatus}<br>` +
-    `📊 달성: 일요일 20:00 마감 · ${_achStatus}<br>` +
+    `📋 목표: ${_goalDayName}요일 ${_twDeadlineLabel(CU.uid,'goal').split(' ')[1]} 마감 · ${_goalStatus}<br>` +
+    `📊 달성: ${_achDayName}요일 ${_twDeadlineLabel(CU.uid,'achievement').split(' ')[1]} 마감 · ${_achStatus}<br>` +
     `<span style="color:#dc2626;font-size:11px;">※ 늦으면 목표취합 지각 처리</span>`;
   openModal('m-goals');
 }
@@ -6393,8 +6647,8 @@ async function saveGoal() {
   const achAction  = Number($('goal-ach-action').value)    || 0;
   const weekNum = _getWeekNum(twDate);
   const now = new Date();
-  const monDL = _getWeekDeadline(twDate, 1, 12, 1); // 목표 마감: 월요일 12:00
-  const sunDL = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
+  const monDL = _twDeadline(CU.uid, 'goal', twDate, 1); // 목표 마감: 팀 기준(기본 월요일 12:00)
+  const sunDL = _twDeadline(CU.uid, 'achievement', twDate); // 달성 마감: 팀 기준(기본 일요일 20:00)
   const existingGoal = (twGoals[CU.uid]||{})[weekNum] || {};
   // 목표 필드 입력 여부
   const hasGoalInput = goalCount || goalCanp || goalCis || goalAction;
@@ -6438,7 +6692,7 @@ async function saveAchNone() {
   if (!confirm('이번 주 달성을 "없음(0)"으로 제출합니다.\n제출 후에도 수정 가능합니다. 진행할까요?')) return;
   const weekNum = _getWeekNum(twDate);
   const now = new Date();
-  const sunDL = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
+  const sunDL = _twDeadline(CU.uid, 'achievement', twDate); // 달성 마감: 팀 기준(기본 일요일 20:00)
   const existingGoal = (twGoals[CU.uid]||{})[weekNum] || {};
   const prevAchLateOk = existingGoal.achLate === false ||
                         (existingGoal.achLate === undefined && existingGoal.late === false);
@@ -6547,7 +6801,7 @@ function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📝 활동보고</div>${chip}</div>
     ${actAutoNote}
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">당일 12:00 마감</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">당일 ${_twDeadlineLabel(CU.uid,'activity')} 마감</div>
     ${hasDone ? `<div style="background:var(--gray-50);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;margin-bottom:10px;">${esc(a.content)}</div>
     <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">📌 등록: ${_fmtSavedAt(a.firstSavedAt)}${adminTimeBtn}</div>` : ''}
     <button class="btn-outline" style="width:100%;padding:11px;" onclick="openActivityModal()">
@@ -6560,6 +6814,7 @@ function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
 function openActivityModal() {
   const myR = twReports[CU.uid] || {};
   $('activity-content').value = (myR.activity||{}).content || '';
+  const _adl = $('m-activity-dl'); if (_adl) _adl.textContent = '당일 ' + _twDeadlineLabel(CU.uid,'activity') + ' 까지 작성 / 늦으면 지각 체크';
   openModal('m-activity');
 }
 
@@ -6567,7 +6822,7 @@ async function saveActivity() {
   const content = $('activity-content').value.trim();
   if (!content) { toast('내용을 입력하세요','error'); return; }
   const now = new Date();
-  const deadline = new Date(twDate); deadline.setHours(12,0,0,0); // 12:00 마감
+  const deadline = _twDeadline(CU.uid, 'activity', twDate); // 팀 기준(기본 12:00) 마감
   // 이미 제출된 기록이 있고 late===false이면 수정해도 지각 유지 안 함
   const existingAct = (twReports[CU.uid]||{}).activity || {};
   const isLate = (existingAct.content && existingAct.late === false) ? false : (now > deadline);
@@ -6604,7 +6859,7 @@ function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">🌙 하루후기</div>${chip}</div>
     ${revAutoNote}
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">다음날 06:00 마감 (늦으면 전날 지각)</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">${_twDeadlineLabel(CU.uid,'review')} 마감 (늦으면 지각)</div>
     ${hasDone ? `<div style="background:var(--gray-50);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;margin-bottom:10px;">${esc(r.content)}</div>
     <div style="font-size:11px;color:var(--gray-400);margin-bottom:8px;">📌 등록: ${_fmtSavedAt(r.firstSavedAt)}${isAdmin && hasDone ? '<button class="adm-tedit" onclick="adminEditTime(\'review\',\'firstSavedAt\')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>' : ''}</div>` : ''}
     <button class="btn-outline" style="width:100%;padding:11px;" onclick="openReviewModal()">
@@ -6617,6 +6872,7 @@ function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
 function openReviewModal() {
   const myR = twReports[CU.uid] || {};
   $('review-content').value = (myR.review||{}).content || '';
+  const _rdl = $('m-review-dl'); if (_rdl) _rdl.textContent = _twDeadlineLabel(CU.uid,'review') + '까지 작성 / 늦으면 지각 체크';
   openModal('m-review');
 }
 
@@ -6624,8 +6880,8 @@ async function saveReview() {
   const content = $('review-content').value.trim();
   if (!content) { toast('내용을 입력하세요','error'); return; }
   const now = new Date();
-  // 마감: 다음날 06:00 (twDate 기준으로 그 다음날 06:00)
-  const targetDate = new Date(twDate); targetDate.setDate(targetDate.getDate()+1); targetDate.setHours(6,0,0,0); // 06:00 마감
+  // 마감: 팀 기준(기본 당일 자정=익일 00:00)
+  const targetDate = _twDeadline(CU.uid, 'review', twDate);
   // 이미 제출된 기록이 있고 late===false이면 수정해도 지각 유지 안 함
   const existingRev = (twReports[CU.uid]||{}).review || {};
   const isLate = (existingRev.content && existingRev.late === false) ? false : (now > targetDate);
@@ -6684,7 +6940,7 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📸 TA인증</div>${chip}</div>
     ${taAutoNote}
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">사진을 먼저 등록한 뒤 10통 이상/이하를 선택하세요 · 미등록·10통 이하/미체크 시 다음날 07:00 기준 지각</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">사진을 먼저 등록한 뒤 10통 이상/이하를 선택하세요 · 미등록·미체크 시 ${_twDeadlineLabel(CU.uid,'ta')} 기준 지각</div>
     ${hasDone
       ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center;">
            <div style="font-size:18px;margin-bottom:4px;">✅</div>
@@ -6732,13 +6988,7 @@ async function checkTa(taType) {
   const _isSat = new Date(twDate).getDay() === 6;
   let isLate = false;
   if (!_isSat) {
-    const deadline = new Date(twDate);
-    deadline.setDate(deadline.getDate() + 1);
-    if (taType === 'high') {
-      deadline.setHours(6, 1, 0, 0); // 10통 이상: 다음날 06:01 마감
-    } else {
-      deadline.setHours(7, 0, 0, 0); // 10통 이하: 다음날 07:00 마감
-    }
+    const deadline = _twDeadline(CU.uid, 'ta', twDate); // 팀 기준(기본 당일 자정=익일 00:00)
     isLate = now > deadline;
   }
   try {
@@ -6862,9 +7112,9 @@ async function uploadSatAttendPhoto(input) {
   }
   if (!newUrls.length) { _satAttUploading = false; return; }
   const photoUrls = [...prevUrls, ...newUrls];
-  // 지각 판정: 토요일 10:00 기준 (최초 등록만 판정, 재등록은 기존 지각상태 유지)
+  // 지각 판정: 토요일 출근사진 팀 기준(기본 10:00) — 최초 등록만 판정, 재등록은 기존 지각상태 유지
   const now = new Date();
-  const dl10 = new Date(twDate); dl10.setHours(10,0,0,0);
+  const dl10 = _twDeadline(CU.uid, 'attendSat', twDate);
   const isLate = already ? !!prev.late : (now > dl10);
   const FS = firebase.firestore.FieldValue.serverTimestamp();
   try {
@@ -7036,12 +7286,13 @@ async function recordLate(uid, date, type) {
     // 매월 27일 18:00 ~ 28일 00:00: 기간 마감 freeze — 새 지각 기록 추가 안 함
     const nowCheck = new Date();
     if (nowCheck.getDate() === 27 && nowCheck.getHours() >= 18) return;
-    // 중복 방지: 해당 날짜/타입 이미 있으면 스킵
-    const existing = await db.collection('users').doc(uid).collection('late_records')
-      .where('date','==',date).where('type','==',type).limit(1).get();
+    // 중복 방지: 해당 날짜/타입 이미 있으면 스킵 (기존 랜덤ID 문서까지 탐지)
+    const col = db.collection('users').doc(uid).collection('late_records');
+    const existing = await col.where('date','==',date).where('type','==',type).limit(1).get();
     if (!existing.empty) return;
     const fee = type === 'attendance' ? 20000 : 10000;
-    await db.collection('users').doc(uid).collection('late_records').add({
+    // 고정 문서ID(date_type)로 저장 → 동시 호출·연타 시에도 같은 문서 1건으로 수렴(멱등)
+    await col.doc(`${date}_${type}`).set({
       date, type, fee,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
@@ -7063,13 +7314,13 @@ async function _autoRecordLates() {
   let myGoal = (twGoals[CU.uid]||{})[weekNum] || {};
   const srv = () => firebase.firestore.FieldValue.serverTimestamp();
 
-  const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
-  const dl10    = new Date(twDate); dl10.setHours(10,0,0,0); // 토요일 출근사진 마감
-  const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
-  const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
-  const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
-  const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
-  const sunDL   = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
+  const dl8     = _twDeadline(CU.uid, 'attendWeekday', twDate);      // 평일 출근 마감(기본 08:00)
+  const dl10    = _twDeadline(CU.uid, 'attendSat', twDate);          // 토요일 출근사진 마감(기본 10:00)
+  const dl12    = _twDeadline(CU.uid, 'activity', twDate, 1);        // 활동보고: 마감+1분부터 자동지각(기본 12:01)
+  const dlNext6 = _twDeadline(CU.uid, 'review', twDate);             // 하루후기 마감(기본 당일 자정=익일 00:00)
+  const dlNext7 = _twDeadline(CU.uid, 'ta', twDate);                 // TA인증 마감(기본 당일 자정=익일 00:00)
+  const monDL   = _twDeadline(CU.uid, 'goal', twDate, 1);            // 목표취합 마감+1분(기본 월 12:01)
+  const sunDL   = _twDeadline(CU.uid, 'achievement', twDate);        // 달성취합 마감(기본 일 20:00)
 
   // 자동지각 전 서버에서 최신 데이터 재확인 (Firestore 캐시 우회)
   try {
@@ -7177,7 +7428,7 @@ async function _autoRecordLates() {
     }
   }
 
-  // 4. 하루후기 (다음날 06:00 마감)
+  // 4. 하루후기 (당일 자정 = 익일 00:00 마감)
   if (!_isOff && now > dlNext6) {
     const rv = myR.review || {};
     if (!rv.content && !rv.late && !rv.autoLatedAt) {
@@ -7195,7 +7446,7 @@ async function _autoRecordLates() {
     }
   }
 
-  // 5. TA인증 (10통 이상: 다음날 06:01 마감 / 10통 이하·미체크: 다음날 07:00 마감, 토요일 제외)
+  // 5. TA인증 (당일 자정 = 익일 00:00 마감, 토요일 제외)
   const _twDaySelf = new Date(twDate).getDay(); // 0=일,6=토
   if (!_isOff && _twDaySelf !== 6) {
     const ta = myR.ta || {};
@@ -7216,12 +7467,12 @@ async function _autoRecordLates() {
     }
   }
 
-  // 6. 어제자 하루후기·TA인증 재확인 (다음날 06:01/07:00 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
+  // 6. 어제자 하루후기·TA인증 재확인 (당일 자정 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
   try {
     const _prevD = new Date(twDate); _prevD.setDate(_prevD.getDate()-1);
     const prevDate = _prevD.getFullYear()+'-'+String(_prevD.getMonth()+1).padStart(2,'0')+'-'+String(_prevD.getDate()).padStart(2,'0');
-    const prevDL6 = new Date(twDate); prevDL6.setHours(6,1,0,0);
-    const prevDL7 = new Date(twDate); prevDL7.setHours(7,0,0,0);
+    const prevDL6 = _twDeadline(CU.uid, 'review', prevDate); // 어제자 하루후기 마감(팀 기준, 기본 당일 자정)
+    const prevDL7 = _twDeadline(CU.uid, 'ta', prevDate);     // 어제자 TA인증 마감(팀 기준, 기본 당일 자정)
     if (now > prevDL6 || now > prevDL7) {
       const _prevSnap = await db.collection('users').doc(CU.uid).collection('tw_reports').doc(prevDate).get({source:'server'});
       if (_prevSnap.exists) {
@@ -7272,17 +7523,9 @@ async function _autoRecordLatesForTeam() {
   const weekNum = _getWeekNum(twDate);
   const srv = () => firebase.firestore.FieldValue.serverTimestamp();
 
-  const dl8     = new Date(twDate); dl8.setHours(8,0,0,0);
-  const dl10    = new Date(twDate); dl10.setHours(10,0,0,0); // 토요일 출근사진 마감
-  const dl12    = new Date(twDate); dl12.setHours(12,1,0,0); // 12:01부터 자동지각처리
-  const dlNext6 = new Date(twDate); dlNext6.setDate(dlNext6.getDate()+1); dlNext6.setHours(6,1,0,0); // 06:01부터 자동지각처리
-  const dlNext7 = new Date(twDate); dlNext7.setDate(dlNext7.getDate()+1); dlNext7.setHours(7,0,0,0); // 07:00부터 자동지각처리 (TA 10통 이하/미체크)
-  const monDL   = _getWeekDeadline(twDate, 1, 12, 1);
-  const sunDL   = _getWeekDeadline(twDate, 0, 20, 0); // 달성 마감: 일요일 20:00
-
+  // ※ 마감시각은 팀마다 다를 수 있어(관리자는 여러 팀 대상) 각 팀원 처리 시 루프 안에서 개별 계산
   const _isAutoOff = tw_isAutoOffDay(twDate); // 명절 당일(설날·추석) 여부
   const _attReq    = !tw_isSunday(twDate) && !tw_isHoliday(twDate); // 출근보고 필요 여부
-  const _attDL     = tw_isSaturday(twDate) ? dl10 : dl8; // 토요일 10:00 / 평일 08:00
 
   // 팀장 uid 집합 (팀장은 지각처리 제외)
   const leaderUids = new Set(Object.values(allTeams).map(t => t.leaderId).filter(Boolean));
@@ -7328,6 +7571,16 @@ async function _autoRecordLatesForTeam() {
       if (!twGoals[uid]) twGoals[uid] = {};
       twGoals[uid][weekNum] = goal;
     } catch(e) { goal = (twGoals[uid] || {})[weekNum] || {}; }
+
+    // ── 이 팀원의 팀 기준 마감시각 계산 (관리자는 팀마다 기준이 다를 수 있음) ──
+    const dl8     = _twDeadline(uid, 'attendWeekday', twDate);   // 평일 출근(기본 08:00)
+    const dl10    = _twDeadline(uid, 'attendSat', twDate);       // 토요일 출근사진(기본 10:00)
+    const dl12    = _twDeadline(uid, 'activity', twDate, 1);     // 활동보고 마감+1분(기본 12:01)
+    const dlNext6 = _twDeadline(uid, 'review', twDate);          // 하루후기(기본 당일 자정)
+    const dlNext7 = _twDeadline(uid, 'ta', twDate);             // TA인증(기본 당일 자정)
+    const monDL   = _twDeadline(uid, 'goal', twDate, 1);        // 목표취합 마감+1분(기본 월 12:01)
+    const sunDL   = _twDeadline(uid, 'achievement', twDate);    // 달성취합(기본 일 20:00)
+    const _attDL  = tw_isSaturday(twDate) ? dl10 : dl8;
 
     // 1. 출근보고 (평일 08:00 / 토요일 10:00 마감, 일요일·공휴일 제외)
     if (_attReq && now > _attDL) {
@@ -7393,7 +7646,7 @@ async function _autoRecordLatesForTeam() {
       }
     }
 
-    // 4. 하루후기 (다음날 06:01 마감)
+    // 4. 하루후기 (당일 자정 = 익일 00:00 마감)
     if (!_uidIsOff && now > dlNext6) {
       const rv = r.review || {};
       if (!rv.content && !rv.late && !rv.autoLatedAt) {
@@ -7410,7 +7663,7 @@ async function _autoRecordLatesForTeam() {
       }
     }
 
-    // 5. TA인증 (10통 이상: 06:01 마감 / 10통 이하·미체크: 07:00 마감, 토요일 제외)
+    // 5. TA인증 (당일 자정 = 익일 00:00 마감, 토요일 제외)
     const _twDayTeam = new Date(twDate).getDay(); // 0=일,6=토
     if (!_uidIsOff && _twDayTeam !== 6) {
       const ta = r.ta || {};
@@ -7430,12 +7683,12 @@ async function _autoRecordLatesForTeam() {
       }
     }
 
-    // 6. 어제자 하루후기·TA인증 재확인 (다음날 06:01/07:00 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
+    // 6. 어제자 하루후기·TA인증 재확인 (당일 자정 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
     try {
       const _prevD = new Date(twDate); _prevD.setDate(_prevD.getDate()-1);
       const prevDate = _prevD.getFullYear()+'-'+String(_prevD.getMonth()+1).padStart(2,'0')+'-'+String(_prevD.getDate()).padStart(2,'0');
-      const prevDL6 = new Date(twDate); prevDL6.setHours(6,1,0,0);
-      const prevDL7 = new Date(twDate); prevDL7.setHours(7,0,0,0);
+      const prevDL6 = _twDeadline(uid, 'review', prevDate); // 어제자 하루후기 마감(팀 기준, 기본 당일 자정)
+      const prevDL7 = _twDeadline(uid, 'ta', prevDate);     // 어제자 TA인증 마감(팀 기준, 기본 당일 자정)
       if (now > prevDL6 || now > prevDL7) {
         const _prevSnap = await db.collection('users').doc(uid).collection('tw_reports').doc(prevDate).get({source:'server'});
         if (_prevSnap.exists) {
@@ -7474,6 +7727,44 @@ async function _autoRecordLatesForTeam() {
   }
 }
 
+/* ── 목표/달성 오탐 지각 자동 재판정 (공용 self-heal):
+   deduped된 late_records 배열 중 goal/achievement 기록을 실제 제출시각(goalAt/achAt)과 대조.
+   마감 전 제출인데 지각으로 남아있는 벌금기록을 삭제하고 stale 문서ID Set을 반환.
+   주차는 기록 날짜(r.date)로 산정하므로 전 정산기간에 걸쳐 적용됨. ── */
+async function _reconcileGoalAchStale(uid, records) {
+  const stale = new Set();
+  const targets = (records || []).filter(r => r.type === 'goal' || r.type === 'achievement');
+  if (!targets.length) return stale;
+  const _toTs = (ts) => { if (!ts) return null; try { return ts.toDate ? ts.toDate() : new Date(ts.seconds * 1000); } catch (e) { return null; } };
+  const cache = {}; // weekNum -> tw_goals data (or null)
+  for (const r of targets) {
+    try {
+      const wn = String(_getWeekNum(r.date));
+      if (!(wn in cache)) {
+        const gs = await db.collection('users').doc(uid).collection('tw_goals').doc(wn).get();
+        cache[wn] = gs.exists ? gs.data() : null;
+      }
+      const g = cache[wn];
+      if (!g) continue;
+      if (r.type === 'goal') {
+        const monDL = _twDeadline(uid, 'goal', r.date, 1); // 팀 기준 목표 마감(기본 월 12:00, 12:01부터 지각)
+        const gAt = _toTs(g.goalAt);
+        if (gAt && gAt <= monDL) stale.add(r.id);
+      } else {
+        const sunDL = _twDeadline(uid, 'achievement', r.date); // 팀 기준 달성 마감(기본 일 20:00)
+        const aAt = _toTs(g.achAt);
+        if (aAt && aAt <= sunDL) stale.add(r.id);
+      }
+    } catch (e) {}
+  }
+  if (stale.size) {
+    stale.forEach(id => {
+      db.collection('users').doc(uid).collection('late_records').doc(id).delete().catch(() => {});
+    });
+  }
+  return stale;
+}
+
 /* ── 목표취합 오탐 지각 복구 (관리자 전용): 실제로는 마감 전에 제출했는데
    twGoals 사전 로딩 실패 등으로 잘못 지각처리된 기록을 실제 제출시각(goalAt/achAt) 기준으로 재검사·복구 ── */
 async function repairGoalLateFlags() {
@@ -7483,13 +7774,14 @@ async function repairGoalLateFlags() {
   if (!confirm('이번 주 목표취합 지각 기록을 실제 제출시각 기준으로 재검사하고,\n잘못 지각처리된 경우 복구할까요?')) return;
 
   const weekNum = _getWeekNum(twDate);
-  const monDL = _getWeekDeadline(twDate, 1, 12, 1);
-  const sunDL = _getWeekDeadline(twDate, 0, 20, 0);
   const toTs = (ts) => { if(!ts) return null; try { return ts.toDate ? ts.toDate() : new Date(ts.seconds*1000); } catch(e){ return null; } };
 
   let checked = 0, fixed = 0, errCount = 0;
   for (const u of allUsers) {
     try {
+      // 마감시각은 팀 기준 (팀마다 다를 수 있음)
+      const monDL = _twDeadline(u.uid, 'goal', twDate, 1);
+      const sunDL = _twDeadline(u.uid, 'achievement', twDate);
       const ref = db.collection('users').doc(u.uid).collection('tw_goals').doc(String(weekNum));
       const snap = await ref.get({source:'server'});
       if (!snap.exists) continue;
@@ -7499,7 +7791,7 @@ async function repairGoalLateFlags() {
       const achAtDate  = toTs(g.achAt);
       const patch = {};
 
-      // 목표: 실제 제출시각이 월요일 12:00 이전인데 지각으로 찍힌 경우만 복구
+      // 목표: 실제 제출시각이 마감 이전인데 지각으로 찍힌 경우만 복구
       if (goalAtDate && goalAtDate <= monDL && (g.goalLate === true || (g.late === true && g.autoLatedAt))) {
         patch.goalLate = false;
         patch.autoLatedAt = firebase.firestore.FieldValue.delete();
@@ -7521,7 +7813,21 @@ async function repairGoalLateFlags() {
       }
     } catch(e) { errCount++; }
   }
-  toast(`검사 ${checked}건 · 복구 ${fixed}건${errCount ? ` · 오류 ${errCount}건` : ''}`, fixed ? 'success' : 'info');
+
+  // late_records 벌금기록도 실제 제출시각 기준으로 전 정산기간에 걸쳐 자동 정리
+  let feeCleaned = 0;
+  const {start, end} = _getLateFeePeriod(twDate);
+  for (const u of allUsers) {
+    try {
+      const snap = await db.collection('users').doc(u.uid).collection('late_records')
+        .where('date','>=',start).where('date','<=',end).get();
+      const recs = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      const staleSet = await _reconcileGoalAchStale(u.uid, recs);
+      feeCleaned += staleSet.size;
+    } catch(e) { errCount++; }
+  }
+
+  toast(`검사 ${checked}건 · 복구 ${fixed}건 · 벌금정리 ${feeCleaned}건${errCount ? ` · 오류 ${errCount}건` : ''}`, (fixed || feeCleaned) ? 'success' : 'info');
   renderTeamwork(true);
 }
 
@@ -7628,7 +7934,29 @@ async function _tw_lateSection(canEdit) {
       const snap = await db.collection('users').doc(uid).collection('late_records')
         .where('date','>=',start).where('date','<=',end)
         .orderBy('date','asc').get();
-      const records = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      const rawRecords = snap.docs.map(d => ({id:d.id, ...d.data()}));
+      // (날짜+종류) 기준 중복 방어 — 과거 이중 기록이 있어도 1건만 집계, 나머지는 자동 정리
+      const _seen = new Set();
+      const records = [];
+      const _dupRefs = [];
+      rawRecords.forEach(r => {
+        const k = r.date + '_' + r.type;
+        if (_seen.has(k)) { _dupRefs.push(r.id); return; }
+        _seen.add(k); records.push(r);
+      });
+      if (_dupRefs.length) {
+        _dupRefs.forEach(id => {
+          db.collection('users').doc(uid).collection('late_records').doc(id).delete().catch(()=>{});
+        });
+      }
+
+      // 목표/달성 오탐 지각 자동 재판정 — 실제 제출시각(goalAt/achAt)이 마감 전이면 잘못된 벌금기록 삭제 + 집계 제외
+      const _staleGA = await _reconcileGoalAchStale(uid, records);
+      if (_staleGA.size) {
+        for (let i = records.length - 1; i >= 0; i--) {
+          if (_staleGA.has(records[i].id)) records.splice(i, 1);
+        }
+      }
 
       const attendLates = records.filter(r => r.type==='attendance');
       const otherLates  = records.filter(r => r.type!=='attendance');
@@ -7747,7 +8075,8 @@ async function addLateRecord() {
   if (!date) { toast('날짜를 선택하세요', 'error'); return; }
   const fee = type === 'attendance' ? 20000 : 10000;
   try {
-    await db.collection('users').doc(uid).collection('late_records').add({
+    // 고정 문서ID로 저장 → 같은 날짜·종류 중복 추가 방지
+    await db.collection('users').doc(uid).collection('late_records').doc(`${date}_${type}`).set({
       date, type, fee, createdAt: firebase.firestore.FieldValue.serverTimestamp()
     });
     await _renderLateEditRecords(uid);
