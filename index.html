@@ -5555,7 +5555,7 @@ function _tw_deadlineSummaryHtml() {
   const dayFull = ['일','월','화','수','목','금','토'];
   const dailyTxt = o => (o.off===1 && o.h===0 && o.m===0) ? '당일 자정(24:00)' : (o.off===1 ? '익일 '+hm(o) : '당일 '+hm(o));
   const items = [
-    {icon:'🏃', label:'출근', time:'평일 '+hm(c.attendWeekday)+' · 토 '+hm(c.attendSat)},
+    {icon:'🏃', label:'출근', time:'평일 '+hm(c.attendWeekday)+' · 토 '+hm(c.attendSat)+'<br><span style="font-size:11px;color:var(--danger);">전일 TA 10통 미만 시 '+hm(c.attendLowTa)+'</span>'},
     {icon:'📝', label:'활동보고', time:'당일 '+hm(c.activity)},
     {icon:'🌙', label:'하루후기', time:dailyTxt(c.review)},
     {icon:'📸', label:'TA인증', time:dailyTxt(c.ta)},
@@ -5958,7 +5958,7 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div>${chip}</div>
     ${attendAutoNote}
-    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (직출·OFF 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (전일 TA 10통 미만/미인증 시 07:00 기준 / 직출·OFF 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${btns}</div>
     ${cancelBtn}
     ${memberList}
@@ -6001,11 +6001,15 @@ async function selectAttend(status) {
   // 지각 판정: OFF/직출은 면제, 기상·출발·도착은 08:00 기준
   // depart/arrive는 기상 시각 기준으로 판정 (기상이 8시 전이면 지각 아님)
   let isLate = false;
+  let _attnLowTaFlag = false; // 07시(저TA) 마감으로 판정된 출근지각 여부
   if (status === 'off') {
     isLate = false; // OFF는 지각 없음
   } else {
     const exempt = status === 'direct';
-    const hour8 = _twDeadline(CU.uid, 'attendWeekday', twDate);
+    // 어제 TA 10통 미만/미인증이면 오늘 출근 마감 07:00(attendLowTa), 아니면 평일 08:00
+    const _lowTa = await _attnLowTaDeadline(CU.uid, twDate);
+    _attnLowTaFlag = _lowTa;
+    const hour8 = _twDeadline(CU.uid, _lowTa ? 'attendLowTa' : 'attendWeekday', twDate);
     if (!exempt && tw_isWeekday(twDate)) {
       if (status === 'depart' || status === 'arrive') {
         // 기상(wake) 시각이 있으면 그 시각 기준, 없으면 현재 시각 기준
@@ -6046,7 +6050,7 @@ async function selectAttend(status) {
     await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set({attend: attendData}, {merge:true});
     if (!twReports[CU.uid]) twReports[CU.uid] = {};
     twReports[CU.uid].attend = {...attendData, time: now, allTimes: {...prevAllTimes, [status]: now}};
-    if (isLate) await recordLate(CU.uid, twDate, 'attendance');
+    if (isLate) await recordLate(CU.uid, twDate, 'attendance', _attnLowTaFlag ? {lowTa:true} : null);
     renderTeamwork(true);
     const msg = status==='off' ? 'OFF 체크 완료' : (isLate?'출근 체크 (지각 처리됨)':'출근 체크 완료');
     toast(msg, isLate ? 'error' : 'success');
@@ -6208,14 +6212,24 @@ function admOpenTimeEdit(uid) {
   }
   openModal('m-admtime');
 }
-async function _admSyncLate(uid, date, type, isLate) {
+async function _admSyncLate(uid, date, type, isLate, extra) {
   try {
     const col = db.collection('users').doc(uid).collection('late_records');
     const snap = await col.where('date','==',date).where('type','==',type).get();
     if (isLate) {
       if (snap.empty) {
         const fee = type === 'attendance' ? 20000 : 10000;
-        await col.doc(`${date}_${type}`).set({date, type, fee, createdAt: firebase.firestore.FieldValue.serverTimestamp()});
+        const _doc = {date, type, fee, createdAt: firebase.firestore.FieldValue.serverTimestamp()};
+        if (extra && extra.lowTa) _doc.lowTa = true;
+        await col.doc(`${date}_${type}`).set(_doc);
+      } else if (type === 'attendance') {
+        // 기존 출근지각 기록의 07지각(lowTa) 표기를 관리자 재판정 결과에 맞춰 동기화
+        const want = !!(extra && extra.lowTa);
+        snap.forEach(d => {
+          if (!!(d.data()||{}).lowTa !== want) {
+            d.ref.set({lowTa: want}, {merge:true}).catch(()=>{});
+          }
+        });
       }
     } else if (!snap.empty) {
       const batch = db.batch();
@@ -6224,6 +6238,35 @@ async function _admSyncLate(uid, date, type, isLate) {
     }
   } catch(e) {}
 }
+
+/* [1회성 소급 정리] 이번 정산기간 출근지각을 전일 TA로 재판정 → 07지각(lowTa) 표기.
+   대상: SM·BM·총무 제외 전원(ASM·FC). 벌금·집계 변화 없음(표시만). 관리자 콘솔에서 _migrateLowTaLates() 실행. */
+async function _migrateLowTaLates() {
+  const isAdmin = CU && (CU.employeeId===ADMIN_ID || CU.role==='admin');
+  if (!isAdmin) { toast('관리자만 실행할 수 있습니다','error'); return; }
+  const {start, end} = _getLateFeePeriod(twDate);
+  const EXCLUDE = ['SM','BM','총무'];
+  const targets = (allUsers||[]).filter(u => u && u.uid && !EXCLUDE.includes(u.position || ''));
+  if (!confirm(`이번 정산기간(${start}~${end}) 출근지각을 재판정해 07지각을 표기합니다.\n대상: SM·BM·총무 제외 ${targets.length}명.\n(벌금액은 변동 없음, 표시만 변경)\n진행할까요?`)) return;
+  let scanned=0, updated=0, errUsers=0;
+  for (const u of targets) {
+    try {
+      const col = db.collection('users').doc(u.uid).collection('late_records');
+      const snap = await col.where('date','>=',start).where('date','<=',end)
+        .where('type','==','attendance').get();
+      for (const d of snap.docs) {
+        scanned++;
+        const rec = d.data() || {};
+        const low = await _attnLowTaDeadline(u.uid, rec.date);
+        if (low && !rec.lowTa) { await d.ref.set({lowTa:true}, {merge:true}); updated++; }
+      }
+    } catch(e) { errUsers++; }
+  }
+  toast(`소급 정리 완료: ${updated}건 07지각 표기 (검토 ${scanned}건${errUsers?`, 오류 ${errUsers}명`:''})`, 'success');
+  try { renderTeamwork(true); } catch(e){}
+  return {updated, scanned, errUsers};
+}
+if (typeof window !== 'undefined') window._migrateLowTaLates = _migrateLowTaLates;
 async function admSaveTimeEdit() {
   const uid = _admTimeUid;
   if (!uid) { closeModal('m-admtime'); return; }
@@ -6267,8 +6310,10 @@ async function admSaveTimeEdit() {
       });
       let newLate = false;
       const attUpd = {};
+      // 어제 TA 10통 미만/미인증이면 출근 마감 07:00(attendLowTa) 기준으로 재판정
+      const _lowTaAdm = await _attnLowTaDeadline(uid, twDate);
       if (photoNew) {
-        const dl10 = _twDeadline(uid, 'attendSat', twDate);
+        const dl10 = _twDeadline(uid, _lowTaAdm ? 'attendLowTa' : 'attendSat', twDate);
         newLate = photoNew > dl10;
         attUpd.photoAt = TS.fromDate(photoNew);
       }
@@ -6279,7 +6324,7 @@ async function admSaveTimeEdit() {
         if (!photoNew) {
           if (a.status==='direct' || a.status==='off') { newLate = false; }
           else if (tw_isWeekday(twDate)) {
-            const dl8 = _twDeadline(uid, 'attendWeekday', twDate);
+            const dl8 = _twDeadline(uid, _lowTaAdm ? 'attendLowTa' : 'attendWeekday', twDate);
             const ref = _admTsToDate(allTimes.wake || allTimes.depart || allTimes.arrive);
             newLate = ref ? ref > dl8 : false;
           }
@@ -6289,7 +6334,7 @@ async function admSaveTimeEdit() {
       await repRef.set({attend: attUpd}, {merge:true});
       twReports[uid].attend = {...a, ...attUpd, allTimes:{...allTimes}, late:newLate};
       const attLateForFee = (a.status==='direct'||a.status==='off') ? false : newLate;
-      await _admSyncLate(uid, twDate, 'attendance', attLateForFee);
+      await _admSyncLate(uid, twDate, 'attendance', attLateForFee, _lowTaAdm ? {lowTa:true} : null);
     }
     // ── 활동·후기·TA·목표·달성 ──
     for (const e of edits) {
@@ -6555,6 +6600,7 @@ function _getWeekDeadline(dateStr, targetDay, hour, min) {
    daily 항목: {off:일수, h:시, m:분} (off=0 당일, off=1 익일)  ·  weekly 항목: {day:요일(0=일,1=월), h, m} */
 const TW_DL_DEFAULTS = {
   attendWeekday: {off:0, h:8,  m:0},   // 평일 출근 마감
+  attendLowTa:   {off:0, h:7,  m:0},   // 어제 TA 10통 미만/미인증 시 오늘 출근 마감(07:00 고정)
   attendSat:     {off:0, h:10, m:0},   // 토요일 출근사진 마감
   activity:      {off:0, h:12, m:0},   // 활동보고 마감
   review:        {off:1, h:0,  m:0},   // 하루후기 마감(당일 자정=익일 00:00)
@@ -6562,9 +6608,9 @@ const TW_DL_DEFAULTS = {
   goal:          {day:1, h:12, m:0},   // 목표취합 마감(월요일 12:00)
   achievement:   {day:0, h:20, m:0},   // 달성취합 마감(일요일 20:00)
 };
-const TW_DL_ITEMS = ['attendWeekday','attendSat','activity','review','ta','goal','achievement'];
+const TW_DL_ITEMS = ['attendWeekday','attendLowTa','attendSat','activity','review','ta','goal','achievement'];
 const TW_DL_WEEKLY = {goal:true, achievement:true};
-const TW_DL_LABELS = {attendWeekday:'평일 출근', attendSat:'토요일 출근사진', activity:'활동보고', review:'하루후기', ta:'TA인증', goal:'목표취합', achievement:'달성취합'};
+const TW_DL_LABELS = {attendWeekday:'평일 출근', attendLowTa:'저TA 출근(10통미만)', attendSat:'토요일 출근사진', activity:'활동보고', review:'하루후기', ta:'TA인증', goal:'목표취합', achievement:'달성취합'};
 
 // uid가 속한 팀 문서 반환(팀장/팀원 모두)
 function _teamOf(uid) {
@@ -6604,6 +6650,25 @@ function _twDeadlineLabel(uid, item) {
   if (cfg.off === 1 && cfg.h === 0 && cfg.m === 0) return '당일 자정(24:00)';
   if (cfg.off === 1) return '익일 ' + hm;
   return hm;
+}
+
+/* 어제 TA 실적 기준 오늘 출근 마감 판정.
+   어제가 TA 필수 근무일(일요일·공휴일·토요일 아님, OFF 아님)이고
+   어제 TA가 10통 미만(taType!=='high': low 또는 미인증)이면 true
+   → 오늘 출근 마감은 attendLowTa(기본 07:00)를 적용한다. */
+async function _attnLowTaDeadline(uid, dateStr) {
+  try {
+    const _p = new Date(dateStr); _p.setDate(_p.getDate() - 1);
+    const prevDate = _p.getFullYear() + '-' + String(_p.getMonth()+1).padStart(2,'0') + '-' + String(_p.getDate()).padStart(2,'0');
+    // 어제가 TA 의무일이 아니면(일요일·공휴일·토요일) 평상시 마감 유지
+    if (tw_isSunday(prevDate) || tw_isHoliday(prevDate) || tw_isSaturday(prevDate)) return false;
+    const snap = await db.collection('users').doc(uid).collection('tw_reports').doc(prevDate).get({source:'server'});
+    const pr = snap.exists ? (snap.data() || {}) : {};
+    if ((pr.attend || {}).status === 'off') return false; // 어제 OFF면 TA 의무 없음 → 평상시 마감
+    const ta = pr.ta || {};
+    const taType = ta.taType || (ta.checked ? 'high' : null);
+    return taType !== 'high'; // low 또는 미인증 → 07시 적용
+  } catch(e) { return false; } // 조회 실패 시 안전하게 평상시 마감(오탐 지각 방지)
 }
 
 async function openGoalModal() {
@@ -7113,8 +7178,10 @@ async function uploadSatAttendPhoto(input) {
   if (!newUrls.length) { _satAttUploading = false; return; }
   const photoUrls = [...prevUrls, ...newUrls];
   // 지각 판정: 토요일 출근사진 팀 기준(기본 10:00) — 최초 등록만 판정, 재등록은 기존 지각상태 유지
+  // 단, 어제(금요일) TA 10통 미만/미인증이면 07:00(attendLowTa) 기준 적용
   const now = new Date();
-  const dl10 = _twDeadline(CU.uid, 'attendSat', twDate);
+  const _lowTaSat = await _attnLowTaDeadline(CU.uid, twDate);
+  const dl10 = _twDeadline(CU.uid, _lowTaSat ? 'attendLowTa' : 'attendSat', twDate);
   const isLate = already ? !!prev.late : (now > dl10);
   const FS = firebase.firestore.FieldValue.serverTimestamp();
   try {
@@ -7123,7 +7190,7 @@ async function uploadSatAttendPhoto(input) {
     await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).set({attend: upd}, {merge:true});
     if (!twReports[CU.uid]) twReports[CU.uid] = {};
     twReports[CU.uid].attend = {...prev, status:'photo', photoUrls, photoUrl:photoUrls[0], late:isLate};
-    if (isLate && !already) await recordLate(CU.uid, twDate, 'attendance');
+    if (isLate && !already) await recordLate(CU.uid, twDate, 'attendance', _lowTaSat ? {lowTa:true} : null);
     _satAttUploading = false;
     renderTeamwork(true);
     toast(isLate ? '출근 사진 등록 (지각 처리됨)' : '출근 사진 등록 완료 ✅', isLate ? 'error' : 'success');
@@ -7281,7 +7348,7 @@ async function openMemberAbsenceModal(date) {
 }
 
 /* ── 지각 기록 ── */
-async function recordLate(uid, date, type) {
+async function recordLate(uid, date, type, extra) {
   try {
     // 매월 27일 18:00 ~ 28일 00:00: 기간 마감 freeze — 새 지각 기록 추가 안 함
     const nowCheck = new Date();
@@ -7291,11 +7358,14 @@ async function recordLate(uid, date, type) {
     const existing = await col.where('date','==',date).where('type','==',type).limit(1).get();
     if (!existing.empty) return;
     const fee = type === 'attendance' ? 20000 : 10000;
-    // 고정 문서ID(date_type)로 저장 → 동시 호출·연타 시에도 같은 문서 1건으로 수렴(멱등)
-    await col.doc(`${date}_${type}`).set({
+    const _doc = {
       date, type, fee,
       createdAt: firebase.firestore.FieldValue.serverTimestamp()
-    });
+    };
+    // 저TA(07시) 출근지각이면 lowTa 플래그 표기(요금은 attendance와 동일, 표시만 07지각)
+    if (extra && extra.lowTa) _doc.lowTa = true;
+    // 고정 문서ID(date_type)로 저장 → 동시 호출·연타 시에도 같은 문서 1건으로 수렴(멱등)
+    await col.doc(`${date}_${type}`).set(_doc);
   } catch(e) {}
 }
 
@@ -7355,12 +7425,14 @@ async function _autoRecordLates() {
 
   // 1. 출근보고 (평일 08:00 / 토요일 10:00 마감, 일요일·공휴일 제외)
   const _attReq = !tw_isSunday(twDate) && !tw_isHoliday(twDate);
-  const _attDL  = tw_isSaturday(twDate) ? dl10 : dl8;
+  // 어제 TA 10통 미만/미인증이면 출근 마감 07:00(attendLowTa), 아니면 평일 08:00·토 10:00
+  const _lowTaAtt = await _attnLowTaDeadline(CU.uid, twDate);
+  const _attDL  = _lowTaAtt ? _twDeadline(CU.uid, 'attendLowTa', twDate) : (tw_isSaturday(twDate) ? dl10 : dl8);
   if (_attReq && now > _attDL) {
     const a = myR.attend || {};
     if (!a.status && !a.late && !a.autoLatedAt) {
       try {
-        await recordLate(CU.uid, twDate, 'attendance');
+        await recordLate(CU.uid, twDate, 'attendance', _lowTaAtt ? {lowTa:true} : null);
         // update: attend.status 등 기존 필드 보존 (content 덮어쓰기 방지)
         await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate)
           .update({'attend.late':true,'attend.autoLatedAt':srv()})
@@ -7580,14 +7652,16 @@ async function _autoRecordLatesForTeam() {
     const dlNext7 = _twDeadline(uid, 'ta', twDate);             // TA인증(기본 당일 자정)
     const monDL   = _twDeadline(uid, 'goal', twDate, 1);        // 목표취합 마감+1분(기본 월 12:01)
     const sunDL   = _twDeadline(uid, 'achievement', twDate);    // 달성취합(기본 일 20:00)
-    const _attDL  = tw_isSaturday(twDate) ? dl10 : dl8;
+    // 어제 TA 10통 미만/미인증이면 출근 마감 07:00(attendLowTa), 아니면 평일 08:00·토 10:00
+    const _lowTaAtt = await _attnLowTaDeadline(uid, twDate);
+    const _attDL  = _lowTaAtt ? _twDeadline(uid, 'attendLowTa', twDate) : (tw_isSaturday(twDate) ? dl10 : dl8);
 
     // 1. 출근보고 (평일 08:00 / 토요일 10:00 마감, 일요일·공휴일 제외)
     if (_attReq && now > _attDL) {
       const a = r.attend || {};
       if (!a.status && !a.late && !a.autoLatedAt) {
         try {
-          await recordLate(uid, twDate, 'attendance');
+          await recordLate(uid, twDate, 'attendance', _lowTaAtt ? {lowTa:true} : null);
           await db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
             .update({'attend.late':true,'attend.autoLatedAt':srv()})
             .catch(()=>db.collection('users').doc(uid).collection('tw_reports').doc(twDate)
@@ -7974,7 +8048,8 @@ async function _tw_lateSection(canEdit) {
         const chips = recs.map(r => {
           const typeColor = r.type==='attendance' ? 'var(--danger)' : 'var(--warning)';
           const bg = r.type==='attendance' ? '#fff1f1' : '#fffbeb';
-          return `<span style="font-size:11px;font-weight:600;color:${typeColor};background:${bg};padding:1px 6px;border-radius:6px;">${typeLbl[r.type]||r.type}</span>`;
+          const lbl = (r.type==='attendance' && r.lowTa) ? '07지각' : (typeLbl[r.type]||r.type);
+          return `<span style="font-size:11px;font-weight:600;color:${typeColor};background:${bg};padding:1px 6px;border-radius:6px;">${lbl}</span>`;
         }).join('');
         return `<div style="display:flex;align-items:center;gap:6px;padding:4px 0;border-bottom:1px solid var(--gray-50);flex-wrap:wrap;">
           <span style="font-size:11px;color:var(--gray-500);min-width:50px;flex-shrink:0;">${date ? date.slice(5) : '-'}</span>
@@ -7984,7 +8059,10 @@ async function _tw_lateSection(canEdit) {
       }).join('');
 
       const summaryTags = [];
-      if (attendLates.length) summaryTags.push(`<span style="font-size:11px;background:#fff1f1;color:var(--danger);padding:2px 7px;border-radius:99px;font-weight:600;">출근지각 ${attendLates.length}회</span>`);
+      const attnNormal = attendLates.filter(r => !r.lowTa).length;
+      const attn07 = attendLates.filter(r => r.lowTa).length;
+      if (attnNormal) summaryTags.push(`<span style="font-size:11px;background:#fff1f1;color:var(--danger);padding:2px 7px;border-radius:99px;font-weight:600;">출근지각 ${attnNormal}회</span>`);
+      if (attn07) summaryTags.push(`<span style="font-size:11px;background:#fff1f1;color:var(--danger);padding:2px 7px;border-radius:99px;font-weight:600;">07지각 ${attn07}회</span>`);
       if (otherLates.length) {
         const grouped = {};
         otherLates.forEach(r => { grouped[r.type] = (grouped[r.type]||0)+1; });
@@ -8046,7 +8124,7 @@ async function _renderLateEditRecords(uid) {
           <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 10px;background:var(--gray-50);border-radius:8px;margin-bottom:6px;">
             <div>
               <span style="font-size:13px;font-weight:600;">${r.date}</span>
-              <span style="font-size:12px;color:var(--gray-500);margin-left:8px;">${typeLbl[r.type]||r.type}</span>
+              <span style="font-size:12px;color:var(--gray-500);margin-left:8px;">${(r.type==='attendance'&&r.lowTa)?'07지각':(typeLbl[r.type]||r.type)}</span>
               <span style="font-size:12px;color:var(--danger);margin-left:8px;">${(r.fee||0).toLocaleString()}원</span>
             </div>
             <button onclick="deleteLateRecord('${uid}','${r.id}')"
