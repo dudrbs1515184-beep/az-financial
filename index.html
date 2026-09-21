@@ -5382,14 +5382,18 @@ async function removeTeamMember(uid) {
 
 /* ── 팀 업무 ── */
 function tw_today() {
-  const _d = new Date();
-  if (_d.getHours() < 5) _d.setDate(_d.getDate() - 1); // 05시 이전은 전날로 간주
-  return _d.getFullYear() + '-' +
-    String(_d.getMonth()+1).padStart(2,'0') + '-' +
-    String(_d.getDate()).padStart(2,'0');
+  // 한국시간(KST=UTC+9) 기준 오늘. 기기 시간대가 잘못 설정돼도 항상 한국 날짜로 판정.
+  const _d = new Date(Date.now() + 9*3600000);
+  if (_d.getUTCHours() < 5) _d.setUTCDate(_d.getUTCDate() - 1); // 05시(KST) 이전은 전날로 간주
+  return _d.getUTCFullYear() + '-' +
+    String(_d.getUTCMonth()+1).padStart(2,'0') + '-' +
+    String(_d.getUTCDate()).padStart(2,'0');
 }
+// 날짜문자열(YYYY-MM-DD)을 '로컬' 자정으로 파싱. bare new Date('YYYY-MM-DD')는 UTC자정으로 해석되어
+// 기기 시간대가 한국(UTC+9)보다 뒤면(음수 오프셋) 전날로 밀리는 오탐 지각 버그가 생김 → 반드시 이 함수 사용.
+function tw_pd(dateStr) { return new Date(dateStr + 'T00:00:00'); }
 function tw_isWeekday(dateStr) {
-  const d = new Date(dateStr); return d.getDay() !== 0 && d.getDay() !== 6;
+  const d = tw_pd(dateStr); return d.getDay() !== 0 && d.getDay() !== 6;
 }
 /* ── 공휴일(2026~2027) — 출근보고 면제 / 설날·추석 당일 — 전 팀원 자동 OFF ── */
 const TW_HOLIDAYS = new Set([
@@ -5421,12 +5425,14 @@ const TW_HOLIDAYS = new Set([
 const TW_AUTO_OFF_DAYS = new Set(['2026-02-17','2026-09-25','2027-02-07','2027-09-15']); // 설날·추석 당일
 function tw_isHoliday(dateStr) { return TW_HOLIDAYS.has(dateStr); }
 function tw_isAutoOffDay(dateStr) { return TW_AUTO_OFF_DAYS.has(dateStr); }
-function tw_isSaturday(dateStr) { return new Date(dateStr).getDay() === 6; }
-function tw_isSunday(dateStr) { return new Date(dateStr).getDay() === 0; }
+function tw_isSaturday(dateStr) { return tw_pd(dateStr).getDay() === 6; }
+function tw_isSunday(dateStr) { return tw_pd(dateStr).getDay() === 0; }
+// TA 인증 기준 통수: 일요일 20통 / 그 외(평일·토요일) 10통. 버튼은 항상 '기준 이상/이하' 2개.
+function _taThreshold(dateStr) { return tw_isSunday(dateStr) ? 20 : 10; }
 // 출근보고 필요일: 일요일·공휴일 제외 (토요일 포함)
 function tw_attendRequired(dateStr) { return !tw_isSunday(dateStr) && !tw_isHoliday(dateStr); }
 function tw_dateLabel(dateStr) {
-  const d = new Date(dateStr);
+  const d = tw_pd(dateStr);
   const day = ['일','월','화','수','목','금','토'][d.getDay()];
   return `${dateStr} (${day})`;
 }
@@ -5556,7 +5562,7 @@ function _tw_deadlineSummaryHtml() {
   const dayFull = ['일','월','화','수','목','금','토'];
   const dailyTxt = o => (o.off===1 && o.h===0 && o.m===0) ? '당일 자정(24:00)' : (o.off===1 ? '익일 '+hm(o) : '당일 '+hm(o));
   const items = [
-    {icon:'🏃', label:'출근', time:'평일 '+hm(c.attendWeekday)+' · 토 '+hm(c.attendSat)+'<br><span style="font-size:11px;color:var(--danger);">전일 TA 10통 미만 시 '+hm(c.attendLowTa)+'</span>'},
+    {icon:'🏃', label:'출근', time:'평일 '+hm(c.attendWeekday)+' · 토 '+hm(c.attendSat)+'<br><span style="font-size:11px;color:var(--danger);">전일 TA 기준(평일10·일20통) 미만 시 '+hm(c.attendLowTa)+'</span>'},
     {icon:'📝', label:'활동보고', time:'당일 '+hm(c.activity)},
     {icon:'🌙', label:'하루후기', time:dailyTxt(c.review)},
     {icon:'📸', label:'TA인증', time:dailyTxt(c.ta)},
@@ -5828,7 +5834,17 @@ function _tw_memberListHtml(type) {
       done = !!(ta.checked || ta.taType || ta.url);
       late = !!ta.late;
       _taPhoto = (ta.photoUrls && ta.photoUrls[0]) || ta.photoUrl || '';
-      if (done) detail = ta.taType === 'high' ? '10통 이상 인증' : ta.taType === 'low' ? '10통 이하 인증' : '인증 완료';
+      if (done) {
+        detail = ta.taType === 'high' ? _taThreshold(twDate)+'통 이상 인증' : ta.taType === 'low' ? _taThreshold(twDate)+'통 이하 인증' : '인증 완료';
+        const _raw = ta.checkedAt || ta.savedAt;
+        if (_raw) {
+          try {
+            const _d = _raw.toDate ? _raw.toDate() : (_raw.seconds ? new Date(_raw.seconds*1000) : new Date(_raw));
+            const _tm = _d.toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'});
+            if (_tm) detail += ` · ${_tm}`;
+          } catch(e) {}
+        }
+      }
       else if (_taPhoto) detail = '사진 등록됨 (통화수 미선택)';
     }
         const absent = !!(myT.absentUids && myT.absentUids[uid]);
@@ -5959,7 +5975,7 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div>${chip}</div>
     ${attendAutoNote}
-    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (전일 TA 10통 미만/미인증 시 07:00 기준 / 직출·OFF 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
+    <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (전일 TA 기준 미만/미인증 시 07:00 기준 · 기준=평일10통·일요일20통 / 직출·OFF 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${btns}</div>
     ${cancelBtn}
     ${memberList}
@@ -6052,6 +6068,7 @@ async function selectAttend(status) {
     if (!twReports[CU.uid]) twReports[CU.uid] = {};
     twReports[CU.uid].attend = {...attendData, time: now, allTimes: {...prevAllTimes, [status]: now}};
     if (isLate) await recordLate(CU.uid, twDate, 'attendance', _attnLowTaFlag ? {lowTa:true} : null);
+    else await _admSyncLate(CU.uid, twDate, 'attendance', false); // 체크(직출·OFF·정시 출근) 시 이미 생긴 자동지각 벌금기록 정리
     renderTeamwork(true);
     const msg = status==='off' ? 'OFF 체크 완료' : (isLate?'출근 체크 (지각 처리됨)':'출근 체크 완료');
     toast(msg, isLate ? 'error' : 'success');
@@ -6591,8 +6608,8 @@ function _getWeekDeadline(dateStr, targetDay, hour, min) {
   const diff = monBasedTarget - curDay; // 음수: 이전 날짜 (같은 주 내)
   const dl = new Date(d);
   dl.setDate(d.getDate() + diff);
-  dl.setHours(hour, min, 0, 0);
-  return dl;
+  // dl의 달력 날짜(연/월/일)를 한국시간(KST=UTC+9) 벽시계 기준 절대시각으로 변환 → 기기 시간대 무관
+  return new Date(Date.UTC(dl.getFullYear(), dl.getMonth(), dl.getDate(), hour - 9, min, 0, 0));
 }
 
 /* ══════════ 팀별 마감시간(기준시간) 설정 ══════════
@@ -6611,7 +6628,7 @@ const TW_DL_DEFAULTS = {
 };
 const TW_DL_ITEMS = ['attendWeekday','attendLowTa','attendSat','activity','review','ta','goal','achievement'];
 const TW_DL_WEEKLY = {goal:true, achievement:true};
-const TW_DL_LABELS = {attendWeekday:'평일 출근', attendLowTa:'저TA 출근(10통미만)', attendSat:'토요일 출근사진', activity:'활동보고', review:'하루후기', ta:'TA인증', goal:'목표취합', achievement:'달성취합'};
+const TW_DL_LABELS = {attendWeekday:'평일 출근', attendLowTa:'저TA 출근(평일10·일20통미만)', attendSat:'토요일 출근사진', activity:'활동보고', review:'하루후기', ta:'TA인증', goal:'목표취합', achievement:'달성취합'};
 
 // uid가 속한 팀 문서 반환(팀장/팀원 모두)
 function _teamOf(uid) {
@@ -6625,7 +6642,7 @@ function _teamDLCfg(uidOrTeam) {
   for (const k of TW_DL_ITEMS) out[k] = Object.assign({}, TW_DL_DEFAULTS[k], dl[k] || {});
   return out;
 }
-// uid 팀 기준 특정 항목 마감시각 Date 반환. grace(분)는 자동지각 유예(예: 활동 12:01) 반영용.
+// uid 팀 기준 특정 항목 마감시각 Date 반환. grace 인자는 하위호환용(무시); 마감 '분' 전체를 정시로 처리.
 function _twDeadline(uid, item, dateStr, grace) {
   const cfg = _teamDLCfg(uid)[item];
   if (!cfg) return null;
@@ -6633,11 +6650,13 @@ function _twDeadline(uid, item, dateStr, grace) {
   if (TW_DL_WEEKLY[item]) {
     d = _getWeekDeadline(dateStr, cfg.day, cfg.h, cfg.m);
   } else {
-    d = new Date(dateStr);
-    if (cfg.off) d.setDate(d.getDate() + cfg.off);
-    d.setHours(cfg.h, cfg.m, 0, 0);
+    // 한국시간(KST=UTC+9) 벽시계 기준 절대시각으로 마감 구성 → 기기 시간대가 잘못돼도 정확한 마감 순간
+    const _p = dateStr.split('-');
+    d = new Date(Date.UTC(+_p[0], +_p[1] - 1, +_p[2] + (cfg.off || 0), cfg.h - 9, cfg.m, 0, 0));
   }
-  if (grace) d.setMinutes(d.getMinutes() + grace);
+  // 마감시각의 '분'이 찍히는 동안(mm:00~mm:59)은 정시. 다음 분(mm+1:00)이 되는 순간부터 지각.
+  // 예: 마감 12:00이면 12:00:59.999까지 정시, 12:01:00부터 지각(now>deadline). 07/08시 등 모든 마감 동일.
+  d.setSeconds(59, 999);
   return d;
 }
 // 안내문구용 라벨 문자열. 예: '08:00' · '익일 00:00(당일 자정)' · '월 12:00' · '일 20:00'
@@ -6654,15 +6673,15 @@ function _twDeadlineLabel(uid, item) {
 }
 
 /* 어제 TA 실적 기준 오늘 출근 마감 판정.
-   어제가 TA 필수 근무일(일요일·공휴일·토요일 아님, OFF 아님)이고
-   어제 TA가 10통 미만(taType!=='high': low 또는 미인증)이면 true
-   → 오늘 출근 마감은 attendLowTa(기본 07:00)를 적용한다. */
+   어제가 TA 필수일(공휴일·토요일 아님, OFF 아님)이고 어제 TA가 기준 미만(taType!=='high')이면 true
+   → 오늘 출근 마감은 attendLowTa(기본 07:00)를 적용한다.
+   TA 기준 통수: 평일 10통 / 일요일 20통(=_taThreshold). 일요일 TA도 다음날(월) 출근 마감에 반영. */
 async function _attnLowTaDeadline(uid, dateStr) {
   try {
-    const _p = new Date(dateStr); _p.setDate(_p.getDate() - 1);
+    const _p = tw_pd(dateStr); _p.setDate(_p.getDate() - 1);
     const prevDate = _p.getFullYear() + '-' + String(_p.getMonth()+1).padStart(2,'0') + '-' + String(_p.getDate()).padStart(2,'0');
-    // 어제가 TA 의무일이 아니면(일요일·공휴일·토요일) 평상시 마감 유지
-    if (tw_isSunday(prevDate) || tw_isHoliday(prevDate) || tw_isSaturday(prevDate)) return false;
+    // 어제가 TA 의무일이 아니면(공휴일·토요일) 평상시 마감 유지. (일요일은 TA 의무일 → 포함)
+    if (tw_isHoliday(prevDate) || tw_isSaturday(prevDate)) return false;
     const snap = await db.collection('users').doc(uid).collection('tw_reports').doc(prevDate).get({source:'server'});
     const pr = snap.exists ? (snap.data() || {}) : {};
     if ((pr.attend || {}).status === 'off') return false; // 어제 OFF면 TA 의무 없음 → 평상시 마감
@@ -6971,7 +6990,7 @@ async function saveReview() {
 
 function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
   const memberList = _tw_memberListHtml('ta');
-  const _isSaturdayTa = new Date(twDate).getDay() === 6; // 토요일 TA 불필요
+  const _isSaturdayTa = tw_pd(twDate).getDay() === 6; // 토요일 TA 불필요
   if (_isSaturdayTa) {
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">📸 TA인증</div></div>
@@ -6999,14 +7018,15 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
     } catch(e) {}
   }
   const taAutoNote = !hasDone ? _autoLateNote(ta) : '';
-  const taTypeLabel = taType === 'high' ? '10통 이상 인증완료' : taType === 'low' ? '10통 이하 인증완료' : '사진 인증 완료';
+  const _thr = _taThreshold(twDate); // 일요일 20통 / 그 외 10통
+  const taTypeLabel = taType === 'high' ? _thr+'통 이상 인증완료' : taType === 'low' ? _thr+'통 이하 인증완료' : '사진 인증 완료';
   const taPhotoUrls = (ta.photoUrls && ta.photoUrls.length) ? ta.photoUrls : (ta.photoUrl ? [ta.photoUrl] : []);
   const hasPhoto = taPhotoUrls.length > 0;
   const photoGallery = _photoGalleryHtml(taPhotoUrls, 'deleteTaPhoto');
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📸 TA인증</div>${chip}</div>
     ${taAutoNote}
-    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">사진을 먼저 등록한 뒤 10통 이상/이하를 선택하세요 · 미등록·미체크 시 ${_twDeadlineLabel(CU.uid,'ta')} 기준 지각</div>
+    <div style="font-size:12px;color:var(--gray-500);margin-bottom:14px;">사진을 먼저 등록한 뒤 ${_thr}통 이상/이하를 선택하세요 · 미등록·미체크 시 ${_twDeadlineLabel(CU.uid,'ta')} 기준 지각</div>
     ${hasDone
       ? `<div style="background:#f0fdf4;border:1.5px solid #86efac;border-radius:10px;padding:16px;text-align:center;">
            <div style="font-size:18px;margin-bottom:4px;">✅</div>
@@ -7030,15 +7050,15 @@ function _tw_taSection(myR, canEdit, isLeader, isAdmin) {
            <div style="font-size:12px;font-weight:700;color:var(--gray-600);margin-bottom:8px;">통화 수를 선택하면 인증이 완료됩니다</div>
            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
              <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#86efac;color:#166534;font-weight:700;" onclick="checkTa('high')">
-               📞 10통 이상<br><span style="font-size:11px;font-weight:500;">인증완료</span>
+               📞 ${_thr}통 이상<br><span style="font-size:11px;font-weight:500;">인증완료</span>
              </button>
              <button class="btn-outline" style="padding:14px;font-size:14px;border-color:#fbbf24;color:#92400e;font-weight:700;" onclick="checkTa('low')">
-               📞 10통 이하<br><span style="font-size:11px;font-weight:500;">인증완료</span>
+               📞 ${_thr}통 이하<br><span style="font-size:11px;font-weight:500;">인증완료</span>
              </button>
            </div>`
         : `<label style="display:block;text-align:center;padding:20px;border:2px dashed #93c5fd;border-radius:12px;background:#eff6ff;color:#1d4ed8;font-size:15px;font-weight:700;cursor:pointer;">
              🖼 사진 등록 (앨범에서 선택, 여러 장 가능)
-             <div style="font-size:11px;font-weight:500;color:var(--gray-500);margin-top:6px;">사진을 등록해야 10통 인증 버튼이 나타납니다</div>
+             <div style="font-size:11px;font-weight:500;color:var(--gray-500);margin-top:6px;">사진을 등록해야 ${_thr}통 인증 버튼이 나타납니다</div>
              <input type="file" accept="image/*" multiple onchange="uploadTaPhoto(this)" style="display:none;">
            </label>`)
     }
@@ -7051,7 +7071,7 @@ async function checkTa(taType) {
   const _ta0Photos = (_ta0.photoUrls && _ta0.photoUrls.length) ? _ta0.photoUrls : (_ta0.photoUrl ? [_ta0.photoUrl] : []);
   if (!_ta0Photos.length) { toast('먼저 인증 사진을 등록하세요','error'); return; }
   const now = new Date();
-  const _isSat = new Date(twDate).getDay() === 6;
+  const _isSat = tw_pd(twDate).getDay() === 6;
   let isLate = false;
   if (!_isSat) {
     const deadline = _twDeadline(CU.uid, 'ta', twDate); // 팀 기준(기본 당일 자정=익일 00:00)
@@ -7065,7 +7085,8 @@ async function checkTa(taType) {
     twReports[CU.uid].ta = {...(twReports[CU.uid].ta||{}), taType, checked: true, late: isLate};
     if (isLate) await recordLate(CU.uid, twDate, 'ta');
     renderTeamwork(true);
-    const label = taType === 'high' ? '10통 이상' : '10통 이하';
+    const _thr = _taThreshold(twDate);
+    const label = taType === 'high' ? _thr+'통 이상' : _thr+'통 이하';
     toast(isLate ? `${label} 인증완료 (TA 지각)` : `${label} 인증완료 ✅`, isLate ? 'error' : 'success');
   } catch(e) { toast('오류', 'error'); }
 }
@@ -7125,7 +7146,7 @@ async function uploadTaPhoto(input) {
     twReports[CU.uid].ta.photoUrl = photoUrls[0];
     _taPhotoUploading = false;
     renderTeamwork(true);
-    toast('사진 등록 완료 ✅ 이제 10통 이상/이하를 선택하세요','success');
+    toast('사진 등록 완료 ✅ 이제 '+_taThreshold(twDate)+'통 이상/이하를 선택하세요','success');
   } catch(e) { _taPhotoUploading = false; toast('저장 오류','error'); }
 }
 
@@ -7520,7 +7541,7 @@ async function _autoRecordLates() {
   }
 
   // 5. TA인증 (당일 자정 = 익일 00:00 마감, 토요일 제외)
-  const _twDaySelf = new Date(twDate).getDay(); // 0=일,6=토
+  const _twDaySelf = tw_pd(twDate).getDay(); // 0=일,6=토
   if (!_isOff && _twDaySelf !== 6) {
     const ta = myR.ta || {};
     const taType = ta.taType || (ta.checked ? 'high' : null);
@@ -7542,7 +7563,7 @@ async function _autoRecordLates() {
 
   // 6. 어제자 하루후기·TA인증 재확인 (당일 자정 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
   try {
-    const _prevD = new Date(twDate); _prevD.setDate(_prevD.getDate()-1);
+    const _prevD = tw_pd(twDate); _prevD.setDate(_prevD.getDate()-1);
     const prevDate = _prevD.getFullYear()+'-'+String(_prevD.getMonth()+1).padStart(2,'0')+'-'+String(_prevD.getDate()).padStart(2,'0');
     const prevDL6 = _twDeadline(CU.uid, 'review', prevDate); // 어제자 하루후기 마감(팀 기준, 기본 당일 자정)
     const prevDL7 = _twDeadline(CU.uid, 'ta', prevDate);     // 어제자 TA인증 마감(팀 기준, 기본 당일 자정)
@@ -7739,7 +7760,7 @@ async function _autoRecordLatesForTeam() {
     }
 
     // 5. TA인증 (당일 자정 = 익일 00:00 마감, 토요일 제외)
-    const _twDayTeam = new Date(twDate).getDay(); // 0=일,6=토
+    const _twDayTeam = tw_pd(twDate).getDay(); // 0=일,6=토
     if (!_uidIsOff && _twDayTeam !== 6) {
       const ta = r.ta || {};
       const taType = ta.taType || (ta.checked ? 'high' : null);
@@ -7760,7 +7781,7 @@ async function _autoRecordLatesForTeam() {
 
     // 6. 어제자 하루후기·TA인증 재확인 (당일 자정 마감이라 twDate가 오늘로 넘어간 뒤에도 놓치지 않도록 별도 재검사)
     try {
-      const _prevD = new Date(twDate); _prevD.setDate(_prevD.getDate()-1);
+      const _prevD = tw_pd(twDate); _prevD.setDate(_prevD.getDate()-1);
       const prevDate = _prevD.getFullYear()+'-'+String(_prevD.getMonth()+1).padStart(2,'0')+'-'+String(_prevD.getDate()).padStart(2,'0');
       const prevDL6 = _twDeadline(uid, 'review', prevDate); // 어제자 하루후기 마감(팀 기준, 기본 당일 자정)
       const prevDL7 = _twDeadline(uid, 'ta', prevDate);     // 어제자 TA인증 마감(팀 기준, 기본 당일 자정)
