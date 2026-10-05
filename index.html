@@ -676,7 +676,7 @@
       </div>
       <!-- 고객 마인드맵 영역 -->
       <div id="mm-area-customer">
-        <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 드래그로 이동 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 스크롤/핀치로 확대</p>
+        <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 자동 트리배치(위치 고정) &nbsp;·&nbsp; ＋로 하위 추가 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 빈 곳 드래그로 이동 · 스크롤/핀치로 확대</p>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
           <button onclick="mmZoomOut('customer')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">−</button>
           <span id="mm-zoom-label-customer" style="min-width:42px;text-align:center;font-size:13px;font-weight:700;color:var(--gray-600);">100%</span>
@@ -687,7 +687,7 @@
       </div>
       <!-- 계보 마인드맵 영역 -->
       <div id="mm-area-lineage" style="display:none;">
-        <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 드래그로 이동 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 스크롤/핀치로 확대 &nbsp;|&nbsp; <span style="background:#fffbeb;border:1px solid #fbbf24;border-radius:4px;padding:1px 6px;color:#78350f;">🟡 상위계보</span>&nbsp;<span style="background:#f0fdf4;border:1px solid #4ade80;border-radius:4px;padding:1px 6px;color:#14532d;">🟢 하위계보</span></p>
+        <p style="font-size:12px;color:var(--gray-400);margin-bottom:10px;">💡 자동 트리배치(위치 고정) &nbsp;·&nbsp; ＋로 추가 &nbsp;·&nbsp; 더블클릭으로 수정/삭제 &nbsp;·&nbsp; 빈 곳 드래그/핀치로 확대 &nbsp;|&nbsp; <span style="background:#fffbeb;border:1px solid #fbbf24;border-radius:4px;padding:1px 6px;color:#78350f;">🟡 상위계보(위)</span>&nbsp;<span style="background:#f0fdf4;border:1px solid #4ade80;border-radius:4px;padding:1px 6px;color:#14532d;">🟢 하위계보(아래)</span></p>
         <div style="display:flex;align-items:center;gap:6px;margin-bottom:8px;">
           <button onclick="mmZoomOut('lineage')" style="width:34px;height:34px;border:1.5px solid var(--gray-200);border-radius:8px;background:white;font-size:18px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--gray-700);">−</button>
           <span id="mm-zoom-label-lineage" style="min-width:42px;text-align:center;font-size:13px;font-weight:700;color:var(--gray-600);">100%</span>
@@ -1382,7 +1382,7 @@
   <div class="modal" style="max-width:480px;">
     <div class="modal-head"><div class="modal-title">🎉 공휴일 설정</div><button class="modal-close" onclick="closeModal('m-holedit')">✕</button></div>
     <div id="holedit-teamwrap" style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid var(--gray-100);"></div>
-    <div style="font-size:12px;color:var(--gray-500);line-height:1.5;margin-bottom:12px;background:#f8fafc;border-radius:8px;padding:10px 12px;">공휴일에는 출근·활동보고·하루후기·TA 지각처리가 면제됩니다. 기본 공휴일에 팀별로 날짜를 추가하거나 제외할 수 있습니다. 저장하면 우리 팀 전원에 즉시 반영됩니다.</div>
+    <div style="font-size:12px;color:var(--gray-500);line-height:1.5;margin-bottom:12px;background:#fff7ed;border:1px solid #fed7aa;border-radius:8px;padding:10px 12px;"><b style="color:#c2410c;">기본 공휴일(달력 빨간날)도 평일처럼 정상 출근 대상입니다.</b> 쉬는 날은 아래에서 직접 <b>지정</b>해야 출근·활동보고·하루후기·TA 지각처리가 면제됩니다. 저장하면 우리 팀 전원에 즉시 반영됩니다.</div>
     <div style="display:flex;gap:6px;align-items:center;margin-bottom:12px;">
       <input type="date" id="holedit-date" style="flex:1;padding:9px;border:1.5px solid var(--gray-200);border-radius:8px;font-size:14px;">
       <button class="btn-primary" style="padding:9px 14px;font-size:13px;" onclick="_holEditAdd()">＋ 추가</button>
@@ -4052,64 +4052,89 @@ function mmSvgEl(tag, a) {
   Object.entries(a).forEach(([k,v]) => { if(v!==null&&v!==undefined&&v!=='') e.setAttribute(k, v); });
   return e;
 }
-function autoLayoutMm(nodes, W, H) {
+/* 트리형 자동배치 — 저장된 x/y 무시하고 부모-자식 구조로 매 렌더마다 재계산.
+   lineage: 상위계보(relation==='parent')는 센터 위, 하위계보(child)는 아래로 층층이 배치.
+   customer: 모든 노드를 센터 아래 트리로 배치. 사용자가 직접 끌어 옮길 필요 없이 자동 정렬. */
+function autoLayoutMm(nodes, W, H, type) {
   const center = nodes.find(n => n.isCenter);
   if (!center) return;
-  if (!center.x || isNaN(center.x)) { center.x = W/2; center.y = H/2; }
   const byId = {};
   nodes.forEach(n => { byId[n.id] = n; });
-  // 직계 자식 수에 따라 반경 동적 계산
-  const directCount = nodes.filter(n => !n.isCenter && (!n.parentId||n.parentId===center.id)).length;
-  const baseRadius = Math.max(160, directCount * 38);
-  const queue = [center.id];
-  const visited = new Set([center.id]);
-  while (queue.length) {
-    const pid = queue.shift();
-    const parent = byId[pid];
-    if (!parent) continue;
-    const children = nodes.filter(n => !n.isCenter && (n.parentId || center.id) === pid && !visited.has(n.id));
-    const unpos = children.filter(n => !n.x || isNaN(n.x));
-    if (unpos.length) {
-      if (pid === center.id) {
-        unpos.forEach((n, i) => {
-          const angle = (i / unpos.length) * 2 * Math.PI - Math.PI / 2;
-          n.x = Math.round(center.x + baseRadius * Math.cos(angle));
-          n.y = Math.round(center.y + baseRadius * Math.sin(angle));
-        });
-      } else {
-        const gpId = parent.parentId || center.id;
-        const gp = byId[gpId] || center;
-        const dx = parent.x - gp.x, dy = parent.y - gp.y;
-        const len = Math.sqrt(dx*dx + dy*dy) || 1;
-        const dist = Math.max(140, unpos.length * 22 + 100);
-        const perpStep = Math.max(80, unpos.length * 22);
-        unpos.forEach((n, i) => {
-          const perp = (i - (unpos.length - 1) / 2) * perpStep;
-          // bounds 없음 — 패닝으로 이동 가능
-          n.x = Math.round(parent.x + (dx/len)*dist + (-dy/len)*perp);
-          n.y = Math.round(parent.y + (dy/len)*dist + (dx/len)*perp);
-        });
-      }
-    }
-    children.forEach(n => { visited.add(n.id); queue.push(n.id); });
+  // 부모 → 자식 목록 (parentId 없으면 센터의 자식)
+  const kids = {};
+  nodes.forEach(n => {
+    if (n.isCenter) return;
+    const p = (n.parentId && byId[n.parentId]) ? n.parentId : center.id;
+    (kids[p] = kids[p] || []).push(n);
+  });
+  const slot = {}, depth = {}, dir = {};
+  let cursor = 0;
+  // 서브트리 배치: 리프는 가로 슬롯 순차배정, 내부노드는 자식들 가운데 정렬
+  function layoutSub(node, d, dr) {
+    depth[node.id] = d; dir[node.id] = dr;
+    const ch = kids[node.id] || [];
+    if (!ch.length) { slot[node.id] = cursor; cursor += 1; return; }
+    ch.forEach(c => layoutSub(c, d + 1, dr));
+    slot[node.id] = (slot[ch[0].id] + slot[ch[ch.length - 1].id]) / 2;
   }
+  function shift(node, delta) {
+    slot[node.id] += delta;
+    (kids[node.id] || []).forEach(c => shift(c, delta));
+  }
+  // 센터의 직계 자식을 상/하 방향으로 분리
+  const top = kids[center.id] || [];
+  const upTop = [], downTop = [];
+  top.forEach(n => { ((type === 'lineage' && n.relation === 'parent') ? upTop : downTop).push(n); });
+  // 각 방향을 독립적으로 배치 후, 직계자식 묶음의 중앙이 센터(슬롯 0) 위에 오도록 평행이동
+  function layoutDir(topList, dr) {
+    if (!topList.length) return;
+    cursor = 0;
+    topList.forEach(n => layoutSub(n, 1, dr));
+    const mid = (slot[topList[0].id] + slot[topList[topList.length - 1].id]) / 2;
+    topList.forEach(n => shift(n, -mid));
+  }
+  layoutDir(upTop, -1);
+  layoutDir(downTop, 1);
+  const COLW = 88, ROWH = 112;
+  center.x = Math.round(W / 2);
+  center.y = Math.round(H / 2);
+  nodes.forEach(n => {
+    if (n.isCenter) return;
+    n.x = Math.round(W / 2 + (slot[n.id] || 0) * COLW);
+    n.y = Math.round(H / 2 + (dir[n.id] || 1) * (depth[n.id] || 1) * ROWH);
+  });
+}
+/* 트리 전체가 화면에 들어오도록 줌/팬 자동 맞춤 */
+function _mmFit(type, nodes, W, H) {
+  if (!nodes.length) { mmZoom[type] = 1; mmPan[type] = {x:0,y:0}; _mmSetViewBox(type); _updateMmZoomLabel(type); return; }
+  let minX=1e9, maxX=-1e9, minY=1e9, maxY=-1e9;
+  nodes.forEach(n => {
+    const r = n.isCenter ? 44 : 30;
+    minX = Math.min(minX, n.x - r); maxX = Math.max(maxX, n.x + r);
+    minY = Math.min(minY, n.y - r); maxY = Math.max(maxY, n.y + r);
+  });
+  const pad = 64; minX -= pad; maxX += pad; minY -= pad; maxY += pad;
+  const cw = Math.max(1, maxX - minX), ch = Math.max(1, maxY - minY);
+  let z = Math.min(W / cw, H / ch); z = Math.max(0.1, Math.min(2.5, z));
+  mmZoom[type] = z;
+  mmPan[type] = {x: (minX + maxX)/2 - W/2, y: (minY + maxY)/2 - H/2};
+  _mmSetViewBox(type);
+  _updateMmZoomLabel(type);
 }
 function renderMindmap(type) {
   const mm = type === 'customer' ? customerMindmap : lineageMindmap;
   const svg = $('mm-' + type + '-svg');
   if (!svg) return;
   const W = 800, H = 500;
-  const z = mmZoom[type] || 1;
-  const vbW = W/z, vbH = H/z;
-  const vbX = W/2 - vbW/2, vbY = H/2 - vbH/2;
-  svg.setAttribute('viewBox', `${vbX} ${vbY} ${vbW} ${vbH}`);
   svg.innerHTML = '';
   const nodes = (mm.nodes || []).slice();
   if (!nodes.length) {
+    svg.setAttribute('viewBox', `0 0 ${W} ${H}`);
     const t = mmSvgEl('text',{x:W/2,y:H/2,'text-anchor':'middle','dominant-baseline':'middle','font-size':'14','fill':'#94a3b8','font-family':'system-ui,sans-serif'});
     t.textContent = '+ 추가 버튼을 눌러 노드를 추가하세요'; svg.appendChild(t); return;
   }
-  autoLayoutMm(nodes, W, H);
+  autoLayoutMm(nodes, W, H, type);
+  _mmFit(type, nodes, W, H);
   const byId = {};
   nodes.forEach(n => { byId[n.id] = n; });
   const center = nodes.find(n => n.isCenter);
@@ -4133,7 +4158,7 @@ function renderMindmap(type) {
           : type==='lineage' ? {bg:'#f0fdf4',stroke:'#4ade80',fg:'#14532d'}
             : {bg:'#eff6ff',stroke:'#93c5fd',fg:'#1e3a8a'});
     const g = document.createElementNS('http://www.w3.org/2000/svg','g');
-    g.style.cursor = readOnly ? 'default' : 'grab';
+    g.style.cursor = readOnly ? 'default' : 'pointer';
     g.appendChild(mmSvgEl('circle',{cx:n.x,cy:n.y+3,r,fill:'rgba(0,0,0,.07)','pointer-events':'none'}));
     g.appendChild(mmSvgEl('circle',{cx:n.x,cy:n.y,r,fill:cc.bg,stroke:cc.stroke,'stroke-width':n.isCenter?3:2}));
     const lbl = n.label||'', chunk = n.isCenter?5:4, lines=[];
@@ -4144,8 +4169,7 @@ function renderMindmap(type) {
       t.textContent=line; g.appendChild(t);
     });
     if (!readOnly) {
-      g.addEventListener('mousedown',e=>{e.stopPropagation();startMmDrag(n.id,type,e);});
-      g.addEventListener('touchstart',e=>{e.stopPropagation();const t=e.touches[0];startMmDrag(n.id,type,{clientX:t.clientX,clientY:t.clientY});},{passive:false});
+      // 트리형 자동배치 — 노드 드래그 비활성화(위치 고정). 더블클릭으로만 수정/삭제.
       if(!n.isCenter) g.addEventListener('dblclick',e=>{e.stopPropagation();openMmEdit(n.id,type);});
       // "+" button at bottom-right — adds child of this node
       const bx = n.x + r * 0.72, by = n.y + r * 0.72;
@@ -5441,19 +5465,21 @@ const TW_HOLIDAYS = new Set([
   '2027-12-25','2027-12-27'  // 성탄절·대체
 ]);
 const TW_AUTO_OFF_DAYS = new Set(['2026-02-17','2026-09-25','2027-02-07','2027-09-15']); // 설날·추석 당일
-/* 공휴일 판정(팀 기준). 기본 공휴일(TW_HOLIDAYS) + 팀 추가분(holAdd) − 팀 제외분(holDel).
+/* 공휴일(출근보고 면제) 판정 — '완전 평일처럼' 정책.
+   기본 공휴일(TW_HOLIDAYS)은 더 이상 자동 면제하지 않는다(평일처럼 출근·지각처리).
+   오직 관리자/팀장(SM)/ASM이 🎉공휴일 모달에서 명시적으로 지정한 날(holAdd)만 면제된다.
+   단, 설날·추석 당일(TW_AUTO_OFF_DAYS)은 tw_isAutoOffDay로 별도 전원 OFF 처리.
    uidOrTeam 생략 시 현재 로그인 유저(CU)의 팀 기준. _teamOf는 함수 선언이라 호이스팅되어 여기서 호출 가능. */
 function tw_isHoliday(dateStr, uidOrTeam) {
   let t = null;
   if (uidOrTeam && typeof uidOrTeam === 'object') t = uidOrTeam;
   else if (uidOrTeam) t = (typeof _teamOf === 'function') ? _teamOf(uidOrTeam) : null;
   else if (typeof CU !== 'undefined' && CU) t = (typeof _teamOf === 'function') ? _teamOf(CU.uid) : null;
-  if (t) {
-    if (Array.isArray(t.holDel) && t.holDel.indexOf(dateStr) !== -1) return false; // 팀이 제외한 기본공휴일
-    if (Array.isArray(t.holAdd) && t.holAdd.indexOf(dateStr) !== -1) return true;  // 팀이 추가한 공휴일
-  }
-  return TW_HOLIDAYS.has(dateStr);
+  if (t && Array.isArray(t.holAdd) && t.holAdd.indexOf(dateStr) !== -1) return true; // 팀이 지정한 공휴일만 면제
+  return false;
 }
+/* 기본 공휴일(달력상 빨간날) 여부 — 표시/빠른지정 제안용(면제 판정에는 사용하지 않음) */
+function tw_isPublicHoliday(dateStr) { return TW_HOLIDAYS.has(dateStr); }
 function tw_isAutoOffDay(dateStr) { return TW_AUTO_OFF_DAYS.has(dateStr); }
 function tw_isSaturday(dateStr) { return tw_pd(dateStr).getDay() === 6; }
 function tw_isSunday(dateStr) { return tw_pd(dateStr).getDay() === 0; }
@@ -5737,12 +5763,12 @@ function openHolEdit() {
   openModal('m-holedit');
 }
 
-/* 팀의 현재 holAdd/holDel을 작업 세트로 로드 후 렌더 */
+/* 팀의 현재 holAdd(지정 공휴일)를 작업 세트로 로드 후 렌더.
+   holDel은 '완전 평일처럼' 정책에서 더 이상 사용하지 않음(저장 시 [] 로 정리). */
 function _holEditLoad(teamId) {
   _holEditTeamId = teamId;
   const team = allTeams[teamId] || {};
-  _holWork = { add: new Set(Array.isArray(team.holAdd) ? team.holAdd : []),
-               del: new Set(Array.isArray(team.holDel) ? team.holDel : []) };
+  _holWork = { add: new Set(Array.isArray(team.holAdd) ? team.holAdd : []) };
   _holEditRender();
 }
 
@@ -5752,56 +5778,59 @@ function _holDateLabel(ds) {
   return ds + ' (' + wd + ')';
 }
 
-/* 모달 본문 렌더 — 기본 공휴일(제외 가능) + 추가 공휴일(삭제 가능) */
+/* 모달 본문 렌더 — 팀이 지정한 공휴일 목록 + 다가오는 기본 공휴일 빠른 지정 */
 function _holEditRender() {
   if (!_holWork) return;
-  const all = Array.from(new Set([...Array.from(TW_HOLIDAYS), ...Array.from(_holWork.add)])).sort();
-  const rows = all.map(ds => {
-    const isBase = TW_HOLIDAYS.has(ds);
-    const isDel = _holWork.del.has(ds);
-    let tag, btn, style = '';
-    if (isBase && isDel) {
-      tag = '<span style="font-size:11px;color:var(--gray-400);background:var(--gray-100);border-radius:5px;padding:2px 7px;">제외됨</span>';
-      btn = `<button onclick="_holEditToggle('${ds}')" style="background:var(--gray-100);color:var(--gray-700);border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;">복원</button>`;
-      style = 'opacity:0.5;text-decoration:line-through;';
-    } else if (isBase) {
-      tag = '<span style="font-size:11px;color:#0369a1;background:#e0f2fe;border-radius:5px;padding:2px 7px;">기본</span>';
-      btn = `<button onclick="_holEditToggle('${ds}')" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;">제외</button>`;
-    } else {
-      tag = '<span style="font-size:11px;color:#047857;background:#d1fae5;border-radius:5px;padding:2px 7px;">추가</span>';
-      btn = `<button onclick="_holEditToggle('${ds}')" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;">삭제</button>`;
-    }
+  const added = Array.from(_holWork.add).sort();
+  const rows = added.map(ds => {
+    const isPub = TW_HOLIDAYS.has(ds);
+    const tag = isPub
+      ? '<span style="font-size:11px;color:#0369a1;background:#e0f2fe;border-radius:5px;padding:2px 7px;">공휴일</span>'
+      : '<span style="font-size:11px;color:#047857;background:#d1fae5;border-radius:5px;padding:2px 7px;">지정</span>';
+    const btn = `<button onclick="_holEditToggle('${ds}')" style="background:#fee2e2;color:#b91c1c;border:none;border-radius:6px;padding:5px 10px;font-size:12px;font-weight:700;cursor:pointer;">삭제</button>`;
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 2px;border-bottom:1px solid var(--gray-100);gap:10px;">
-      <div style="display:flex;align-items:center;gap:8px;${style}"><span style="font-size:13.5px;font-weight:700;color:var(--gray-700);">${_holDateLabel(ds)}</span>${tag}</div>
+      <div style="display:flex;align-items:center;gap:8px;"><span style="font-size:13.5px;font-weight:700;color:var(--gray-700);">${_holDateLabel(ds)}</span>${tag}</div>
       ${btn}
     </div>`;
   }).join('');
-  $('holedit-body').innerHTML = rows || '<div style="text-align:center;color:var(--gray-400);padding:20px;font-size:13px;">공휴일이 없습니다</div>';
+  // 오늘 이후의 기본 공휴일 중 아직 지정 안 된 날 — 눌러서 빠른 지정
+  const todayStr = (typeof tw_today === 'function') ? tw_today() : new Date().toISOString().slice(0,10);
+  const sugg = Array.from(TW_HOLIDAYS).filter(ds => ds >= todayStr && !_holWork.add.has(ds)).sort().slice(0, 12);
+  const suggHtml = sugg.length ? `<div style="margin-top:14px;">
+      <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:7px;">공휴일 빠른 지정 (눌러서 추가)</div>
+      <div style="display:flex;flex-wrap:wrap;gap:6px;">
+        ${sugg.map(ds => `<button onclick="_holEditQuick('${ds}')" style="background:#eff6ff;color:#1d4ed8;border:1px solid #bfdbfe;border-radius:14px;padding:5px 11px;font-size:12px;font-weight:700;cursor:pointer;">＋ ${_holDateLabel(ds)}</button>`).join('')}
+      </div></div>` : '';
+  $('holedit-body').innerHTML =
+    (rows || '<div style="text-align:center;color:var(--gray-400);padding:18px;font-size:13px;">지정된 공휴일이 없습니다<br><span style="font-size:11.5px;">(지정하지 않으면 모든 날이 평일처럼 출근 대상)</span></div>')
+    + suggHtml;
 }
 
-/* 날짜 입력창의 날짜를 추가 */
+/* 날짜 입력창의 날짜를 지정 목록에 추가 */
 function _holEditAdd() {
   const v = ($('holedit-date').value || '').trim();
   if (!v) { toast('날짜를 선택하세요'); return; }
   if (!_holWork) return;
-  if (TW_HOLIDAYS.has(v)) { _holWork.del.delete(v); toast('기본 공휴일입니다 (반영됨)'); }
-  else { _holWork.add.add(v); }
+  _holWork.add.add(v);
   $('holedit-date').value = '';
   _holEditRender();
 }
 
-/* 제외/복원/삭제 토글 */
-function _holEditToggle(ds) {
+/* 빠른 지정(제안 칩 클릭) */
+function _holEditQuick(ds) {
   if (!_holWork) return;
-  if (TW_HOLIDAYS.has(ds)) {
-    if (_holWork.del.has(ds)) _holWork.del.delete(ds); else _holWork.del.add(ds);
-  } else {
-    _holWork.add.delete(ds);
-  }
+  _holWork.add.add(ds);
   _holEditRender();
 }
 
-/* 저장 — shared_teams 문서에 holAdd/holDel 기록 */
+/* 지정 공휴일 삭제 */
+function _holEditToggle(ds) {
+  if (!_holWork) return;
+  _holWork.add.delete(ds);
+  _holEditRender();
+}
+
+/* 저장 — shared_teams 문서에 holAdd 기록 (holDel은 레거시 정리) */
 async function saveTeamHol() {
   const perm = _canEditTeamDL();
   if (!perm) { toast('권한이 없습니다'); return; }
@@ -5810,7 +5839,7 @@ async function saveTeamHol() {
   if (!team) { toast('팀 정보를 찾을 수 없습니다'); return; }
   if (perm.mode !== 'admin' && perm.team.id !== teamId) { toast('본인 팀만 설정할 수 있습니다'); return; }
   const holAdd = Array.from(_holWork.add).sort();
-  const holDel = Array.from(_holWork.del).sort();
+  const holDel = [];
   try {
     await db.collection('shared_teams').doc(teamId).set({holAdd, holDel}, {merge:true});
     allTeams[teamId] = Object.assign({}, team, {holAdd, holDel});
@@ -6026,9 +6055,10 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   const _isAutoOff = tw_isAutoOffDay(twDate);
   const _isSat = tw_isSaturday(twDate);
 
-  // 일요일·공휴일: 출근보고 제외 (설날·추석 당일은 전 팀원 OFF)
-  if (_isSun || _isHol) {
-    const lbl = _isAutoOff ? '명절 · 전 팀원 OFF 🌙' : (_isHol ? '공휴일 · 출근보고 제외 🎉' : '일요일 · 출근보고 제외');
+  // 일요일 / 팀 지정 공휴일 / 명절 당일(전원 OFF): 출근보고 제외
+  // ※ 기본 공휴일은 '평일처럼' 처리 → 더 이상 자동 제외하지 않음(_isHol은 팀 지정분만 true)
+  if (_isSun || _isHol || _isAutoOff) {
+    const lbl = _isAutoOff ? '명절 · 전 팀원 OFF 🌙' : (_isHol ? '공휴일(팀 지정) · 출근보고 제외 🎉' : '일요일 · 출근보고 제외');
     return `<div class="tw-section">
       <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><span class="tw-status-chip pending">${lbl}</span></div>
       ${memberList}
