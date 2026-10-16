@@ -5542,12 +5542,13 @@ async function loadTeamworkData(date) {
     uids = [...new Set([...( myT.memberIds||[]), myT.leaderId].filter(Boolean))];
   }
   twReports = {};
-  for (const uid of uids) {
+  // 병렬 읽기: 팀원별 독립 문서이므로 동시에 요청해 N번 왕복을 1번 수준으로 단축
+  await Promise.all(uids.map(async uid => {
     try {
       const doc = await db.collection('users').doc(uid).collection('tw_reports').doc(date).get();
       if (doc.exists) twReports[uid] = doc.data();
     } catch(e) { console.warn('tw_report 읽기 실패:', uid, e.message); }
-  }
+  }));
 }
 
 async function renderTeamwork(skipReload) {
@@ -5576,16 +5577,16 @@ async function renderTeamwork(skipReload) {
     const isAdm = CU.employeeId===ADMIN_ID||CU.role==='admin';
     const uids = isAdm ? allUsers.map(u=>u.uid) : (myT ? [...new Set([...(myT.memberIds||[]),myT.leaderId].filter(Boolean))] : [CU.uid]);
     twGoals = {};
-    for (const uid of uids) {
+    // 병렬 읽기: 팀원별 독립 문서이므로 동시에 요청
+    await Promise.all(uids.map(async uid => {
       try {
         const doc = await db.collection('users').doc(uid).collection('tw_goals').doc(String(weekNum)).get();
         if (doc.exists) twGoals[uid] = {[weekNum]: doc.data()};
       } catch(e) {}
-    }
-    // 마감 초과 자동 지각처리 (팀원만, 팀장 제외)
-    await _autoRecordLates();
-    // 관리자·팀장이 열면 미로그인 팀원들도 지각처리
-    await _autoRecordLatesForTeam();
+    }));
+    // 자동 지각처리: 본인(_autoRecordLates)과 팀원(_autoRecordLatesForTeam)은 서로 다른 uid만 건드리므로 동시 실행 안전
+    // (팀 함수는 uid===CU.uid를 건너뜀 → 충돌 없음)
+    await Promise.all([_autoRecordLates(), _autoRecordLatesForTeam()]);
   }
 
   const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
@@ -7587,23 +7588,28 @@ async function _autoRecordLates() {
   const monDL   = _twDeadline(CU.uid, 'goal', twDate, 1);            // 목표취합 마감+1분(기본 월 12:01)
   const sunDL   = _twDeadline(CU.uid, 'achievement', twDate);        // 달성취합 마감(기본 일 20:00)
 
-  // 자동지각 전 서버에서 최신 데이터 재확인 (Firestore 캐시 우회)
-  try {
-    const _freshSnap = await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).get({source:'server'});
-    if (_freshSnap.exists) { twReports[CU.uid] = _freshSnap.data(); }
-    else { delete twReports[CU.uid]; }
-  } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 */ }
+  // 자동지각 전 서버에서 최신 데이터 재확인 (Firestore 캐시 우회) — 보고·목표 두 읽기를 병렬로
+  await Promise.all([
+    (async () => {
+      try {
+        const _freshSnap = await db.collection('users').doc(CU.uid).collection('tw_reports').doc(twDate).get({source:'server'});
+        if (_freshSnap.exists) { twReports[CU.uid] = _freshSnap.data(); }
+        else { delete twReports[CU.uid]; }
+      } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 */ }
+    })(),
+    (async () => {
+      // 목표 데이터도 최신 재확인 (사전 로딩 실패로 인한 오탐 지각처리 방지)
+      try {
+        const _freshGoalSnap = await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).get({source:'server'});
+        if (_freshGoalSnap.exists) {
+          myGoal = _freshGoalSnap.data();
+          if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
+          twGoals[CU.uid][weekNum] = myGoal;
+        }
+      } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 (섣부른 지각처리 방지) */ }
+    })(),
+  ]);
   const myR = twReports[CU.uid] || {};
-
-  // 목표 데이터도 최신 재확인 (사전 로딩 실패로 인한 오탐 지각처리 방지)
-  try {
-    const _freshGoalSnap = await db.collection('users').doc(CU.uid).collection('tw_goals').doc(String(weekNum)).get({source:'server'});
-    if (_freshGoalSnap.exists) {
-      myGoal = _freshGoalSnap.data();
-      if (!twGoals[CU.uid]) twGoals[CU.uid] = {};
-      twGoals[CU.uid][weekNum] = myGoal;
-    }
-  } catch(e) { /* 네트워크 오류 시 기존 캐시 사용 (섣부른 지각처리 방지) */ }
 
   // 0. 명절 당일(설날·추석) 자동 OFF 처리 — 전 팀원 OFF, 모든 지각 제외
   if (tw_isAutoOffDay(twDate)) {
@@ -7805,11 +7811,12 @@ async function _autoRecordLatesForTeam() {
     targetUids = (myT.memberIds || []).filter(uid => uid && uid !== myT.leaderId);
   }
 
-  for (const uid of targetUids) {
-    if (uid === CU.uid) continue; // 본인은 _autoRecordLates()에서 이미 처리
+  // 병렬 처리: 팀원별 독립(각 uid 문서만 접근)이고 recordLate는 고정 문서ID로 멱등 → 동시 실행 안전
+  await Promise.all(targetUids.map(async uid => {
+    if (uid === CU.uid) return; // 본인은 _autoRecordLates()에서 이미 처리
     // 미출근자 지각 제외 (팀에서 absent로 표시된 경우)
     const myTForAbsent = Object.values(allTeams).find(t => (t.memberIds||[]).includes(uid) || t.leaderId===uid);
-    if (myTForAbsent && myTForAbsent.absentUids && myTForAbsent.absentUids[uid]) continue;  // 미출근자 지각 제외
+    if (myTForAbsent && myTForAbsent.absentUids && myTForAbsent.absentUids[uid]) return;  // 미출근자 지각 제외
     // 서버에서 최신 데이터 재확인 (캐시로 인한 오판 방지)
     let r;
     try {
@@ -7827,7 +7834,7 @@ async function _autoRecordLatesForTeam() {
           twReports[uid].attend = {...(r.attend||{}), status:'off', late:false, autoOff:true};
         } catch(e) {}
       }
-      continue; // 명절 당일은 모든 자동지각 제외
+      return; // 명절 당일은 모든 자동지각 제외
     }
     const _attReq   = !tw_isSunday(twDate) && !tw_isHoliday(twDate, uid); // 이 팀원 팀 기준 출근보고 필요 여부
     const _uidIsOff = (r.attend||{}).status === 'off' || !tw_attendRequired(twDate, uid); // OFF 체크한 날(또는 일요일·팀 공휴일) 활동/하루후기/TA 지각 제외
@@ -7994,7 +8001,7 @@ async function _autoRecordLatesForTeam() {
         }
       }
     } catch(e) {}
-  }
+  }));
 }
 
 /* ── 목표/달성 오탐 지각 자동 재판정 (공용 self-heal):
