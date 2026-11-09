@@ -6048,6 +6048,8 @@ function _tw_memberListHtml(type) {
 
 function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   const a = myR.attend || {};
+  const isAdmin = CU && (CU.employeeId===ADMIN_ID||CU.role==='admin');
+  const repairBtn = isAdmin ? `<button onclick="repairReportLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
   const STATUS = [{k:'wake',e:'🌅',l:'기상'},{k:'depart',e:'🚗',l:'출발'},{k:'arrive',e:'🏢',l:'도착'},{k:'direct',e:'📍',l:'직출'},{k:'off',e:'🏖',l:'OFF'}];
   const memberList = _tw_memberListHtml('attend');
 
@@ -6088,7 +6090,7 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
     const satPhotoGallery = _photoGalleryHtml(satPhotoUrls, 'deleteSatAttendPhoto');
     const satAutoNote = !hasPhoto ? _autoLateNote(a) : '';
     return `<div class="tw-section">
-      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div>${satChip}</div>
+      <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><div style="display:flex;align-items:center;gap:6px;">${satChip}${repairBtn}</div></div>
       ${satAutoNote}
       <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">토요일은 <b>10:00 이전</b>에 출근 사진을 등록하세요. 미등록 시 출근지각 처리됩니다.</p>
       ${hasPhoto
@@ -6147,7 +6149,7 @@ function _tw_attendSection(myR, isWD, canEdit, isLeader) {
 
   const attendAutoNote = !a.status ? _autoLateNote(a) : '';
   return `<div class="tw-section">
-    <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div>${chip}</div>
+    <div class="tw-section-head"><div class="tw-section-title">📍 출근보고</div><div style="display:flex;align-items:center;gap:6px;">${chip}${repairBtn}</div></div>
     ${attendAutoNote}
     <p style="font-size:12px;color:var(--gray-500);margin-bottom:12px;">버튼을 누르면 현재 시각이 기록됩니다. 08:00 이후 출근·도착은 지각 처리됩니다. (전일 TA 기준 미만/미인증 시 07:00 기준 · 기준=평일10통·일요일20통 / 직출·OFF 면제 / 직출·OFF는 어제~7일 후까지 예약 가능)</p>
     <div style="display:grid;grid-template-columns:repeat(5,1fr);gap:8px;">${btns}</div>
@@ -7057,8 +7059,9 @@ function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
   const adminTimeBtn = isAdmin && hasDone
     ? `<button class="adm-tedit" onclick="adminEditTime('activity','firstSavedAt')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>`
     : '';
+  const repairBtn = isAdmin ? `<button onclick="repairReportLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
   return `<div class="tw-section">
-    <div class="tw-section-head"><div class="tw-section-title">📝 활동보고</div>${chip}</div>
+    <div class="tw-section-head"><div class="tw-section-title">📝 활동보고</div><div style="display:flex;align-items:center;gap:6px;">${chip}${repairBtn}</div></div>
     ${actAutoNote}
     <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">당일 ${_twDeadlineLabel(CU.uid,'activity')} 마감</div>
     ${hasDone ? `<div style="background:var(--gray-50);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;margin-bottom:10px;">${esc(a.content)}</div>
@@ -7115,8 +7118,9 @@ function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
     </div>`;
   }
   const revAutoNote = !hasDone ? _autoLateNote(r) : '';
+  const repairBtn = isAdmin ? `<button onclick="repairReportLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
   return `<div class="tw-section">
-    <div class="tw-section-head"><div class="tw-section-title">🌙 하루후기</div>${chip}</div>
+    <div class="tw-section-head"><div class="tw-section-title">🌙 하루후기</div><div style="display:flex;align-items:center;gap:6px;">${chip}${repairBtn}</div></div>
     ${revAutoNote}
     <div style="font-size:12px;color:var(--gray-500);margin-bottom:10px;">${_twDeadlineLabel(CU.uid,'review')} 마감 (늦으면 지각)</div>
     ${hasDone ? `<div style="background:var(--gray-50);border-radius:10px;padding:12px;font-size:14px;white-space:pre-wrap;margin-bottom:10px;">${esc(r.content)}</div>
@@ -8107,6 +8111,110 @@ async function repairGoalLateFlags() {
   toast(`검사 ${checked}건 · 복구 ${fixed}건 · 벌금정리 ${feeCleaned}건${errCount ? ` · 오류 ${errCount}건` : ''}`, (fixed || feeCleaned) ? 'success' : 'info');
   renderTeamwork(true);
 }
+
+/* ── 보고(출근·활동·후기) 오탐 지각 복구 (관리자 전용) ──
+   이번 정산기간 내 late_records(attendance/activity/review)를 실제 기록 기준으로 재검사.
+   · 출근: 전일 TA로 07시(attendLowTa)/08시(attendWeekday)·토 10시(attendSat) 마감 자동 판정 → 실제 출근시각이 마감 이전이면 복구
+   · 활동/후기: firstSavedAt가 마감 이전이면 복구 (OFF·일요일·공휴일 등 의무없는 날 기록도 복구)
+   실제 제출시각이 없는 미출근/미제출 지각은 그대로 유지(새 지각 추가 안 함, 오탐만 제거).
+   벌금기록 삭제 + 보고 플래그(late/autoLatedAt) 복구 → 지각현황 자동 반영. */
+async function repairReportLateFlags() {
+  if (!CU) return;
+  const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
+  if (!isAdmin) { toast('관리자만 실행할 수 있습니다', 'error'); return; }
+  if (!confirm('이번 정산기간의 출근·활동·후기 지각 기록을 실제 기록 기준으로 재검사하고,\n잘못 지각처리된 경우 복구할까요?\n(출근은 전일 TA에 따라 07:00/08:00 마감 자동 반영)')) return;
+
+  const {start, end} = _getLateFeePeriod(twDate);
+  const toTs = (ts) => { if (!ts) return null; try { return ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts.seconds*1000)); } catch(e){ return null; } };
+  const TYPES = ['attendance','activity','review'];
+  const DEL = firebase.firestore.FieldValue.delete();
+
+  let checked = 0, fixed = 0, feeCleaned = 0, errCount = 0;
+
+  for (const u of allUsers) {
+    try {
+      const snap = await db.collection('users').doc(u.uid).collection('late_records')
+        .where('date','>=',start).where('date','<=',end).get();
+      const recs = snap.docs.map(d => ({id:d.id, ...d.data()})).filter(r => TYPES.includes(r.type));
+      if (!recs.length) continue;
+
+      // 날짜별 보고 문서 캐시(서버 최신, 중복조회 방지)
+      const repCache = {};
+      const getRep = async (date) => {
+        if (!(date in repCache)) {
+          try { const s = await db.collection('users').doc(u.uid).collection('tw_reports').doc(date).get({source:'server'}); repCache[date] = s.exists ? (s.data()||{}) : {}; }
+          catch(e) { repCache[date] = {}; }
+        }
+        return repCache[date];
+      };
+
+      for (const rec of recs) {
+        checked++;
+        const date = rec.date;
+        const rep = await getRep(date);
+        let shouldBeLate = true; // 기본: 기록 유지(오탐만 제거)
+
+        if (rec.type === 'attendance') {
+          // 일요일·팀지정 공휴일·명절 당일은 출근 의무 없음 → 지각 기록은 오류
+          if (!tw_attendRequired(date, u.uid) || tw_isAutoOffDay(date)) {
+            shouldBeLate = false;
+          } else {
+            const a = rep.attend || {};
+            if (a.status === 'direct' || a.status === 'off') { shouldBeLate = false; }
+            else {
+              // 전일 TA 기준 미만/미인증이면 07:00(attendLowTa), 아니면 평일 08:00·토 10:00
+              const low = await _attnLowTaDeadline(u.uid, date);
+              let ref, dl;
+              if (tw_isSaturday(date)) {
+                dl = _twDeadline(u.uid, low ? 'attendLowTa' : 'attendSat', date);
+                ref = toTs(a.photoAt || a.time);
+              } else {
+                dl = _twDeadline(u.uid, low ? 'attendLowTa' : 'attendWeekday', date);
+                const at = a.allTimes || {};
+                ref = toTs(at.wake || at.depart || at.arrive);
+              }
+              // 실제 출근기록이 있고 마감 이전이면 복구 / 기록 없으면(미출근) 지각 유지
+              if (ref && ref <= dl) shouldBeLate = false;
+            }
+          }
+        } else { // activity / review
+          const off = (rep.attend||{}).status === 'off' || !tw_attendRequired(date, u.uid) || tw_isAutoOffDay(date);
+          if (off) { shouldBeLate = false; }
+          else {
+            const dl = _twDeadline(u.uid, rec.type, date); // 항목명 일치(activity/review)
+            const ref = toTs((rep[rec.type]||{}).firstSavedAt);
+            if (ref && ref <= dl) shouldBeLate = false;
+          }
+        }
+
+        if (!shouldBeLate) {
+          // 1) 벌금기록 삭제 → 지각현황 반영
+          try { await db.collection('users').doc(u.uid).collection('late_records').doc(rec.id).delete(); feeCleaned++; }
+          catch(e) { errCount++; }
+          // 2) 보고 문서의 지각 플래그 복구
+          try {
+            const fld = rec.type === 'attendance' ? 'attend' : rec.type;
+            const repRefD = db.collection('users').doc(u.uid).collection('tw_reports').doc(date);
+            const upd = {}; upd[fld+'.late'] = false; upd[fld+'.autoLatedAt'] = DEL;
+            await repRefD.update(upd).catch(async () => {
+              const o = {}; o[fld] = {late:false}; await repRefD.set(o, {merge:true});
+            });
+            fixed++;
+            // 로컬 캐시 반영(현재 보고 있는 날짜의 보고에만 적용 — 다른 날짜 캐시 오염 방지)
+            if (date === twDate && twReports[u.uid] && twReports[u.uid][fld]) {
+              twReports[u.uid][fld].late = false;
+              delete twReports[u.uid][fld].autoLatedAt;
+            }
+          } catch(e) { errCount++; }
+        }
+      }
+    } catch(e) { errCount++; }
+  }
+
+  toast(`검사 ${checked}건 · 복구 ${fixed}건 · 벌금정리 ${feeCleaned}건${errCount ? ` · 오류 ${errCount}건` : ''}`, (fixed || feeCleaned) ? 'success' : 'info');
+  renderTeamwork(true);
+}
+if (typeof window !== 'undefined') window.repairReportLateFlags = repairReportLateFlags;
 
 /* ── 백그라운드 자동지각 체크 (팀워크 탭을 안 봐도 앱이 열려있으면 마감시각 지나면 자동 처리) ── */
 let _bgAutoLateTimer = null;
