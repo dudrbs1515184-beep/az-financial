@@ -6049,7 +6049,7 @@ function _tw_memberListHtml(type) {
 function _tw_attendSection(myR, isWD, canEdit, isLeader) {
   const a = myR.attend || {};
   const isAdmin = CU && (CU.employeeId===ADMIN_ID||CU.role==='admin');
-  const repairBtn = isAdmin ? `<button onclick="repairReportLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
+  const repairBtn = isAdmin ? `<button onclick="repairAllLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
   const STATUS = [{k:'wake',e:'🌅',l:'기상'},{k:'depart',e:'🚗',l:'출발'},{k:'arrive',e:'🏢',l:'도착'},{k:'direct',e:'📍',l:'직출'},{k:'off',e:'🏖',l:'OFF'}];
   const memberList = _tw_memberListHtml('attend');
 
@@ -6748,7 +6748,7 @@ function _tw_goalTableHtml(weekNum) {
   return `<div style="margin-top:12px;border-top:1px solid var(--gray-100);padding-top:10px;">
     <div style="font-size:12px;font-weight:700;color:var(--gray-500);margin-bottom:2px;display:flex;justify-content:space-between;align-items:center;gap:8px;">
       <span>팀원 현황 · 목표 ${rows.filter(r=>r.hasDone).length}/${rows.length}명 · <span style="color:#166534;">달성 ${rows.filter(r=>r.achDone).length}/${rows.length}명</span> 제출</span>
-      ${isAdm ? `<button onclick="repairGoalLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : ''}
+      ${isAdm ? `<button onclick="repairAllLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : ''}
     </div>
     ${goalTable}${achTable}
   </div>`;
@@ -7059,7 +7059,7 @@ function _tw_actSection(myR, canEdit, isLeader, isAdmin) {
   const adminTimeBtn = isAdmin && hasDone
     ? `<button class="adm-tedit" onclick="adminEditTime('activity','firstSavedAt')" style="margin-left:6px;font-size:10px;padding:2px 7px;border:1px solid var(--gray-300);border-radius:5px;background:#fff;color:var(--gray-600);cursor:pointer;">✏️ 시간수정</button>`
     : '';
-  const repairBtn = isAdmin ? `<button onclick="repairReportLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
+  const repairBtn = isAdmin ? `<button onclick="repairAllLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">📝 활동보고</div><div style="display:flex;align-items:center;gap:6px;">${chip}${repairBtn}</div></div>
     ${actAutoNote}
@@ -7118,7 +7118,7 @@ function _tw_reviewSection(myR, canEdit, isLeader, isAdmin) {
     </div>`;
   }
   const revAutoNote = !hasDone ? _autoLateNote(r) : '';
-  const repairBtn = isAdmin ? `<button onclick="repairReportLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
+  const repairBtn = isAdmin ? `<button onclick="repairAllLateFlags()" style="flex-shrink:0;font-size:10px;padding:3px 8px;border:1px solid var(--gray-300);border-radius:6px;background:#fff;color:var(--gray-600);cursor:pointer;">🔧 지각오류 검사·복구</button>` : '';
   return `<div class="tw-section">
     <div class="tw-section-head"><div class="tw-section-title">🌙 하루후기</div><div style="display:flex;align-items:center;gap:6px;">${chip}${repairBtn}</div></div>
     ${revAutoNote}
@@ -8215,6 +8215,202 @@ async function repairReportLateFlags() {
   renderTeamwork(true);
 }
 if (typeof window !== 'undefined') window.repairReportLateFlags = repairReportLateFlags;
+
+/* ── 종합 양방향 지각 재판정·복구 (관리자 전용) ──
+   대상 6종: 출근(attendance)·활동(activity)·후기(review)·TA(ta)·목표(goal)·달성(achievement)
+   양방향:
+     · 오탐 제거: 실제 기록(제출시각)이 마감 이전인데 지각으로 남은 벌금기록 삭제 + 보고 플래그 복구
+     · 누락 추가: 마감을 넘겼는데(미제출 또는 지각제출) 지각기록이 없으면 추가(recordLate=멱등)
+   판정 규칙은 _autoRecordLates(권위 로직)와 동일한 마감(_twDeadline)·기준시각 사용.
+   정산기간 전체(_getLateFeePeriod)를 순회하되 미래 날짜·마감 전은 추가하지 않음.
+   팀장·미출근자는 지각현황 대상이 아니므로 제외.
+   ※ 목표/달성은 주 단위(목표=월요일 기준, 달성=일요일 기준). 15:00 등 마감 후 제출은 '진짜 지각'으로 유지/재추가됨. */
+async function repairAllLateFlags() {
+  if (!CU) return;
+  const isAdmin = CU.employeeId === ADMIN_ID || CU.role === 'admin';
+  if (!isAdmin) { toast('관리자만 실행할 수 있습니다', 'error'); return; }
+  if (!confirm('이번 정산기간의 모든 보고·취합(출근·활동·후기·TA·목표·달성) 지각 기록을\n실제 기록 기준으로 재검사합니다.\n\n· 잘못 지각된 기록은 복구(삭제)\n· 마감을 넘긴 진짜 지각은 새로 추가\n\n진행할까요?')) return;
+
+  const { start, end } = _getLateFeePeriod(twDate);
+  const today = tw_today();
+  const now = new Date();
+  const toTs = (ts) => { if (!ts) return null; try { return ts.toDate ? ts.toDate() : (ts instanceof Date ? ts : new Date(ts.seconds * 1000)); } catch (e) { return null; } };
+  const DEL = firebase.firestore.FieldValue.delete();
+  const srv = () => firebase.firestore.FieldValue.serverTimestamp();
+
+  // 대상 uid: 팀장·미출근자 제외 (지각현황 표시 대상과 동일)
+  const isLeaderUid = (uid) => Object.values(allTeams).some(t => t.leaderId === uid);
+  const isAbsentUid = (uid) => {
+    const t = Object.values(allTeams).find(t => (t.memberIds || []).includes(uid) || t.leaderId === uid);
+    return !!(t && t.absentUids && t.absentUids[uid]);
+  };
+  const targetUsers = allUsers.filter(u => !isLeaderUid(u.uid) && !isAbsentUid(u.uid));
+
+  // 기간 내 날짜 문자열 목록(start~end, 오늘 이하만)
+  const dates = [];
+  { let d = tw_pd(start); const e = tw_pd(end);
+    while (d <= e) {
+      const ds = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      if (ds <= today) dates.push(ds);
+      d.setDate(d.getDate() + 1);
+    } }
+
+  let added = 0, removed = 0, errCount = 0;
+
+  for (const u of targetUsers) {
+    const uid = u.uid;
+    try {
+      // 1) 기존 late_records(기간 내) 수집
+      const lrSnap = await db.collection('users').doc(uid).collection('late_records')
+        .where('date', '>=', start).where('date', '<=', end).get({ source: 'server' });
+      const recs = lrSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+      const recByKey = {};            // 일 단위(출근/활동/후기/TA): `${date}_${type}` -> rec
+      const goalWeeks = new Set();    // 목표 지각기록 존재 주차
+      const achWeeks = new Set();     // 달성 지각기록 존재 주차
+      recs.forEach(r => {
+        if (r.type === 'goal') goalWeeks.add(String(_getWeekNum(r.date)));
+        else if (r.type === 'achievement') achWeeks.add(String(_getWeekNum(r.date)));
+        else recByKey[r.date + '_' + r.type] = r;
+      });
+
+      // 보고/목표 문서 서버 캐시
+      const repCache = {}, goalCache = {};
+      const getRep = async (date) => {
+        if (!(date in repCache)) {
+          try { const s = await db.collection('users').doc(uid).collection('tw_reports').doc(date).get({ source: 'server' }); repCache[date] = s.exists ? (s.data() || {}) : {}; }
+          catch (e) { repCache[date] = {}; }
+        }
+        return repCache[date];
+      };
+      const getGoal = async (wn) => {
+        if (!(wn in goalCache)) {
+          try { const s = await db.collection('users').doc(uid).collection('tw_goals').doc(String(wn)).get({ source: 'server' }); goalCache[wn] = s.exists ? (s.data() || {}) : null; }
+          catch (e) { goalCache[wn] = null; }
+        }
+        return goalCache[wn];
+      };
+
+      // 공용 헬퍼
+      const setReportLate = async (date, fld, late) => {
+        try {
+          const ref = db.collection('users').doc(uid).collection('tw_reports').doc(date);
+          const upd = {}; upd[fld + '.late'] = late; upd[fld + '.autoLatedAt'] = late ? srv() : DEL;
+          await ref.update(upd).catch(async () => {
+            const o = {}; o[fld] = late ? { late: true, autoLatedAt: srv() } : { late: false }; await ref.set(o, { merge: true });
+          });
+          if (date === twDate && twReports[uid]) {
+            if (!twReports[uid][fld]) twReports[uid][fld] = {};
+            twReports[uid][fld].late = late;
+            if (late) twReports[uid][fld].autoLatedAt = now; else delete twReports[uid][fld].autoLatedAt;
+          }
+        } catch (e) { errCount++; }
+      };
+      const addLate = async (date, type, extra) => { try { await recordLate(uid, date, type, extra || null); added++; } catch (e) { errCount++; } };
+      const removeLate = async (id) => { try { await db.collection('users').doc(uid).collection('late_records').doc(id).delete(); removed++; } catch (e) { errCount++; } };
+      const patchGoal = async (wn, fields) => {
+        try {
+          await db.collection('users').doc(uid).collection('tw_goals').doc(String(wn)).set(fields, { merge: true });
+          goalCache[wn] = { ...(goalCache[wn] || {}), ...fields };
+          if (twGoals[uid] && twGoals[uid][wn]) twGoals[uid][wn] = { ...twGoals[uid][wn], ...fields };
+        } catch (e) { errCount++; }
+      };
+
+      // 2) 일 단위 재판정(출근/활동/후기/TA)
+      for (const date of dates) {
+        const rep = await getRep(date);
+        const sat = tw_isSaturday(date);
+        const attReq = tw_attendRequired(date, uid) && !tw_isAutoOffDay(date);
+        const off = (rep.attend || {}).status === 'off' || !attReq;
+        // 보고 문서가 아예 없는 날은 소급 지각 '추가' 금지(_autoRecordLates 섹션6과 동일: 문서 존재 시에만 추가). 오탐 제거(remove)는 무조건 양방향 유지
+        const hasReport = Object.keys(rep).length > 0;
+
+        // 출근
+        {
+          let want = false, lowFlag = false;
+          if (attReq) {
+            const a = rep.attend || {};
+            if (a.status === 'direct' || a.status === 'off') { want = false; }
+            else {
+              const low = await _attnLowTaDeadline(uid, date); lowFlag = low;
+              let dl, ref;
+              if (sat) { dl = _twDeadline(uid, low ? 'attendLowTa' : 'attendSat', date); ref = toTs(a.photoAt || a.time); }
+              else { dl = _twDeadline(uid, low ? 'attendLowTa' : 'attendWeekday', date); const at = a.allTimes || {}; ref = toTs(at.wake || at.depart || at.arrive); }
+              want = ref ? (ref > dl) : (now > dl); // 제출: 마감초과면 지각 / 미제출: 마감 지났으면 지각
+            }
+          }
+          const rec = recByKey[date + '_attendance'];
+          // 출근은 '해당일 기준' 순수 판정: 평일 무보고=미출근=지각(hasReport 게이트 미적용). 마감은 전날 TA 이상→정상/이하·미인증→07시(_attnLowTaDeadline)
+          if (want && !rec) { await addLate(date, 'attendance', lowFlag ? { lowTa: true } : null); await setReportLate(date, 'attend', true); }
+          else if (!want && rec) { await removeLate(rec.id); await setReportLate(date, 'attend', false); }
+        }
+
+        // 활동 / 후기
+        for (const type of ['activity', 'review']) {
+          let want = false;
+          const rec = recByKey[date + '_' + type];
+          if (!off) {
+            const dl = _twDeadline(uid, type, date);
+            const node = rep[type] || {};
+            const ref = toTs(node.firstSavedAt);
+            if (node.content) want = ref ? (ref > dl) : !!rec; // 내용 있고 저장시각 없으면(구데이터) 기존 기록 따름
+            else want = now > dl;                              // 미제출: 마감 지났으면 지각
+          }
+          if (want && !rec && hasReport) { await addLate(date, type); await setReportLate(date, type, true); }
+          else if (!want && rec) { await removeLate(rec.id); await setReportLate(date, type, false); }
+        }
+
+        // TA (토요일 제외)
+        {
+          let want = false;
+          if (!off && !sat) {
+            const ta = rep.ta || {};
+            const taType = ta.taType || (ta.checked ? 'high' : null);
+            want = taType ? false : (now > _twDeadline(uid, 'ta', date));
+          }
+          const rec = recByKey[date + '_ta'];
+          if (want && !rec && hasReport) { await addLate(date, 'ta'); await setReportLate(date, 'ta', true); }
+          else if (!want && rec) { await removeLate(rec.id); await setReportLate(date, 'ta', false); }
+        }
+      }
+
+      // 3) 주 단위 재판정(목표=월요일 기준 / 달성=일요일 기준)
+      for (const date of dates) {
+        const dow = tw_pd(date).getDay(); // 0=일,1=월
+        if (dow === 1) {
+          const wn = String(_getWeekNum(date));
+          const g = await getGoal(wn);
+          const monDL = _twDeadline(uid, 'goal', date);
+          let want;
+          if (g) { const gAt = toTs(g.goalAt); const submitted = g.goalCount !== undefined; want = submitted ? (gAt ? (gAt > monDL) : !!g.goalLate) : (now > monDL); }
+          else want = now > monDL;
+          const has = goalWeeks.has(wn);
+          if (want && !has && g) { await addLate(date, 'goal'); goalWeeks.add(wn); await patchGoal(wn, { goalLate: true, late: true, autoLatedAt: srv() }); }
+          else if (!want && has) {
+            const r = recs.find(x => x.type === 'goal' && String(_getWeekNum(x.date)) === wn);
+            if (r) { await removeLate(r.id); goalWeeks.delete(wn); const achLate = !!(goalCache[wn] && goalCache[wn].achLate); await patchGoal(wn, { goalLate: false, late: achLate, autoLatedAt: DEL }); }
+          }
+        } else if (dow === 0) {
+          const wn = String(_getWeekNum(date));
+          const g = await getGoal(wn);
+          const sunDL = _twDeadline(uid, 'achievement', date);
+          let want;
+          if (g) { const aAt = toTs(g.achAt); const submitted = !!g.achDone || !!g.achAt; want = submitted ? (aAt ? (aAt > sunDL) : !!g.achLate) : (now > sunDL); }
+          else want = now > sunDL;
+          const has = achWeeks.has(wn);
+          if (want && !has && g) { await addLate(date, 'achievement'); achWeeks.add(wn); await patchGoal(wn, { achLate: true, achAutoLatedAt: srv() }); }
+          else if (!want && has) {
+            const r = recs.find(x => x.type === 'achievement' && String(_getWeekNum(x.date)) === wn);
+            if (r) { await removeLate(r.id); achWeeks.delete(wn); await patchGoal(wn, { achLate: false, achAutoLatedAt: DEL }); }
+          }
+        }
+      }
+    } catch (e) { errCount++; }
+  }
+
+  toast(`재검사 완료 · 추가 ${added}건 · 복구 ${removed}건${errCount ? ` · 오류 ${errCount}건` : ''}`, (added || removed) ? 'success' : 'info');
+  renderTeamwork(true);
+}
+if (typeof window !== 'undefined') window.repairAllLateFlags = repairAllLateFlags;
 
 /* ── 백그라운드 자동지각 체크 (팀워크 탭을 안 봐도 앱이 열려있으면 마감시각 지나면 자동 처리) ── */
 let _bgAutoLateTimer = null;
